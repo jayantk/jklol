@@ -17,6 +17,7 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgUnaryRule;
 import com.jayantkrish.jklol.ccg.Combinator;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.LexiconEntryInfo;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.ccg.UnaryCombinator;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
@@ -45,18 +46,19 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
   public CcgParse addLogicalForms(CcgParse input) {
     CcgParse result = null;
     if (input.isTerminal()) {
-      CcgCategory currentEntry = input.getLexiconEntry();
+      LexiconEntryInfo lexiconEntry = input.getLexiconEntry();
+      CcgCategory currentEntry = lexiconEntry.getCategory();
       HeadedSyntacticCategory cat = currentEntry.getSyntax();
 
       String predicateString = String.format(wordPredicateFormatString, Joiner.on("_").join(input.getWords()));
       Expression2 logicalForm = logicalFormFromSyntacticCategory(cat, predicateString);
 
-      CcgCategory lexiconEntry = new CcgCategory(cat, logicalForm, currentEntry.getSubjects(), 
+      CcgCategory newCategory = new CcgCategory(cat, logicalForm, currentEntry.getSubjects(), 
           currentEntry.getArgumentNumbers(), currentEntry.getObjects(), currentEntry.getAssignment());
+      LexiconEntryInfo newLexiconEntry = lexiconEntry.replaceCategory(newCategory);
 
-      result = CcgParse.forTerminal(input.getHeadedSyntacticCategory(), lexiconEntry,
-          input.getLexiconTrigger(), input.getLexiconIndex(), input.getSpannedPosTags(),
-          input.getSemanticHeads(), input.getNodeDependencies(),  input.getWords(),
+      result = CcgParse.forTerminal(input.getHeadedSyntacticCategory(), newLexiconEntry,
+          input.getSpannedPosTags(), input.getSemanticHeads(), input.getNodeDependencies(),  input.getWords(),
           input.getNodeProbability(), input.getUnaryRule(),
           input.getSpanStart(), input.getSpanEnd());
     } else {

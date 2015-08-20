@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.ccg.Combinator;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.IndexedPredicate;
+import com.jayantkrish.jklol.ccg.LexiconEntryInfo;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 
 public class CcgPrepositionFixingPattern implements CcgPattern {
@@ -42,7 +43,7 @@ public class CcgPrepositionFixingPattern implements CcgPattern {
         false, 0, null, Combinator.Type.FORWARD_APPLICATION);
 
     HeadedSyntacticCategory newLeftCat = parse.getLexiconEntryForWordIndex(
-          Iterables.getFirst(parse.getHeadWordIndexes(), null)).getSyntax();
+          Iterables.getFirst(parse.getHeadWordIndexes(), null)).getCategory().getSyntax();
 
     int[] uniqueVars = verbReplacementCategory.getCanonicalForm().getUniqueVariables();
     int newArgNum = uniqueVars[uniqueVars.length - 1];
@@ -98,7 +99,7 @@ public class CcgPrepositionFixingPattern implements CcgPattern {
       }
 
       HeadedSyntacticCategory finalCat = left.getLexiconEntryForWordIndex(
-          Iterables.getFirst(left.getHeadWordIndexes(), null)).getSyntax();
+          Iterables.getFirst(left.getHeadWordIndexes(), null)).getCategory().getSyntax();
 
       List<DependencyStructure> deps = Lists.newArrayList();
       for (DependencyStructure dep : parse.getNodeDependencies()) {
@@ -110,13 +111,14 @@ public class CcgPrepositionFixingPattern implements CcgPattern {
           parse.getNodeProbability(), left, right, combinator, parse.getUnaryRule(),
           parse.getSpanStart(), parse.getSpanEnd());
     } else {
-      CcgCategory oldCategory = parse.getLexiconEntry();
+      LexiconEntryInfo oldEntry = parse.getLexiconEntry();
+      CcgCategory oldCategory = oldEntry.getCategory();
       int numHeads = newRoot.getUniqueVariables().length;
       CcgCategory newCcgCategory = new CcgCategory(newRoot, oldCategory.getLogicalForm(),
           oldCategory.getSubjects(), oldCategory.getArgumentNumbers(), oldCategory.getObjects(),
           Collections.<Set<String>>nCopies(numHeads, Sets.<String>newHashSet()));
 
-      return CcgParse.forTerminal(newRoot, newCcgCategory, parse.getLexiconTrigger(), parse.getLexiconIndex(),
+      return CcgParse.forTerminal(newRoot, oldEntry.replaceCategory(newCcgCategory),
           parse.getPosTags(), parse.getSemanticHeads(), parse.getNodeDependencies(), parse.getWords(),
           parse.getNodeProbability(), parse.getUnaryRule(), parse.getSpanStart(), parse.getSpanEnd());
     }

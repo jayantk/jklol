@@ -1353,7 +1353,8 @@ public class CcgParser implements Serializable {
     int syntaxHeadVar = result.getSyntax().getHeadVariable();
     return new ChartEntry(syntaxAsInt, result.getSyntax().getUniqueVariables(), syntaxHeadVar, 
         result, trigger, lexiconIndex, null, assignmentVarIndex, Longs.toArray(assignments),
-        unfilledDependencyVarIndex, unfilledDepArray, depArray, spanStart, spanEnd);
+        unfilledDependencyVarIndex, unfilledDepArray, depArray, spanStart, spanEnd,
+        triggerSpanStart, triggerSpanEnd);
   }
 
   public static int[] computeDistanceCounts(List<String> posTags, Set<String> tagSet) {

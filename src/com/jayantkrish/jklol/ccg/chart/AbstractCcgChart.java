@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableList;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.LexiconEntryInfo;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
@@ -271,8 +272,13 @@ public abstract class AbstractCcgChart implements CcgChart {
     if (entry.isTerminal()) {
       List<String> terminals = getWords();
       List<String> posTags = getPosTags();
-      return CcgParse.forTerminal(syntax, entry.getLexiconEntry(), entry.getLexiconTrigger(),
-          entry.getLexiconIndex(), posTags.subList(spanStart, spanEnd + 1),
+      // rightSpanStart and rightSpanEnd are used to track the trigger span
+      // in chart entries for terminals.
+      LexiconEntryInfo lexiconEntryInfo = new LexiconEntryInfo(entry.getLexiconEntry(),
+          entry.getLexiconTrigger(), entry.getLexiconIndex(), spanStart, spanEnd,
+          entry.getRightSpanStart(), entry.getRightSpanEnd()); 
+      
+      return CcgParse.forTerminal(syntax, lexiconEntryInfo, posTags.subList(spanStart, spanEnd + 1),
           parser.variableToIndexedPredicateArray(syntax.getHeadVariable(), entry.getAssignments()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
           terminals.subList(spanStart, spanEnd + 1), getChartEntryProbsForSpan(spanStart, spanEnd)[beamIndex],

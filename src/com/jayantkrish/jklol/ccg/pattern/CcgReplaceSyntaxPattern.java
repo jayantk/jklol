@@ -19,8 +19,7 @@ public class CcgReplaceSyntaxPattern implements CcgPattern {
   public List<CcgParse> match(CcgParse parse) {
     if (parse.isTerminal()) {
       return Arrays.asList(CcgParse.forTerminal(newSyntax, parse.getLexiconEntry(),
-          parse.getLexiconTrigger(), parse.getLexiconIndex(), parse.getPosTags(),
-          parse.getSemanticHeads(), parse.getNodeDependencies(), parse.getSpannedWords(),
+          parse.getPosTags(), parse.getSemanticHeads(), parse.getNodeDependencies(), parse.getSpannedWords(),
           parse.getNodeProbability(), parse.getUnaryRule(), parse.getSpanStart(),
           parse.getSpanEnd()));
     } else {

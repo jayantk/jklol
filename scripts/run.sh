@@ -2,4 +2,4 @@
 
 # Runs a java program with the correct classpath.
 
-java -cp jklol.jar:lib/* -Xmx16000M $@ 
+java -cp jklol.jar:lib/* -Xmx8000M $@ 

@@ -183,8 +183,8 @@ public class CcgParserTest extends TestCase {
     CcgParse parse = parses.get(0);
     assertEquals(6.0, parse.getSubtreeProbability());
     assertEquals("N", parse.getSyntacticCategory().getValue());
-    assertEquals("NN", parse.getLexiconTrigger());
-    assertEquals("NN", parse.getSpannedLexiconTriggers().get(0));
+    assertEquals("NN", parse.getLexiconEntry().getLexiconTrigger());
+    assertEquals("NN", parse.getSpannedLexiconEntries().get(0).getLexiconTrigger());
 
     // No backoff should happen if the word is in the lexicon.
     parses = beamSearch(parser, Arrays.asList("a"), Arrays.asList("NN"), 10);
@@ -192,8 +192,8 @@ public class CcgParserTest extends TestCase {
     parse = parses.get(0);
     assertEquals(1.0, parse.getSubtreeProbability());
     assertEquals(SyntacticCategory.parseFrom("NP/N"), parse.getSyntacticCategory());
-    assertEquals(Arrays.asList("a"), parse.getLexiconTrigger());
-    assertEquals(Arrays.asList("a"), parse.getSpannedLexiconTriggers().get(0));
+    assertEquals(Arrays.asList("a"), parse.getLexiconEntry().getLexiconTrigger());
+    assertEquals(Arrays.asList("a"), parse.getSpannedLexiconEntries().get(0).getLexiconTrigger());
 
     // Capitalization doesn't affect whether the word is in the lexicon or not.
     parses = beamSearch(parser, Arrays.asList("A"), Arrays.asList("NN"), 10);
@@ -201,8 +201,8 @@ public class CcgParserTest extends TestCase {
     parse = parses.get(0);
     assertEquals(1.0, parse.getSubtreeProbability());
     assertEquals(SyntacticCategory.parseFrom("NP/N"), parse.getSyntacticCategory());
-    assertEquals(Arrays.asList("a"), parse.getLexiconTrigger());
-    assertEquals(Arrays.asList("a"), parse.getSpannedLexiconTriggers().get(0));
+    assertEquals(Arrays.asList("a"), parse.getLexiconEntry().getLexiconTrigger());
+    assertEquals(Arrays.asList("a"), parse.getSpannedLexiconEntries().get(0).getLexiconTrigger());
   }
 
   public void testSyntacticCategoryBackoff() {
@@ -564,7 +564,7 @@ public class CcgParserTest extends TestCase {
     assertEquals(2, bestParse.getSpanEnd());
     // This fails because the features aren't applied to the same spans
     // anymore with word skipping.
-    assertEquals(Arrays.asList("i"), ((SkipTrigger) bestParse.getLexiconTrigger()).getTrigger());
+    assertEquals(Arrays.asList("i"), ((SkipTrigger) bestParse.getLexiconEntry().getLexiconTrigger()).getTrigger());
     assertEquals(1.5, bestParse.getSubtreeProbability());
 
     // TODO: test that dependencies are projected from the spans of the original
@@ -944,7 +944,7 @@ public class CcgParserTest extends TestCase {
     // "in"
     SyntacticCategory expected = SyntacticCategory.parseFrom("(N\\N)/N");
     for (CcgParse parse : parses) {
-      assertEquals(expected, parse.getLexiconEntryForWordIndex(3).getSyntax().getSyntax());
+      assertEquals(expected, parse.getLexiconEntryForWordIndex(3).getCategory().getSyntax().getSyntax());
     }
     
     System.out.println(parses.get(0).toHtmlString());

@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.ccg.CcgUnaryRule;
 import com.jayantkrish.jklol.ccg.Combinator;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.LexiconEntryInfo;
 import com.jayantkrish.jklol.ccg.UnaryCombinator;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 
@@ -72,7 +73,8 @@ public class TemplateCcgParseAugmenter implements CcgParseAugmenter {
   private CcgParse addLogicalFormsHelper(CcgParse input, CcgParse wholeParse) {
     CcgParse result = null;
     if (input.isTerminal()) {
-      CcgCategory currentEntry = input.getLexiconEntry();
+      LexiconEntryInfo lexiconEntry = input.getLexiconEntry(); 
+      CcgCategory currentEntry = lexiconEntry.getCategory();
       HeadedSyntacticCategory cat = currentEntry.getSyntax();
       
       Expression2 logicalForm = currentEntry.getLogicalForm();
@@ -88,13 +90,14 @@ public class TemplateCcgParseAugmenter implements CcgParseAugmenter {
         }
       }
 
-      CcgCategory lexiconEntry = new CcgCategory(cat, logicalForm, currentEntry.getSubjects(), 
+      CcgCategory newCategory = new CcgCategory(cat, logicalForm, currentEntry.getSubjects(), 
           currentEntry.getArgumentNumbers(), currentEntry.getObjects(), currentEntry.getAssignment());
+      LexiconEntryInfo newLexiconEntry = lexiconEntry.replaceCategory(newCategory);
 
-      result = CcgParse.forTerminal(input.getHeadedSyntacticCategory(), lexiconEntry,
-          input.getLexiconTrigger(), input.getLexiconIndex(), input.getSpannedPosTags(),
-          input.getSemanticHeads(), input.getNodeDependencies(),  input.getWords(),
-          input.getNodeProbability(), input.getUnaryRule(), input.getSpanStart(), input.getSpanEnd()); 
+      result = CcgParse.forTerminal(input.getHeadedSyntacticCategory(), newLexiconEntry,
+          input.getSpannedPosTags(), input.getSemanticHeads(), input.getNodeDependencies(),
+          input.getWords(), input.getNodeProbability(), input.getUnaryRule(), input.getSpanStart(),
+          input.getSpanEnd()); 
     } else {
       CcgParse left = addLogicalFormsHelper(input.getLeft(), wholeParse);
       CcgParse right = addLogicalFormsHelper(input.getRight(), wholeParse);

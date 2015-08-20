@@ -3,12 +3,12 @@ package com.jayantkrish.jklol.ccg.util;
 import java.util.Collections;
 import java.util.List;
 
-import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
+import com.jayantkrish.jklol.ccg.LexiconEntryInfo;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplificationException;
@@ -74,11 +74,9 @@ public class SemanticParserUtils {
         System.out.println("LICENSED: " + correctLfPossible);
         System.out.println("LEX: ");
         
-        List<Object> triggers = parse.getSpannedLexiconTriggers();
-        List<CcgCategory> entries = parse.getSpannedLexiconCategories();
-        List<Integer> entryIndexes = parse.getWordIndexesWithLexiconEntries();
+        List<LexiconEntryInfo> entries = parse.getSpannedLexiconEntries();
         for (int i = 0; i < entries.size(); i++) {
-          System.out.println("   " + entryIndexes.get(i) + " " + triggers.get(i) + " " + entries.get(i));
+          System.out.println("   " + entries.get(i));
         }
 
         numCorrect += correct;
@@ -87,15 +85,14 @@ public class SemanticParserUtils {
         
         if (exampleLossAccumulator != null) {
           exampleLossAccumulator.add(new SemanticParserExampleLoss(example, lf, deps,
-              entryIndexes, triggers, entries, correctLf, true, correct > 0, correctLfPossible > 0));
+              entries, correctLf, true, correct > 0, correctLfPossible > 0));
         }
       } else {
         System.out.println("NO PARSE");
 
         if (exampleLossAccumulator != null) {
-          exampleLossAccumulator.add(new SemanticParserExampleLoss(example, null, Collections.emptyList(),
-              Collections.emptyList(), Collections.emptyList(), Collections.emptyList(),
-              correctLf, false, false, false));
+          exampleLossAccumulator.add(new SemanticParserExampleLoss(example, null,
+              Collections.emptyList(), Collections.emptyList(), correctLf, false, false, false));
         }
       }
     }

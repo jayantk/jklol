@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
@@ -218,6 +217,7 @@ public class AlignedExpressionTree {
       // to this syntactic category and logical form.
       List<List<String>> possibleWords = Lists.newArrayList();
       possibleWords.add(words);
+
       /*
       if (words.size() > 1) {
         for (String word : words) {
@@ -230,7 +230,8 @@ public class AlignedExpressionTree {
       // number of arguments it accepted in the sentence. Simultaneously
       // generate its dependencies and head assignment.
       for (List<String> curWords : possibleWords) {
-        String head = Joiner.on("_").join(curWords) + "#" + getExpression().toString();
+        // String head = Joiner.on("_").join(curWords) + "#" + getExpression().toString();
+        String head = getExpression().toString();
         // TODO: move the normalization elsewhere:
         head = head.replaceAll(" ", "_");
 

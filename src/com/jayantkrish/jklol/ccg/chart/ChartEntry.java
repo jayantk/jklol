@@ -163,11 +163,13 @@ public class ChartEntry {
    * @param deps
    * @param spanStart
    * @param spanEnd
+   * @param triggerSpanStart
+   * @param triggerSpanEnd
    */
   public ChartEntry(int syntax, int[] syntaxUniqueVars, int syntaxHeadVar, CcgCategory ccgCategory,
       Object lexiconTrigger, int lexiconIndex, UnaryCombinator rootUnaryRule, int[] assignmentVarIndex,
       long[] assignments, int[] unfilledDependencyVarIndex, long[] unfilledDependencies,
-      long[] deps, int spanStart, int spanEnd) {
+      long[] deps, int spanStart, int spanEnd, int triggerSpanStart, int triggerSpanEnd) {
     this.syntax = syntax;
     this.syntaxUniqueVars = syntaxUniqueVars;
     this.syntaxHeadVar = syntaxHeadVar;
@@ -192,8 +194,8 @@ public class ChartEntry {
     this.leftSpanEnd = spanEnd;
     this.leftChartIndex = -1;
 
-    this.rightSpanStart = -1;
-    this.rightSpanEnd = -1;
+    this.rightSpanStart = triggerSpanStart;
+    this.rightSpanEnd = triggerSpanEnd;
     this.rightChartIndex = -1;
 
     this.combinator = null;
@@ -391,7 +393,7 @@ public class ChartEntry {
     if (isTerminal()) {
       return new ChartEntry(resultSyntax, resultUniqueVars, resultHeadVar, lexiconEntry, lexiconTrigger,
           lexiconIndex, unaryRuleCombinator, newAssignmentVarIndex, newAssignments, newUnfilledDepVarIndex,
-          newUnfilledDeps, newFilledDeps, leftSpanStart, leftSpanEnd);
+          newUnfilledDeps, newFilledDeps, leftSpanStart, leftSpanEnd, rightSpanStart, rightSpanEnd);
     } else {
       return new ChartEntry(resultSyntax, resultUniqueVars, resultHeadVar, unaryRuleCombinator, leftUnaryRule, rightUnaryRule,
           newAssignmentVarIndex, newAssignments, newUnfilledDepVarIndex, newUnfilledDeps, newFilledDeps, leftSpanStart,

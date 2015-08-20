@@ -57,8 +57,6 @@ import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.ExpectationMaximization;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
-import com.jayantkrish.jklol.training.Lbfgs;
-import com.jayantkrish.jklol.training.LbfgsConvergenceError;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -221,10 +219,10 @@ public class LexiconInductionCrossValidation extends AbstractCli {
         lexiconEntryLines.add(lexiconEntry.toCsvString());
       }
     }
-    Collections.sort(Lists.newArrayList(Sets.newHashSet(lexiconEntryLines)));
 
     List<String> allLexiconEntries = Lists.newArrayList(lexiconEntryLines);
     allLexiconEntries.addAll(unknownLexiconEntryLines);
+    Collections.sort(allLexiconEntries);
     IoUtils.writeLines(lexiconOutputFilename, allLexiconEntries);
     // IoUtils.serializeObjectToFile(model, alignmentModelOutputFilename);
     
@@ -354,12 +352,13 @@ public class LexiconInductionCrossValidation extends AbstractCli {
         */
     GradientOracle<CcgParser, CcgExample> oracle = new CcgLoglikelihoodOracle(family, comparator, inferenceAlgorithm);
 
-    /*
     int numIterations = trainingExamples.size() * iterations;
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(numIterations, 1,
         1.0, true, true, l2Penalty, new DefaultLogFunction(100, false));
-        */
-    
+    SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),
+        trainingExamples);
+
+    /*
     GradientOptimizer sgdTrainer = StochasticGradientTrainer.createWithL2Regularization(
         trainingExamples.size(), 1, 1.0, true, true, l2Penalty, new DefaultLogFunction(100, false));
     SufficientStatistics sgdParameters = sgdTrainer.train(oracle, oracle.initializeGradient(),
@@ -373,6 +372,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     } catch (LbfgsConvergenceError e) {
       parameters = e.getFinalParameters();
     }
+    */
 
     System.out.println(family.getParameterDescription(parameters));
 

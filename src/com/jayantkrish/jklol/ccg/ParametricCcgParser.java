@@ -726,30 +726,27 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
     List<SufficientStatistics> lexiconScorerParameterList = parameters.coerceToList()
         .getStatisticByName(LEXICON_SCORER_PARAMETERS).coerceToList().getStatistics();
 
-    List<CcgCategory> lexiconEntries = parse.getSpannedLexiconCategories();
-    List<Object> lexiconTriggers = parse.getSpannedLexiconTriggers();
-    List<Integer> lexiconEntryIndexes = parse.getSpannedLexiconEntryIndexes();
-    List<List<String>> posTags = parse.getSpannedPosTagsByLexiconEntry();
-    Preconditions.checkArgument(lexiconEntries.size() == posTags.size());
+    List<LexiconEntryInfo> lexiconEntries = parse.getSpannedLexiconEntries();
     int numEntries = lexiconEntries.size();
-    int numTokensProcessed = 0;
     for (int i = 0; i < numEntries; i++) {
-      CcgCategory lexiconEntry = lexiconEntries.get(i);
-      Object trigger = lexiconTriggers.get(i);
-      int lexiconIndex = lexiconEntryIndexes.get(i);
-      int spanStart = numTokensProcessed;
-      int spanEnd = numTokensProcessed + posTags.get(i).size() - 1;
-
-      numTokensProcessed += posTags.get(i).size();
+      LexiconEntryInfo info = lexiconEntries.get(i);
+      CcgCategory ccgCategory = info.getCategory();
+      Object trigger = info.getLexiconTrigger();
+      int lexiconIndex = info.getLexiconIndex();
+      int spanStart = info.getSpanStart();
+      int spanEnd = info.getSpanEnd();
+      
+      int triggerSpanStart = info.getTriggerSpanStart();
+      int triggerSpanEnd = info.getTriggerSpanEnd();
 
       lexiconFamilies.get(lexiconIndex).incrementLexiconSufficientStatistics(
           lexiconGradientList.get(lexiconIndex), lexiconParameterList.get(lexiconIndex),
-          spanStart, spanEnd, sentence, trigger, lexiconEntry, count);
+          spanStart, spanEnd, sentence, trigger, ccgCategory, count);
 
       for (int j = 0; j < lexiconScorerFamilies.size(); j++) {
         lexiconScorerFamilies.get(j).incrementLexiconSufficientStatistics(
           lexiconScorerGradientList.get(j), lexiconScorerParameterList.get(j),
-          spanStart, spanEnd, sentence, lexiconEntry, count);
+          triggerSpanStart, triggerSpanEnd, sentence, ccgCategory, count);
       }
     }
   }

@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.experiments.geoquery;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.ccg.lexicon.StringContext;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
@@ -17,8 +16,10 @@ public class GeoqueryFeatureGenerator implements FeatureGenerator<StringContext,
   public Map<String, Double> generateFeatures(StringContext item) {
     Map<String, Double> features = Maps.newHashMap();
 
-    String word0 = Joiner.on("_").join(item.getWords().subList(item.getSpanStart(), item.getSpanEnd() + 1));
     for (int offset : OFFSETS) {
+      int word0Index = offset < 0 ? item.getSpanStart() : item.getSpanEnd();
+      String word0 = item.getWords().get(word0Index);
+
       int spanIndex = offset < 0 ? item.getSpanStart() : item.getSpanEnd();
       String word = getWord(spanIndex + offset, item.getWords());
       String featureName = formatFeature(word, offset, word0);

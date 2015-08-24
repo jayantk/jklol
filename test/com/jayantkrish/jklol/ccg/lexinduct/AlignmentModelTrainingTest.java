@@ -12,19 +12,25 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.cli.AlignmentLexiconInduction;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer.ParametersAndLagrangeMultipliers;
 import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.ExpectationMaximization;
 
 public class AlignmentModelTrainingTest extends TestCase {
 
   String[][] dataSet1 = new String[][] {{"plano in texas", "(in plano texas)"},
-      {"in texas", "(lambda x (in x texas))"},
-      {"in plano", "(lambda x (in x plano))"}};
+      {"what plano in us", "(in plano us)"},
+      {"texas in us", "(in texas us)"},
+      {"us in plano", "(in us plano)"},
+      {"what texas borders plano", "(border texas plano)"},
+      {"cities in texas", "(lambda x (and (city x) (in x texas)))"}};
 
   VariableNumMap wordVarPattern, expressionVarPattern;
   
@@ -108,6 +114,35 @@ public class AlignmentModelTrainingTest extends TestCase {
     for (AlignmentExample example : examples) {
       System.out.println(example.getWords());
       System.out.println(model.getBestAlignment(example));
+    }
+  }
+  
+  public void testLagrangianRelaxation() {
+    ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
+        examples, featureGenerator, 1, false);
+
+    SufficientStatistics smoothing = pam.getNewSufficientStatistics();
+    smoothing.increment(0.1);
+
+    SufficientStatistics initial = pam.getNewSufficientStatistics();
+    initial.increment(1);
+    
+    ExpectationMaximization em = new ExpectationMaximization(0, new DefaultLogFunction(1, false));
+    LagrangianAlignmentTrainer trainer = new LagrangianAlignmentTrainer(300, em);
+    ParametersAndLagrangeMultipliers trainedParameters = trainer.train(pam, initial, smoothing, examples);
+
+    // TODO: put in an actual test here.
+    System.out.println(pam.getParameterDescription(trainedParameters.getParameters(), 30));
+    CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters.getParameters());
+    for (int i = 0; i < examples.size(); i++) {
+      AlignmentExample example = examples.get(i);
+      Tensor exampleMultipliers = trainedParameters.getLagrangeMultipliers().slice(
+            new int[] {0}, new int[] {i});
+      TableFactor exampleWeights = new TableFactor(model.getParentVar().union(model.getTerminalVar()),
+          exampleMultipliers.elementwiseProduct(-1.0).elementwiseExp());
+
+      System.out.println(example.getWords());
+      System.out.println(model.getBestAlignment(example, exampleWeights));
     }
   }
 }

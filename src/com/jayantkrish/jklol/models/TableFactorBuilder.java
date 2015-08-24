@@ -202,6 +202,14 @@ public class TableFactorBuilder {
   public void multiplyWeight(Assignment assignment, double weight) {
     setWeight(assignment, getWeight(assignment) * weight);
   }
+  
+  /**
+   * Multiplies the weight of every assignment in this by {@code amount}.
+   * @param weight
+   */
+  public void multiply(double amount) {
+    weightBuilder.multiply(amount);
+  }
 
   /**
    * Sets the weight of {@code assignment} to

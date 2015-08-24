@@ -306,7 +306,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
       return AlignmentLexiconInduction.generateLexiconFromAlignmentModel(model, trainingData, typeReplacements);
     } else {
-      ExpectationMaximization em = new ExpectationMaximization(2, new DefaultLogFunction(1, false));
+      ExpectationMaximization em = new ExpectationMaximization(10, new DefaultLogFunction(1, false));
       LagrangianAlignmentTrainer trainer = new LagrangianAlignmentTrainer(emIterations, em);
       ParametersAndLagrangeMultipliers trainedParameters = trainer.train(pam, initial, smoothing, trainingData);
 

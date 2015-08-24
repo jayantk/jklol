@@ -13,12 +13,11 @@ import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.models.DiscreteFactor;
-import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.bayesnet.SparseCptTableFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -119,36 +118,33 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
 
     DiscreteFactor nonterminalSparsityFactor = nonterminalBuilder.build();
     DiscreteFactor nonterminalConstantFactor = TableFactor.zero(nonterminalVars);
-    SparseCptTableFactor nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
-        leftVar.union(rightVar), nonterminalSparsityFactor, nonterminalConstantFactor);
+
+    // Learn the nonterminal probabilities
+    // SparseCptTableFactor nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
+    // leftVar.union(rightVar), nonterminalSparsityFactor, nonterminalConstantFactor);
 
     // Assign all binary rules probability 1
-    // ParametricFactor nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
+    ParametricFactor nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
 
     DiscreteFactor sparsityFactor = TableFactor.unity(parentVar.union(terminalVar))
         .outerProduct(TableFactor.pointDistribution(ruleVar, ruleVar.outcomeArrayToAssignment(TERMINAL)));
     DiscreteFactor constantFactor = TableFactor.zero(VariableNumMap.unionAll(terminalVar, parentVar, ruleVar));
+
     // TODO: There should probably be special handling for the SKIP symbol
     // Maximize P(logical form | word)
     /*
     SparseCptTableFactor terminalFactor = new SparseCptTableFactor(terminalVar.union(ruleVar),
         parentVar, sparsityFactor, constantFactor);
-     */
+    */
+    
     // Maximize P(word | logical form). This works better.
+    /*
     SparseCptTableFactor terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
         terminalVar, sparsityFactor, constantFactor);
-
-    /*
-    CombiningParametricFactor terminalFactor = new CombiningParametricFactor(
-        VariableNumMap.unionAll(terminalVar, parentVar, ruleVar),
-        Arrays.asList("l_given_w", "w_given_l"),
-        Arrays.asList(logicalFormGivenWord, wordGivenLogicalForm), false);
      */
     
-    /*
-    SparseCptTableFactor terminalFactor = new SparseCptTableFactor(VariableNumMap.EMPTY,
-        VariableNumMap.unionAll(parentVar, ruleVar, terminalVar), sparsityFactor, constantFactor);
-        */    
+    // Set all terminals to have probability 1
+    ParametricFactor terminalFactor = new ConstantParametricFactor(sparsityFactor.getVars(), sparsityFactor);
 
     /*
     VariableNumMap vars = VariableNumMap.unionAll(parentVar, ruleVar, terminalVar);
@@ -166,6 +162,10 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
 
   public VariableNumMap getNonterminalVar() {
     return parentVar;
+  }
+
+  public VariableNumMap getTerminalVar() {
+    return terminalVar;
   }
 
   @Override

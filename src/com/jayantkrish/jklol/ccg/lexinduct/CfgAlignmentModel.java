@@ -82,6 +82,10 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     return parentVar;
   }
 
+  public VariableNumMap getTerminalVar() {
+    return terminalVar;
+  }
+
   public AlignedExpressionTree getBestAlignment(AlignmentExample example) {
     return getBestAlignment(example, TableFactor.logUnity(parentVar));
   }
@@ -146,7 +150,7 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
   }
 
   public CfgParser getCfgParser(AlignmentExample example) {
-    return getCfgParser(example, TableFactor.logUnity(parentVar));
+    return getCfgParser(example, TableFactor.logUnity(parentVar.union(terminalVar)));
   }
 
   public CfgParser getCfgParser(AlignmentExample example, TableFactor expressionTerminalWeights) {
@@ -185,14 +189,13 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     for (ExpressionNode expression : expressions) {
       for (int i = 0; i < exampleWords.size(); i++) {
         double prob = 1.0;
-        Assignment expressionAssignment = parentVar.outcomeArrayToAssignment(expression);
-        prob *= expressionTerminalWeights.getUnnormalizedProbability(expressionAssignment) ;
 
         if (terminalsGenerateManyWords) {
           for (int j = i; j < exampleWords.size(); j++) {
             Assignment a = terminalFactor.getVars().outcomeArrayToAssignment(exampleWords.subList(j, j + 1),
                 expression, ParametricCfgAlignmentModel.TERMINAL);
             prob *= terminalFactor.getUnnormalizedProbability(a);
+            prob *= expressionTerminalWeights.getUnnormalizedProbability(a.intersection(expressionTerminalWeights.getVars()));
 
             Assignment terminalAssignment = newVars.outcomeArrayToAssignment(exampleWords.subList(i, j + 1),
                 expression, ParametricCfgAlignmentModel.TERMINAL);
@@ -204,6 +207,7 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
                 expression, ParametricCfgAlignmentModel.TERMINAL);
             if (terminalFactor.getVars().isValidAssignment(a)) {
               double entryProb = prob * terminalFactor.getUnnormalizedProbability(a);
+              entryProb *= expressionTerminalWeights.getUnnormalizedProbability(a.intersection(expressionTerminalWeights.getVars()));
 
               Assignment terminalAssignment = newVars.outcomeArrayToAssignment(exampleWords.subList(i, j + 1),
                       expression, ParametricCfgAlignmentModel.TERMINAL);

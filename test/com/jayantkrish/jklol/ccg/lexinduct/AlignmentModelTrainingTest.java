@@ -12,8 +12,11 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.cli.AlignmentLexiconInduction;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder.LagrangianDecodingResult;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer.ParametersAndLagrangeMultipliers;
+import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.inference.JunctionTree;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -143,6 +146,31 @@ public class AlignmentModelTrainingTest extends TestCase {
 
       System.out.println(example.getWords());
       System.out.println(model.getBestAlignment(example, exampleWeights));
+    }
+  }
+
+  public void testLagrangianDecoding() {
+    ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
+        examples, featureGenerator, 1, false);
+    SufficientStatistics initial = pam.getNewSufficientStatistics();
+    initial.increment(1);
+    
+    CfgAlignmentModel model = pam.getModelFromParameters(initial);
+    LagrangianAlignmentDecoder decoder = new LagrangianAlignmentDecoder(500);
+    
+    VariableNumMap lexiconVars = model.getParentVar().union(model.getTerminalVar());
+    VariableNumMap nonterminalVar = model.getParentVar();
+    DiscreteFactor lexiconFactor = TableFactor.unity(lexiconVars).product(Math.log(0.01));
+
+    DiscreteFactor skipIndicatorFactor = TableFactor.pointDistribution(nonterminalVar,
+        nonterminalVar.outcomeArrayToAssignment(ParametricCfgAlignmentModel.SKIP_EXPRESSION)); 
+    lexiconFactor = lexiconFactor.product(TableFactor.unity(nonterminalVar).add(skipIndicatorFactor.product(-1.0)));
+    
+    LagrangianDecodingResult result = decoder.decode(model, examples, lexiconFactor);
+    List<CfgParseTree> trees = result.getParseTrees();
+    for (int i = 0; i < trees.size(); i++) {
+      System.out.println(examples.get(i).getWords());
+      System.out.println(trees.get(i));
     }
   }
 }

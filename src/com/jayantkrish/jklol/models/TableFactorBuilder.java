@@ -184,11 +184,7 @@ public class TableFactorBuilder {
    */
   public void incrementWeight(DiscreteFactor factor) {
     Preconditions.checkArgument(factor.getVars().equals(getVars()));
-    Iterator<Outcome> iter = factor.outcomeIterator();
-    while (iter.hasNext()) {
-      Outcome outcome = iter.next();
-      incrementWeight(outcome.getAssignment(), outcome.getProbability());
-    }
+    weightBuilder.increment(factor.getWeights());
   }
 
   /**
@@ -220,6 +216,17 @@ public class TableFactorBuilder {
    */
   public void maxWeight(Assignment assignment, double weight) {
     setWeight(assignment, Math.max(getWeight(assignment), weight));
+  }
+  
+  /**
+   * Sets the weight of each assignment in this to the maximum
+   * of its current weight and its weight in {@code factor}.
+   *  
+   * @param factor
+   */
+  public void max(DiscreteFactor factor) {
+    Preconditions.checkArgument(factor.getVars().equals(getVars()));
+    weightBuilder.maximum(factor.getWeights());
   }
 
   /**

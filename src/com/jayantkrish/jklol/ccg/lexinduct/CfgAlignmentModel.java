@@ -101,6 +101,10 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     return decodeCfgParse(parseTree, 0);
   }
 
+  public AlignedExpressionTree decodeCfgParse(CfgParseTree t) {
+    return decodeCfgParse(t, 0);
+  }
+  
   private AlignedExpressionTree decodeCfgParse(CfgParseTree t, int numAppliedArguments) {
     Preconditions.checkArgument(!t.getRoot().equals(ParametricCfgAlignmentModel.SKIP_EXPRESSION));
 

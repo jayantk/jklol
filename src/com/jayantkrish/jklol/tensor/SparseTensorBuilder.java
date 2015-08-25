@@ -174,6 +174,22 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
   }
   
   @Override
+  public void maximum(TensorBase other) {
+    int otherSize = other.size();
+    for (int i = 0; i < otherSize; i++) {
+      long keyNum = other.indexToKeyNum(i);
+      double otherValue = other.getByIndex(i);
+      putByKeyNum(keyNum, Math.max(get(keyNum), otherValue));
+    }
+    
+    long[] keys = Longs.toArray(outcomes.keySet());
+    for (long keyNum : keys) {
+      double otherValue = other.get(keyNum);
+      putByKeyNum(keyNum, Math.max(get(keyNum), otherValue));
+    }
+  }
+
+  @Override
   public double innerProduct(TensorBase other) {
     TensorBuilder product = getCopy();
     product.multiply(other);
@@ -317,6 +333,7 @@ public class SparseTensorBuilder extends AbstractTensorBase implements TensorBui
 
   @Override
   public void findEntriesLargerThan(double threshold) {
+    Preconditions.checkArgument(threshold >= 0.0);
     for (long keyNum : outcomes.keySet()) {
       double value = outcomes.get(keyNum);
       if (value >= threshold) {

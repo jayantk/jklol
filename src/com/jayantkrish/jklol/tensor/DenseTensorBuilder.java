@@ -357,12 +357,7 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
     }
   }
 
-  /**
-   * Sets each {@code key} in {@code this} to the elementwise maximum of
-   * {@code this[key]} and {@code other[key]}.
-   * 
-   * @param other
-   */
+  @Override
   public void maximum(TensorBase other) {
     Preconditions.checkArgument(Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers()));
     if (other instanceof DenseTensorBase) {

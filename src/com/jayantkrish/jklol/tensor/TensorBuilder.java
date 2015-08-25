@@ -82,6 +82,14 @@ public interface TensorBuilder extends TensorBase, Serializable {
   void findEntriesLargerThan(double threshold);
 
   /**
+   * Sets each {@code key} in {@code this} to the elementwise maximum of
+   * {@code this[key]} and {@code other[key]}.
+   * 
+   * @param other
+   */
+  public void maximum(TensorBase other);
+  
+  /**
    * Gets the sum of the elementwise product of {@code this} and {@code other}.
    * Requires {@code this} and {@code other} to have identical dimension numbers
    * and sizes.

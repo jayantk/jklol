@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
+import com.jayantkrish.jklol.models.bayesnet.SparseCptTableFactor;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -120,9 +121,10 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     DiscreteFactor nonterminalConstantFactor = TableFactor.zero(nonterminalVars);
 
     // Learn the nonterminal probabilities
-    // SparseCptTableFactor nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
-    // leftVar.union(rightVar), nonterminalSparsityFactor, nonterminalConstantFactor);
-
+    /*
+    SparseCptTableFactor nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
+        leftVar.union(rightVar), nonterminalSparsityFactor, nonterminalConstantFactor);
+     */
     // Assign all binary rules probability 1
     ParametricFactor nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
 
@@ -138,13 +140,11 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     */
     
     // Maximize P(word | logical form). This works better.
-    /*
     SparseCptTableFactor terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
         terminalVar, sparsityFactor, constantFactor);
-     */
     
     // Set all terminals to have probability 1
-    ParametricFactor terminalFactor = new ConstantParametricFactor(sparsityFactor.getVars(), sparsityFactor);
+    // ParametricFactor terminalFactor = new ConstantParametricFactor(sparsityFactor.getVars(), sparsityFactor);
 
     /*
     VariableNumMap vars = VariableNumMap.unionAll(parentVar, ruleVar, terminalVar);

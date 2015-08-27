@@ -99,7 +99,7 @@ public class AlignmentModelTrainingTest extends TestCase {
 
   public void testTrainingCfg() {
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
-        examples, featureGenerator, 1, false);
+        examples, featureGenerator, 1, false, false);
 
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(0.1);
@@ -122,7 +122,7 @@ public class AlignmentModelTrainingTest extends TestCase {
   
   public void testLagrangianRelaxation() {
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
-        examples, featureGenerator, 1, false);
+        examples, featureGenerator, 1, false, false);
 
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(0.1);
@@ -151,7 +151,7 @@ public class AlignmentModelTrainingTest extends TestCase {
 
   public void testLagrangianDecoding() {
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
-        examples, featureGenerator, 1, false);
+        examples, featureGenerator, 1, false, false);
     SufficientStatistics initial = pam.getNewSufficientStatistics();
     initial.increment(1);
     

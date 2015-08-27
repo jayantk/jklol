@@ -9,6 +9,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.cfg.CfgParser;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -28,14 +29,18 @@ public class LagrangianAlignmentTrainer {
   private final int numIterations;
   // TODO: This oracle needs to run hard EM.
   private final ExpectationMaximization em;
+  private final LagrangianAlignmentDecoder decoder;
 
-  public LagrangianAlignmentTrainer(int numIterations, ExpectationMaximization em) {
+  public LagrangianAlignmentTrainer(int numIterations, ExpectationMaximization em,
+      LagrangianAlignmentDecoder decoder) {
     this.numIterations = numIterations;
     this.em = em;
+    this.decoder = decoder;
   }
 
   public ParametersAndLagrangeMultipliers train(ParametricCfgAlignmentModel pam,
-      SufficientStatistics initialParameters, SufficientStatistics smoothing, List<AlignmentExample> trainingData) {
+      SufficientStatistics initialParameters, SufficientStatistics smoothing, List<AlignmentExample> trainingData,
+      DiscreteFactor lexiconFactor) {
     DiscreteVariable terminalVar = (DiscreteVariable) pam.getNonterminalVar().getOnlyVariable();
     DiscreteVariable wordVar = (DiscreteVariable) pam.getTerminalVar().getOnlyVariable();
     
@@ -71,7 +76,7 @@ public class LagrangianAlignmentTrainer {
     for (int i = 0; i < numIterations; i++) {
       double stepSize = 1 / Math.sqrt(i + 1);
 
-      if ((i + 1) % 20 == 0) {
+      if ((i + 1) % 10 == 0) {
         parameters = runEm(pam, smoothing, parameters, trainingData,
             lagrangeMultipliers.build(), 2);
       }

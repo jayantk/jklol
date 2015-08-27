@@ -13,11 +13,11 @@ import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.bayesnet.SparseCptTableFactor;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
@@ -67,17 +67,19 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   }
 
   public static ParametricCfgAlignmentModel buildAlignmentModelWithNGrams(Collection<AlignmentExample> examples,
-      FeatureVectorGenerator<Expression2> featureVectorGenerator, int nGramLength, boolean terminalsGenerateManyWords) {
+      FeatureVectorGenerator<Expression2> featureVectorGenerator, int nGramLength, boolean terminalsGenerateManyWords,
+      boolean discriminative) {
     Set<List<String>> terminalVarValues = Sets.newHashSet();
     for (AlignmentExample example : examples) {
       terminalVarValues.addAll(example.getNGrams(nGramLength));
     }
-    return buildAlignmentModel(examples, featureVectorGenerator, terminalVarValues, terminalsGenerateManyWords);
+    return buildAlignmentModel(examples, featureVectorGenerator, terminalVarValues,
+        terminalsGenerateManyWords, discriminative);
   }
-  
+
   public static ParametricCfgAlignmentModel buildAlignmentModel(Collection<AlignmentExample> examples,
       FeatureVectorGenerator<Expression2> featureVectorGenerator, Set<List<String>> terminalVarValues,
-      boolean terminalsGenerateManyWords) {
+      boolean terminalsGenerateManyWords, boolean discriminative) {
     Set<ExpressionNode> expressions = Sets.newHashSet();
     expressions.add(SKIP_EXPRESSION);
 
@@ -119,33 +121,28 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
 
     DiscreteFactor nonterminalSparsityFactor = nonterminalBuilder.build();
     DiscreteFactor nonterminalConstantFactor = TableFactor.zero(nonterminalVars);
-
-    // Learn the nonterminal probabilities
-    /*
-    SparseCptTableFactor nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
-        leftVar.union(rightVar), nonterminalSparsityFactor, nonterminalConstantFactor);
-     */
-    // Assign all binary rules probability 1
-    ParametricFactor nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
-
     DiscreteFactor sparsityFactor = TableFactor.unity(parentVar.union(terminalVar))
         .outerProduct(TableFactor.pointDistribution(ruleVar, ruleVar.outcomeArrayToAssignment(TERMINAL)));
     DiscreteFactor constantFactor = TableFactor.zero(VariableNumMap.unionAll(terminalVar, parentVar, ruleVar));
 
-    // TODO: There should probably be special handling for the SKIP symbol
-    // Maximize P(logical form | word)
-    /*
-    SparseCptTableFactor terminalFactor = new SparseCptTableFactor(terminalVar.union(ruleVar),
-        parentVar, sparsityFactor, constantFactor);
-    */
-    
-    // Maximize P(word | logical form). This works better.
-    SparseCptTableFactor terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
-        terminalVar, sparsityFactor, constantFactor);
-    
-    // Set all terminals to have probability 1
-    // ParametricFactor terminalFactor = new ConstantParametricFactor(sparsityFactor.getVars(), sparsityFactor);
+    // Learn the nonterminal probabilities
+    ParametricFactor nonterminalFactor = null;
+    ParametricFactor terminalFactor = null;
+    if (!discriminative) {
+      // Maximize P(word | logical form). This works better.
+      nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
+          leftVar.union(rightVar), nonterminalSparsityFactor, nonterminalConstantFactor);
+      terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
+          terminalVar, sparsityFactor, constantFactor);
+    } else {
+      // Assign all binary rules probability 1
+      nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
+      // Maximize P(logical form | word)
+      terminalFactor = new SparseCptTableFactor(terminalVar.union(ruleVar),
+          parentVar, sparsityFactor, constantFactor);
+    }
 
+    // This is some stuff for using features in the nonterminals.
     /*
     VariableNumMap vars = VariableNumMap.unionAll(parentVar, ruleVar, terminalVar);
     int featureVarNum = Ints.max(vars.getVariableNumsArray()) + 1;

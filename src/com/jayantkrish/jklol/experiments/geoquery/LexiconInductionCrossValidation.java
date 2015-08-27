@@ -292,7 +292,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     terminalVarValues.addAll(attestedEntityNames);
 
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModel(
-        trainingData, vectorGenerator, terminalVarValues, false);
+        trainingData, vectorGenerator, terminalVarValues, false, false);
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(smoothingAmount);
 
@@ -464,7 +464,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     return newExamples;
   }
 
-  private static void readFolds(String foldDir, List<String> foldNames, List<List<AlignmentExample>> folds,
+  public static void readFolds(String foldDir, List<String> foldNames, List<List<AlignmentExample>> folds,
       boolean test) {
     File dir = new File(foldDir);
     File[] files = dir.listFiles();

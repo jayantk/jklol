@@ -70,6 +70,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   private OptionSpec<String> outputDir;
   
   private OptionSpec<String> foldNameOpt;
+  private OptionSpec<Void> testOpt;
   
   private OptionSpec<Integer> unknownWordThreshold;
   
@@ -112,6 +113,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     
     // Optional option to only run one fold
     foldNameOpt = parser.accepts("foldName").withRequiredArg().ofType(String.class);
+    testOpt = parser.accepts("test");
     
     // Word count below which the word is mapped to the "unknown" symbol.
     unknownWordThreshold = parser.accepts("unknownWordThreshold").withRequiredArg()
@@ -132,7 +134,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   public void run(OptionSet options) {
     List<String> foldNames = Lists.newArrayList();
     List<List<AlignmentExample>> folds = Lists.newArrayList();
-    readFolds(options.valueOf(trainingDataFolds), foldNames, folds);
+    readFolds(options.valueOf(trainingDataFolds), foldNames, folds, options.has(testOpt));
     
     List<String> additionalLexiconEntries = IoUtils.readLines(options.valueOf(additionalLexicon));
     
@@ -462,13 +464,20 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     return newExamples;
   }
 
-  private static void readFolds(String foldDir, List<String> foldNames, List<List<AlignmentExample>> folds) {
+  private static void readFolds(String foldDir, List<String> foldNames, List<List<AlignmentExample>> folds,
+      boolean test) {
     File dir = new File(foldDir);
     File[] files = dir.listFiles();
     
     for (int i = 0; i < files.length; i++) {
       String name = files[i].getName();
-      if (name.startsWith("fold")) {
+      if (!test && name.startsWith("fold")) {
+        foldNames.add(name);
+        
+        List<AlignmentExample> foldData = AlignmentLexiconInduction
+            .readTrainingData(files[i].getAbsolutePath());
+        folds.add(foldData);
+      } else if (test && (name.startsWith("all_folds") || name.startsWith("test"))) {
         foldNames.add(name);
         
         List<AlignmentExample> foldData = AlignmentLexiconInduction

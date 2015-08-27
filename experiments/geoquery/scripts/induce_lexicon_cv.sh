@@ -9,5 +9,5 @@ mkdir -p $OUT_DIR
 
 ./experiments/geoquery/scripts/generate_lexicon.py > $ENTITY_LEXICON
 
-./scripts/run.sh com.jayantkrish.jklol.experiments.geoquery.LexiconInductionCrossValidation --trainingDataFolds $DATA_DIR --outputDir $OUT_DIR --emIterations 10 --smoothing 0.01 --parserIterations 100 --beamSize 100 --l2Regularization 0.01 --additionalLexicon $ENTITY_LEXICON --unknownWordThreshold 0
+./scripts/run.sh com.jayantkrish.jklol.experiments.geoquery.LexiconInductionCrossValidation --trainingDataFolds $DATA_DIR --outputDir $OUT_DIR --emIterations 100 --smoothing 0.1 --parserIterations 50 --beamSize 100 --l2Regularization 0.0 --additionalLexicon $ENTITY_LEXICON --unknownWordThreshold 0 --foldName all_folds.ccg --test
 

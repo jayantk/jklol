@@ -209,6 +209,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile, null);
     List<AlignmentExample> examples = Lists.newArrayList();
 
+    System.out.println(trainingDataFile);
     int totalTreeSize = 0; 
     for (CcgExample ccgExample : ccgExamples) {
       ExpressionTree tree = expressionToExpressionTree(ccgExample.getLogicalForm());

@@ -22,7 +22,6 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
-import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.ExpectationMaximization;
 
@@ -120,7 +119,7 @@ public class AlignmentModelTrainingTest extends TestCase {
     }
   }
   
-  public void testLagrangianRelaxation() {
+  public void testLagrangianRelaxationTraining() {
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
         examples, featureGenerator, 1, false, false);
 
@@ -129,23 +128,21 @@ public class AlignmentModelTrainingTest extends TestCase {
 
     SufficientStatistics initial = pam.getNewSufficientStatistics();
     initial.increment(1);
+
+    DiscreteFactor lexiconFactor = TableFactor.unity(pam.getNonterminalVar().union(pam.getTerminalVar()))
+          .product(Math.log(0.01));
     
-    ExpectationMaximization em = new ExpectationMaximization(0, new DefaultLogFunction(1, false));
-    LagrangianAlignmentTrainer trainer = new LagrangianAlignmentTrainer(300, em);
-    ParametersAndLagrangeMultipliers trainedParameters = trainer.train(pam, initial, smoothing, examples);
+    LagrangianAlignmentTrainer trainer = new LagrangianAlignmentTrainer(30, new LagrangianAlignmentDecoder(100));
+    ParametersAndLagrangeMultipliers trainedParameters = trainer.train(pam, initial, smoothing, examples, lexiconFactor);
 
     // TODO: put in an actual test here.
     System.out.println(pam.getParameterDescription(trainedParameters.getParameters(), 30));
-    CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters.getParameters());
-    for (int i = 0; i < examples.size(); i++) {
-      AlignmentExample example = examples.get(i);
-      Tensor exampleMultipliers = trainedParameters.getLagrangeMultipliers().slice(
-            new int[] {0}, new int[] {i});
-      TableFactor exampleWeights = new TableFactor(model.getParentVar().union(model.getTerminalVar()),
-          exampleMultipliers.elementwiseProduct(-1.0).elementwiseExp());
-
-      System.out.println(example.getWords());
-      System.out.println(model.getBestAlignment(example, exampleWeights));
+    
+    LagrangianDecodingResult result = trainedParameters.getLagrangeMultipliers();
+    List<CfgParseTree> trees = result.getParseTrees();
+    for (int i = 0; i < trees.size(); i++) {
+      System.out.println(examples.get(i).getWords());
+      System.out.println(trees.get(i));
     }
   }
 

@@ -38,20 +38,23 @@ import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentModel;
+import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder;
+import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder.LagrangianDecodingResult;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer.ParametersAndLagrangeMultipliers;
 import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.util.SemanticParserExampleLoss;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils.SemanticParserLoss;
+import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.cli.AbstractCli;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
-import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.ExpectationMaximization;
 import com.jayantkrish.jklol.training.GradientOptimizer;
@@ -322,9 +325,12 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
       return AlignmentLexiconInduction.generateLexiconFromAlignmentModel(model, trainingData, typeReplacements);
     } else {
-      ExpectationMaximization em = new ExpectationMaximization(10, new DefaultLogFunction(1, false));
-      LagrangianAlignmentTrainer trainer = new LagrangianAlignmentTrainer(emIterations, em);
-      ParametersAndLagrangeMultipliers trainedParameters = trainer.train(pam, initial, smoothing, trainingData);
+      DiscreteFactor lexiconFactor = TableFactor.unity(pam.getNonterminalVar().union(pam.getTerminalVar()))
+          .product(Math.log(0.01));
+      LagrangianAlignmentTrainer trainer = new LagrangianAlignmentTrainer(emIterations,
+          new LagrangianAlignmentDecoder(20));
+      ParametersAndLagrangeMultipliers trainedParameters = trainer.train(pam, initial, smoothing,
+          trainingData, lexiconFactor);
 
       // System.out.println(pam.getParameterDescription(trainedParameters));
 
@@ -332,23 +338,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters.getParameters());
       model.printStuffOut();
 
-      PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
-      for (int i = 0; i < trainingData.size(); i++) {
-        AlignmentExample example = trainingData.get(i);
-        Tensor exampleMultipliers = trainedParameters.getLagrangeMultipliers().slice(
-            new int[] {0}, new int[] {i});
-        TableFactor exampleWeights = new TableFactor(model.getParentVar(),
-            exampleMultipliers.elementwiseProduct(-1.0).elementwiseExp());
-
-        System.out.println(example.getWords());
-        AlignedExpressionTree tree = model.getBestAlignment(example, exampleWeights);
-        System.out.println(tree);
-
-        for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
-          System.out.println("   " + entry.toCsvString());
-          alignments.incrementOutcome(entry.getWords(), entry, 1);
-        }
-      }
+      LagrangianDecodingResult result = trainedParameters.getLagrangeMultipliers();
 
       /*
       // EM trained model.
@@ -367,7 +357,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       lexiconFactor = lexiconFactor.product(TableFactor.unity(nonterminalVar).add(skipIndicatorFactor.product(-1.0)));
 
       LagrangianDecodingResult result = decoder.decode(model, trainingData, lexiconFactor);
-      
+       */
+
       PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
       for (int i = 0; i < trainingData.size(); i++) {
         AlignmentExample example = trainingData.get(i);
@@ -381,7 +372,6 @@ public class LexiconInductionCrossValidation extends AbstractCli {
           alignments.incrementOutcome(entry.getWords(), entry, 1);
         }
       }
-      */
 
       return alignments;
     }

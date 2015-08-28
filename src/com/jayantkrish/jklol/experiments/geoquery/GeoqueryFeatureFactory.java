@@ -209,7 +209,7 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
           lexiconFeatureDictionary, null, false);
 
       ParametricLexiconScorer scorer = new ParametricFeaturizedLexiconScorer("features",
-          ccgCategoryVar, featureVar, classifierFamily, Functions.identity());
+          ccgCategoryVar, featureVar, classifierFamily, Functions.<CcgCategory>identity());
 
       return Lists.newArrayList(scorer);
     } else {

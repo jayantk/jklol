@@ -289,7 +289,6 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     // Preprocess data to generate features.
     FeatureVectorGenerator<Expression2> vectorGenerator = AlignmentLexiconInduction
         .buildFeatureVectorGenerator(trainingData, Collections.<String>emptyList());
-    System.out.println("features: " + vectorGenerator.getFeatureDictionary().getValues());
     trainingData = AlignmentLexiconInduction.applyFeatureVectorGenerator(vectorGenerator, trainingData);
 
     // Add all unigrams to the model.
@@ -307,7 +306,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     terminalVarValues.addAll(attestedEntityNames);
 
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModel(
-        trainingData, vectorGenerator, terminalVarValues, false, discriminative);
+        trainingData, vectorGenerator, terminalVarValues, discriminative);
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(smoothingAmount);
 
@@ -321,7 +320,6 @@ public class LexiconInductionCrossValidation extends AbstractCli {
           initial, trainingData);
 
       CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
-      model.printStuffOut();
 
       return AlignmentLexiconInduction.generateLexiconFromAlignmentModel(model, trainingData, typeReplacements);
     } else {
@@ -336,8 +334,6 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
       // Get the trained model.
       CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters.getParameters());
-      model.printStuffOut();
-
       LagrangianDecodingResult result = trainedParameters.getLagrangeMultipliers();
 
       /*
@@ -361,14 +357,10 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
       PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
       for (int i = 0; i < trainingData.size(); i++) {
-        AlignmentExample example = trainingData.get(i);
         CfgParseTree parse = result.getParseTrees().get(i);
-        System.out.println(example.getWords());
         AlignedExpressionTree tree = model.decodeCfgParse(parse);
-        System.out.println(tree);
 
         for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
-          System.out.println("   " + entry.toCsvString());
           alignments.incrementOutcome(entry.getWords(), entry, 1);
         }
       }
@@ -412,8 +404,6 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       parameters = e.getFinalParameters();
     }
     */
-
-    System.out.println(family.getParameterDescription(parameters));
 
     return family.getModelFromParameters(parameters);
   }

@@ -110,7 +110,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     AlignmentModelInterface model = null;
     if (options.has(useCfg)) {
       ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
-          examples, vectorGenerator, options.valueOf(nGramLength), false, false);
+          examples, vectorGenerator, options.valueOf(nGramLength), false);
       SufficientStatistics smoothing = pam.getNewSufficientStatistics();
       smoothing.increment(options.valueOf(smoothingParam));
 
@@ -173,12 +173,9 @@ public class AlignmentLexiconInduction extends AbstractCli {
       Map<String, String> typeReplacements) {
     PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
     for (AlignmentExample example : examples) {
-      System.out.println(example.getWords());
       AlignedExpressionTree tree = model.getBestAlignment(example);
-      System.out.println(tree);
 
       for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
-        System.out.println("   " + entry.toCsvString());
         alignments.incrementOutcome(entry.getWords(), entry, 1);
       }
     }

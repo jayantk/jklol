@@ -3,9 +3,9 @@
 	 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.jayantkrish</groupId>
+  <groupId>com.jayantkrish.jklol</groupId>
   <artifactId>jklol</artifactId>
-  <version>1.0</version>
+  <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>jklol</name>
@@ -17,9 +17,9 @@
     <directory>${project.basedir}/target</directory>
     <finalName>${project.artifactId}-${project.version}</finalName>
     <sourceDirectory>${basedir}/src</sourceDirectory>
-    <testSourceDirectory>${basedir}/test</testSourceDirectory>
+    <!-- <testSourceDirectory>${basedir}/test</testSourceDirectory> -->
     <outputDirectory>${basedir}/target/classes</outputDirectory>
-    <testOutputDirectory>${basedir}/target/test-classes</testOutputDirectory>
+    <!-- <testOutputDirectory>${basedir}/target/test-classes</testOutputDirectory> -->
 
     <plugins>
     <!-- plugin for deploying project to maven central -->
@@ -33,6 +33,13 @@
 	<nexusUrl>https://oss.sonatype.org/</nexusUrl>
 	<autoReleaseAfterClose>true</autoReleaseAfterClose>
       </configuration>
+      <dependencies>
+      <dependency>
+	<groupId>com.thoughtworks.xstream</groupId>
+	<artifactId>xstream</artifactId>
+	<version>1.4.7</version>
+      </dependency>
+      </dependencies>
     </plugin>
 
     <!-- generate sources and javadoc -->
@@ -52,6 +59,9 @@
     <plugin>
       <groupId>org.apache.maven.plugins</groupId>
       <artifactId>maven-javadoc-plugin</artifactId>
+      <configuration>
+	<additionalparam>-Xdoclint:none</additionalparam>
+      </configuration>
       <version>2.9.1</version>
       <executions>
 	<execution>

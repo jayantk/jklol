@@ -35,11 +35,10 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
   private final VariableNumMap ruleVar;
   
   private final int nGramLength;
-  private final boolean terminalsGenerateManyWords;
   
   public CfgAlignmentModel(DiscreteFactor nonterminalFactor, DiscreteFactor terminalFactor,
       VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar, VariableNumMap parentVar,
-      VariableNumMap ruleVar, int nGramLength, boolean terminalsGenerateManyWords) {
+      VariableNumMap ruleVar, int nGramLength) {
     this.nonterminalFactor = Preconditions.checkNotNull(nonterminalFactor);
     Preconditions.checkArgument(nonterminalFactor.getVars().equals(
         VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar)));
@@ -53,7 +52,6 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     this.parentVar = Preconditions.checkNotNull(parentVar);
     this.ruleVar = Preconditions.checkNotNull(ruleVar);
     this.nGramLength = nGramLength;
-    this.terminalsGenerateManyWords = terminalsGenerateManyWords;
   }
 
   public List<List<String>> getTerminalVarValues() {
@@ -163,12 +161,8 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     expressions.add(ParametricCfgAlignmentModel.SKIP_EXPRESSION);
 
     Set<List<String>> words = Sets.newHashSet();
-    if (terminalsGenerateManyWords) {
-      words.addAll(example.getNGrams(example.getWords().size()));
-    } else {
-      words.addAll(example.getNGrams(nGramLength));
-      words.retainAll(terminalVar.getDiscreteVariables().get(0).getValues());
-    }
+    words.addAll(example.getNGrams(nGramLength));
+    words.retainAll(terminalVar.getDiscreteVariables().get(0).getValues());
 
     // Build a new CFG parser restricted to these logical forms:
     DiscreteVariable expressionVar = new DiscreteVariable("new-expressions", expressions);
@@ -194,30 +188,17 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
       for (int i = 0; i < exampleWords.size(); i++) {
         double prob = 1.0;
 
-        if (terminalsGenerateManyWords) {
-          for (int j = i; j < exampleWords.size(); j++) {
-            Assignment a = terminalFactor.getVars().outcomeArrayToAssignment(exampleWords.subList(j, j + 1),
-                expression, ParametricCfgAlignmentModel.TERMINAL);
-            prob *= terminalFactor.getUnnormalizedProbability(a);
-            prob *= expressionTerminalWeights.getUnnormalizedProbability(a.intersection(expressionTerminalWeights.getVars()));
-
+        for (int j = i; j < Math.min(i + nGramLength, exampleWords.size()); j++) {
+          Assignment a = terminalFactor.getVars().outcomeArrayToAssignment(exampleWords.subList(i, j + 1),
+              expression, ParametricCfgAlignmentModel.TERMINAL);
+          if (terminalFactor.getVars().isValidAssignment(a)) {
+            double entryProb = prob * terminalFactor.getUnnormalizedProbability(a);
+            entryProb *= expressionTerminalWeights.getUnnormalizedProbability(a.intersection(expressionTerminalWeights.getVars()));
+            
             Assignment terminalAssignment = newVars.outcomeArrayToAssignment(exampleWords.subList(i, j + 1),
                 expression, ParametricCfgAlignmentModel.TERMINAL);
-            newTerminalFactor.setWeight(terminalAssignment, prob);
-          }
-        } else {
-          for (int j = i; j < Math.min(i + nGramLength, exampleWords.size()); j++) {
-            Assignment a = terminalFactor.getVars().outcomeArrayToAssignment(exampleWords.subList(i, j + 1),
-                expression, ParametricCfgAlignmentModel.TERMINAL);
-            if (terminalFactor.getVars().isValidAssignment(a)) {
-              double entryProb = prob * terminalFactor.getUnnormalizedProbability(a);
-              entryProb *= expressionTerminalWeights.getUnnormalizedProbability(a.intersection(expressionTerminalWeights.getVars()));
-
-              Assignment terminalAssignment = newVars.outcomeArrayToAssignment(exampleWords.subList(i, j + 1),
-                      expression, ParametricCfgAlignmentModel.TERMINAL);
-
-              newTerminalFactor.setWeight(terminalAssignment, entryProb);
-            }
+            
+            newTerminalFactor.setWeight(terminalAssignment, entryProb);
           }
         }
       }

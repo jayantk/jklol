@@ -4,9 +4,12 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder.LagrangianDecodingResult;
+import com.jayantkrish.jklol.cfg.CfgExpectation;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 
 public class LagrangianAlignmentTrainer {
   
@@ -23,7 +26,16 @@ public class LagrangianAlignmentTrainer {
       DiscreteFactor lexiconFactor) {
 
     SufficientStatistics parameters = initialParameters;
-    SufficientStatistics accumulator = pam.getNewSufficientStatistics();
+    SufficientStatistics nextParameters = pam.getNewSufficientStatistics();
+
+    TableFactorBuilder ruleBuilder = new TableFactorBuilder(
+        pam.getRuleFactor().getVars(), DenseTensorBuilder.getFactory());
+    TableFactorBuilder nonterminalBuilder = new TableFactorBuilder(
+        pam.getNonterminalFactor().getVars(), DenseTensorBuilder.getFactory());
+    TableFactorBuilder terminalBuilder = new TableFactorBuilder(
+        pam.getTerminalFactor().getVars(), DenseTensorBuilder.getFactory());
+    CfgExpectation accumulator = new CfgExpectation(ruleBuilder, nonterminalBuilder, terminalBuilder);
+
     LagrangianDecodingResult result = null;
     for (int i = 0; i < numIterations; i++) {
       CfgAlignmentModel model = pam.getModelFromParameters(parameters);
@@ -33,12 +45,16 @@ public class LagrangianAlignmentTrainer {
       
       // M-step
       accumulator.zeroOut();
-      accumulator.increment(smoothing, 1.0);
       for (CfgParseTree parse : result.getParseTrees()) {
-        pam.incrementSufficientStatistics(accumulator, parameters, parse, 1.0);
+        pam.incrementExpectations(accumulator, parse, 1.0);
       }
+
+      nextParameters.zeroOut();
+      nextParameters.increment(smoothing, 1.0);
+      pam.incrementSufficientStatistics(accumulator, nextParameters, parameters, 1.0);
+
       parameters.zeroOut();
-      parameters.increment(accumulator, 1.0);
+      parameters.increment(nextParameters, 1.0);
     }
     return new ParametersAndLagrangeMultipliers(parameters, result);
   }

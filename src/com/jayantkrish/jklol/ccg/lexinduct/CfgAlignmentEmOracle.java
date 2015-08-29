@@ -1,14 +1,17 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.cfg.CfgExpectation;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParser;
 import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.training.AbstractEmOracle;
+import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
+import com.jayantkrish.jklol.training.EmOracle;
 import com.jayantkrish.jklol.training.LogFunction;
 
-public class CfgAlignmentEmOracle extends AbstractEmOracle<CfgAlignmentModel, AlignmentExample>{
+public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, AlignmentExample, CfgExpectation, CfgExpectation>{
 
   private final ParametricCfgAlignmentModel pam;
   private final SufficientStatistics smoothing;
@@ -24,14 +27,20 @@ public class CfgAlignmentEmOracle extends AbstractEmOracle<CfgAlignmentModel, Al
   }
   
   @Override
-  public SufficientStatistics getInitialExpectationAccumulator() {
-    return pam.getNewSufficientStatistics();
+  public CfgExpectation getInitialExpectationAccumulator() {
+    TableFactorBuilder ruleBuilder = new TableFactorBuilder(
+        pam.getRuleFactor().getVars(), DenseTensorBuilder.getFactory());
+    TableFactorBuilder nonterminalBuilder = new TableFactorBuilder(
+        pam.getNonterminalFactor().getVars(), DenseTensorBuilder.getFactory());
+    TableFactorBuilder terminalBuilder = new TableFactorBuilder(
+        pam.getTerminalFactor().getVars(), DenseTensorBuilder.getFactory());
+    return new CfgExpectation(ruleBuilder, nonterminalBuilder, terminalBuilder);
   }
 
   @Override
-  public SufficientStatistics computeExpectations(CfgAlignmentModel model,
+  public CfgExpectation computeExpectations(CfgAlignmentModel model,
       SufficientStatistics currentParameters, AlignmentExample example,
-      SufficientStatistics accumulator, LogFunction log) {
+      CfgExpectation accumulator, LogFunction log) {
     log.startTimer("e_step/getCfg");
     CfgParser parser = model.getCfgParser(example);
     log.stopTimer("e_step/getCfg");
@@ -42,20 +51,25 @@ public class CfgAlignmentEmOracle extends AbstractEmOracle<CfgAlignmentModel, Al
     log.stopTimer("e_step/marginals");
 
     log.startTimer("e_step/compute_expectations");
-    pam.incrementSufficientStatistics(accumulator, currentParameters, chart, 1.0);
+    pam.incrementExpectations(accumulator, chart, 1.0);
     log.stopTimer("e_step/compute_expectations");
-
+    
     return accumulator;
   }
 
   @Override
-  public SufficientStatistics maximizeParameters(SufficientStatistics expectations,
+  public SufficientStatistics maximizeParameters(CfgExpectation expectations,
       SufficientStatistics currentParameters, LogFunction log) {
-
     SufficientStatistics aggregate = pam.getNewSufficientStatistics();
     aggregate.increment(smoothing, 1.0);
-    aggregate.increment(expectations, 1.0);
-    
+    pam.incrementSufficientStatistics(expectations, aggregate, currentParameters, 1.0);
     return aggregate;
+  }
+  
+  @Override
+  public CfgExpectation combineAccumulators(CfgExpectation accumulator1,
+      CfgExpectation accumulator2) {
+    accumulator1.increment(accumulator2);
+    return accumulator1;
   }
 }

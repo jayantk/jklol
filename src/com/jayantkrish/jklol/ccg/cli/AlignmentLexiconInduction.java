@@ -174,9 +174,12 @@ public class AlignmentLexiconInduction extends AbstractCli {
     PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
     for (AlignmentExample example : examples) {
       AlignedExpressionTree tree = model.getBestAlignment(example);
+      
+      System.out.println(tree);
 
       for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
         alignments.incrementOutcome(entry.getWords(), entry, 1);
+        System.out.println("   " + entry);
       }
     }
     return alignments;

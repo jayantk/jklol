@@ -158,12 +158,13 @@ public class LexiconInductionCrossValidation extends AbstractCli {
         trainingData.addAll(folds.get(j));
       }
 
-      String lexiconOutputFilename = outputDir + "/lexicon." + foldName + ".txt";
-      String alignmentModelOutputFilename = outputDir + "/alignment." + foldName + ".ser";
-      String parserModelOutputFilename = outputDir + "/parser." + foldName + ".ser";
+      String outputDirString = options.valueOf(outputDir);
+      String lexiconOutputFilename = outputDirString + "/lexicon." + foldName + ".txt";
+      String alignmentModelOutputFilename = outputDirString + "/alignment." + foldName + ".ser";
+      String parserModelOutputFilename = outputDirString + "/parser." + foldName + ".ser";
 
-      String trainingErrorOutputFilename = outputDir + "/training_error." + foldName + ".json";
-      String testErrorOutputFilename = outputDir + "/test_error." + foldName + ".json";
+      String trainingErrorOutputFilename = outputDirString + "/training_error." + foldName + ".json";
+      String testErrorOutputFilename = outputDirString + "/test_error." + foldName + ".json";
 
       SemanticParserLoss loss = runFold(trainingData, heldOut, options.valueOf(emIterations),
           options.valueOf(smoothingParam), options.valueOf(nGramLength), options.valueOf(parserIterations),

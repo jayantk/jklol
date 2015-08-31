@@ -8,6 +8,7 @@ import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.training.EmOracle;
 import com.jayantkrish.jklol.training.LogFunction;
 
@@ -31,9 +32,9 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
     TableFactorBuilder ruleBuilder = new TableFactorBuilder(
         pam.getRuleFactor().getVars(), DenseTensorBuilder.getFactory());
     TableFactorBuilder nonterminalBuilder = new TableFactorBuilder(
-        pam.getNonterminalFactor().getVars(), DenseTensorBuilder.getFactory());
+        pam.getNonterminalFactor().getVars(), SparseTensorBuilder.getFactory());
     TableFactorBuilder terminalBuilder = new TableFactorBuilder(
-        pam.getTerminalFactor().getVars(), DenseTensorBuilder.getFactory());
+        pam.getTerminalFactor().getVars(), SparseTensorBuilder.getFactory());
     return new CfgExpectation(ruleBuilder, nonterminalBuilder, terminalBuilder);
   }
 

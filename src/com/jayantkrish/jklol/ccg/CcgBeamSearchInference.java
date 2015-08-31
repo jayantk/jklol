@@ -75,8 +75,7 @@ public class CcgBeamSearchInference implements CcgInference {
   @Override
   public CcgParse getBestConditionalParse(CcgParser parser, AnnotatedSentence sentence,
       ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
-      LexiconEntryLabels lexiconEntries, Set<DependencyStructure> observedDependencies,
-      Expression2 observedLogicalForm) {
+      Set<DependencyStructure> observedDependencies, Expression2 observedLogicalForm) {
 
     List<CcgParse> possibleParses = null;
     ChartCost syntacticCost = null;
@@ -84,9 +83,6 @@ public class CcgBeamSearchInference implements CcgInference {
     if (observedSyntacticTree != null) {
       syntacticCost = SyntacticChartCost.createAgreementCost(observedSyntacticTree);
     } 
-    if (lexiconEntries != null) {
-      lexiconCost = new LexiconChartCost(lexiconEntries);
-    }
     
     ChartCost conditionalChartFilter = SumChartCost.create(searchFilter, chartFilter,
         syntacticCost, lexiconCost);

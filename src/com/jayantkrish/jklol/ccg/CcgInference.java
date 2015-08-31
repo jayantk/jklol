@@ -39,13 +39,11 @@ public interface CcgInference {
    * @param chartFilter
    * @param log
    * @param observedSyntacticTree
-   * @param lexiconEntries
    * @param observedDependencies
    * @param observedLogicalForm
    * @return
    */
   public CcgParse getBestConditionalParse(CcgParser parser, AnnotatedSentence sentence,
       ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
-      LexiconEntryLabels lexiconEntries, Set<DependencyStructure> observedDependencies,
-      Expression2 observedLogicalForm);
+      Set<DependencyStructure> observedDependencies, Expression2 observedLogicalForm);
 }

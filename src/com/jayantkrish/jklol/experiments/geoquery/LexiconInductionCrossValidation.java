@@ -21,7 +21,6 @@ import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
-import com.jayantkrish.jklol.ccg.LexiconEntryLabels;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.cli.AlignmentLexiconInduction;
 import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
@@ -246,7 +245,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     // IoUtils.serializeObjectToFile(model, alignmentModelOutputFilename);
     
     // Initialize CCG parser components.
-    List<CcgExample> ccgTrainingExamples = alignmentExamplesToCcgExamples(trainingData, null);
+    List<CcgExample> ccgTrainingExamples = alignmentExamplesToCcgExamples(trainingData);
     List<String> ruleEntries = Arrays.asList("\"DUMMY{0} DUMMY{0}\",\"(lambda $L $L)\"");
 
     FeatureVectorGenerator<StringContext> featureGen = getCcgFeatureFactory(ccgTrainingExamples);
@@ -274,7 +273,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
         inferenceAlgorithm, simplifier, comparator, trainingExampleLosses);
     SemanticParserExampleLoss.writeJsonToFile(trainingErrorOutputFilename, trainingExampleLosses);
 
-    List<CcgExample> ccgTestExamples = alignmentExamplesToCcgExamples(testData, null);
+    List<CcgExample> ccgTestExamples = alignmentExamplesToCcgExamples(testData);
     ccgTestExamples = featurizeExamples(ccgTestExamples, featureGen);
     List<SemanticParserExampleLoss> testExampleLosses = Lists.newArrayList();    
     SemanticParserLoss testLoss = SemanticParserUtils.testSemanticParser(ccgTestExamples, ccgParser,
@@ -410,7 +409,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   }
 
   public static List<CcgExample> alignmentExamplesToCcgExamples(
-      List<AlignmentExample> alignmentExamples, CfgAlignmentModel model) {
+      List<AlignmentExample> alignmentExamples) {
     // Convert data to CCG training data.
     List<CcgExample> ccgExamples = Lists.newArrayList();
     for (AlignmentExample example : alignmentExamples) {
@@ -418,14 +417,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
       AnnotatedSentence supertaggedSentence = new AnnotatedSentence(words, posTags);
 
-      LexiconEntryLabels ccgLexiconEntries = null;
-      if (model != null) {
-        AlignedExpressionTree tree = model.getBestAlignment(example);
-        ccgLexiconEntries = tree.getLexiconEntryLabels(example);
-      }
-
       ccgExamples.add(new CcgExample(supertaggedSentence, null, null,
-          example.getTree().getExpression(), ccgLexiconEntries));
+          example.getTree().getExpression()));
     }
     return ccgExamples;
   }
@@ -446,7 +439,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       AnnotatedSentence annotatedSentence = sentence.addAnnotation(FEATURE_ANNOTATION_NAME, annotation);
       
       newExamples.add(new CcgExample(annotatedSentence, example.getDependencies(),
-          example.getSyntacticParse(), example.getLogicalForm(), example.getLexiconEntries()));
+          example.getSyntacticParse(), example.getLogicalForm()));
     }
     return newExamples;
   }

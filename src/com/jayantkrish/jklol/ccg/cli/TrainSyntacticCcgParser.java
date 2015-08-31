@@ -306,7 +306,7 @@ public class TrainSyntacticCcgParser extends AbstractCli {
           SUPERTAG_ANNOTATION_NAME, taggedSentence.getAnnotation());
 
       return new CcgExample(annotatedSentence, item.getDependencies(), item.getSyntacticParse(),
-          item.getLogicalForm(), null);
+          item.getLogicalForm());
     }
   }
 }

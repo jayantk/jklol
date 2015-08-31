@@ -60,7 +60,7 @@ public class SemanticParserUtils {
         }
         
         CcgParse conditionalParse = inferenceAlg.getBestConditionalParse(parser,
-            example.getSentence(), null, log, null, null, null, correctLf);
+            example.getSentence(), null, log, null, null, correctLf);
         if (conditionalParse != null) {
           correctLfPossible = 1;
         }

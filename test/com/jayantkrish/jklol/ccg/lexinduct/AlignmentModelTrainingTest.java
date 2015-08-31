@@ -15,7 +15,6 @@ import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder.LagrangianDecodingResult;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer.ParametersAndLagrangeMultipliers;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
-import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
@@ -63,37 +62,6 @@ public class AlignmentModelTrainingTest extends TestCase {
       examples.add(new AlignmentExample(words, tree));
     }
     return examples;
-  }
-
-  public void testTrainingSimple() {
-    ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(examples, true, false, featureGenerator);
-
-    SufficientStatistics smoothing = pam.getNewSufficientStatistics();
-    smoothing.increment(0.1);
-
-    SufficientStatistics initial = pam.getNewSufficientStatistics();
-    initial.increment(1);
-
-    ExpectationMaximization em = new ExpectationMaximization(30, new DefaultLogFunction());
-    /*
-    SufficientStatistics trainedParameters = em.train(new AlignmentEmOracle(pam, new JunctionTree(), smoothing),
-        initial, examples);
-
-    // TODO: put in an actual test here.
-    System.out.println(pam.getParameterDescription(trainedParameters, 30));
-    */
-
-    pam = pam.updateUseTreeConstraint(true);
-    SufficientStatistics trainedParameters2 = em.train(new AlignmentEmOracle(pam, new JunctionTree(), smoothing, true),
-        initial, examples);
-    
-    // TODO: put in an actual test here.
-    System.out.println(pam.getParameterDescription(trainedParameters2, 30));
-    AlignmentModel model = pam.getModelFromParameters(trainedParameters2);
-    for (AlignmentExample example : examples) {
-      System.out.println(example.getWords());
-      System.out.println(model.getBestAlignment(example));
-    }
   }
 
   public void testTrainingCfg() {

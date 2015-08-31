@@ -11,7 +11,6 @@ import com.jayantkrish.jklol.ccg.chart.SumChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
-import com.jayantkrish.jklol.ccg.lexinduct.LexiconChartCost;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
@@ -85,9 +84,6 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     ChartCost lexiconCost = null;
     if (example.hasSyntacticParse()) {
       syntacticCost = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
-    }
-    if (example.hasLexiconEntries()) {
-      lexiconCost = new LexiconChartCost(example.getLexiconEntries());
     }
     ChartCost cost = SumChartCost.create(syntacticCost, lexiconCost);
 

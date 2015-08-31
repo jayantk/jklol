@@ -167,8 +167,7 @@ public class CcgParserUtils {
     @Override
     public SufficientStatistics reduce(CcgExample example, SufficientStatistics featureCounts) {
       CcgParse bestParse = inference.getBestConditionalParse(parser, example.getSentence(), null,
-          log, example.getSyntacticParse(), example.getLexiconEntries(),
-          example.getDependencies(), example.getLogicalForm());
+          log, example.getSyntacticParse(), example.getDependencies(), example.getLogicalForm());
 
       if (bestParse != null) {
         ccgFamily.incrementSufficientStatistics(featureCounts, parserZeroParameters,

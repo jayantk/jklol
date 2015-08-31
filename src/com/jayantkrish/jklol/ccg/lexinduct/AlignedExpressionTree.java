@@ -14,7 +14,6 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
-import com.jayantkrish.jklol.ccg.LexiconEntryLabels;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -140,35 +139,6 @@ public class AlignedExpressionTree {
       left.getWordAlignmentsHelper(map);
       right.getWordAlignmentsHelper(map);
     }
-  }
-
-  public LexiconEntryLabels getLexiconEntryLabels(AlignmentExample example) {
-    Multimap<List<String>, AlignedExpression> alignments = getWordAlignments();
-    List<Integer> spanStarts = Lists.newArrayList();
-    List<Integer> spanEnds = Lists.newArrayList();
-    List<Expression2> lexiconEntries = Lists.newArrayList();
-    for (AlignedExpression alignedExp : alignments.values()) {
-      spanStarts.add(alignedExp.getSpanStart());
-      spanEnds.add(alignedExp.getSpanEnd() - 1);
-      lexiconEntries.add(alignedExp.getExpression());
-    }
-
-    for (int j = 0; j < example.getWords().size(); j++) {
-      boolean mapped = false;
-      for (int i = 0; i < spanStarts.size(); i++) {
-        if (j >= spanStarts.get(i) && j <= spanEnds.get(i)) {
-          mapped = true;
-          break;
-        }
-      }
-
-      if (!mapped) {
-        spanStarts.add(j);
-        spanEnds.add(j);
-      }
-    }
-
-    return new LexiconEntryLabels(Ints.toArray(spanStarts), Ints.toArray(spanEnds), lexiconEntries);
   }
 
   public List<LexiconEntry> generateLexiconEntries(Map<String, String> typeReplacements) {

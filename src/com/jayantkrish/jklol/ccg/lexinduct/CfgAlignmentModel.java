@@ -37,8 +37,8 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
   private final int nGramLength;
   
   public CfgAlignmentModel(DiscreteFactor nonterminalFactor, DiscreteFactor terminalFactor,
-      VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar, VariableNumMap parentVar,
-      VariableNumMap ruleVar, int nGramLength) {
+      VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar,
+      VariableNumMap parentVar, VariableNumMap ruleVar, int nGramLength) {
     this.nonterminalFactor = Preconditions.checkNotNull(nonterminalFactor);
     Preconditions.checkArgument(nonterminalFactor.getVars().equals(
         VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar)));

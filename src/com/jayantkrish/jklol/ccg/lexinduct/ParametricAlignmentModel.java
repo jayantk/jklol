@@ -10,7 +10,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
-import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.inference.MarginalSet;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.ObjectVariable;
@@ -21,7 +20,6 @@ import com.jayantkrish.jklol.models.dynamic.DynamicFactorGraph;
 import com.jayantkrish.jklol.models.dynamic.VariableNumPattern;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
-import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
@@ -30,7 +28,6 @@ import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.training.NullLogFunction;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Model family for a word alignment-based lexicon induction 
@@ -210,7 +207,7 @@ public class ParametricAlignmentModel implements ParametricFamily<AlignmentModel
       // over words, but it should be a conditional distribution given
       // the sentence.
       DiscreteLogLinearFactor wordFactor = DiscreteLogLinearFactor.createIndicatorFactor(wordVarPattern);
-      LogLinearCptFactor wrapperFactor = new LogLinearCptFactor(wordFactor,
+      LogLinearCptFactor wrapperFactor = new LogLinearCptFactor(wordFactor, VariableNumMap.EMPTY,
           new Lbfgs(20, 20, 1.0, new NullLogFunction()));
       
       builder.addFactor("word-factor", wrapperFactor,

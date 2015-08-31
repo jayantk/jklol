@@ -59,9 +59,6 @@ public class FactorLoglikelihoodOracleTest extends TestCase {
     Factor predictedMarginal = predicted.product(predicted.marginalize(var0).inverse());
     Factor targetMarginal = target2.product(target2.marginalize(var0).inverse());
 
-    System.out.println(predictedMarginal.getParameterDescription());
-    System.out.println(targetMarginal.getParameterDescription());
-
     // Difference between the weights should be very close to 0
     double delta = predictedMarginal.add(targetMarginal.product(-1.0)).getTotalUnnormalizedProbability();
     assertEquals(0.0, delta, 0.01);

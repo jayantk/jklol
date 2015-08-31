@@ -62,17 +62,19 @@ public class FactorLoglikelihoodOracle implements GradientOracle<Factor, Void> {
       double count = targetPartitionFunction;
       log.stopTimer("gradient/condition");
 
-      log.startTimer("gradient/increment");
-      family.incrementSufficientStatisticsFromMarginal(gradient, currentParameters,
-          predictedConditional, a, -1.0 * count, predictedPartitionFunction);
-      family.incrementSufficientStatisticsFromMarginal(gradient, currentParameters,
-          targetConditional, a, count, targetPartitionFunction);
-      log.stopTimer("gradient/increment");
+      if (targetPartitionFunction > 0.0) {
+        log.startTimer("gradient/increment");
+        family.incrementSufficientStatisticsFromMarginal(gradient, currentParameters,
+            predictedConditional, a, -1.0 * count, predictedPartitionFunction);
+        family.incrementSufficientStatisticsFromMarginal(gradient, currentParameters,
+            targetConditional, a, count, targetPartitionFunction);
+        log.stopTimer("gradient/increment");
+        
+        Tensor logProbs = predictedConditional.getWeights()
+            .elementwiseProduct(1.0 / predictedPartitionFunction).elementwiseLog();
 
-      Tensor logProbs = predictedConditional.getWeights()
-          .elementwiseProduct(1.0 / predictedPartitionFunction).elementwiseLog();
-
-      logProb += logProbs.innerProduct(targetConditional.getWeights()).getByDimKey();
+        logProb += logProbs.innerProduct(targetConditional.getWeights()).getByDimKey();
+      }
     }
     return logProb;
   }

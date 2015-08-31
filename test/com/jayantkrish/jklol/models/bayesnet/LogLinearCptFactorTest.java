@@ -38,7 +38,7 @@ public class LogLinearCptFactorTest extends TestCase {
     
     DiscreteLogLinearFactor factor = DiscreteLogLinearFactor.createIndicatorFactor(vars); 
     
-    f = new LogLinearCptFactor(factor, new Lbfgs(10, 10, 0.0001, new DefaultLogFunction()));
+    f = new LogLinearCptFactor(factor, VariableNumMap.EMPTY, new Lbfgs(10, 10, 0.0001, new DefaultLogFunction()));
 
     assignments = Lists.newArrayList(); 
     for (int i = 0; i < assignmentArray.length; i++) {

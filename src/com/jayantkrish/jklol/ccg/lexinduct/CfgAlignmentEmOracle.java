@@ -1,15 +1,24 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
+import java.util.Arrays;
+
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.cfg.CfgExpectation;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParser;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
+import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
+import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.EmOracle;
+import com.jayantkrish.jklol.training.FactorLoglikelihoodOracle;
+import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.training.LogFunction;
 
 public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, AlignmentExample, CfgExpectation, CfgExpectation>{
@@ -61,10 +70,36 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
   @Override
   public SufficientStatistics maximizeParameters(CfgExpectation expectations,
       SufficientStatistics currentParameters, LogFunction log) {
-    SufficientStatistics aggregate = pam.getNewSufficientStatistics();
-    aggregate.increment(smoothing, 1.0);
-    pam.incrementSufficientStatistics(expectations, aggregate, currentParameters, 1.0);
-    return aggregate;
+    if (pam.isLoglinear()) {
+      DiscreteFactor ruleTarget = expectations.getRuleBuilder().build();
+      ParametricFactor ruleFamily = pam.getRuleFactor();
+      SufficientStatistics ruleParameters = trainFamily(ruleFamily, ruleTarget, pam.getNonterminalVar());
+
+      DiscreteFactor nonterminalTarget = expectations.getNonterminalBuilder().build();
+      ParametricFactor nonterminalFamily = pam.getNonterminalFactor();
+      SufficientStatistics nonterminalParameters = trainFamily(nonterminalFamily, nonterminalTarget,
+          pam.getNonterminalVar().union(pam.getRuleVar()));
+
+      DiscreteFactor terminalTarget = expectations.getTerminalBuilder().build();
+      ParametricFactor terminalFamily = pam.getTerminalFactor();
+      SufficientStatistics terminalParameters = trainFamily(terminalFamily, terminalTarget,
+          pam.getNonterminalVar().union(pam.getRuleVar()));
+
+      return new ListSufficientStatistics(Arrays.asList("rules", "nonterminals", "terminals"),
+          Arrays.asList(ruleParameters, nonterminalParameters, terminalParameters));
+    } else {
+      SufficientStatistics aggregate = pam.getNewSufficientStatistics();
+      aggregate.increment(smoothing, 1.0);
+      pam.incrementSufficientStatistics(expectations, aggregate, currentParameters, 1.0);
+      return aggregate;
+    }
+  }
+  
+  private static SufficientStatistics trainFamily(ParametricFactor family, Factor target,
+      VariableNumMap conditionalVars) {
+    Lbfgs lbfgs = new Lbfgs(100, 10, 0.01, new DefaultLogFunction(1, false));
+    FactorLoglikelihoodOracle oracle = new FactorLoglikelihoodOracle(family, target, conditionalVars);
+    return lbfgs.train(oracle, family.getNewSufficientStatistics(), Arrays.asList((Void) null));
   }
   
   @Override

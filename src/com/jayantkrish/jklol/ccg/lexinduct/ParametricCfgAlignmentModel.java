@@ -21,6 +21,7 @@ import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.bayesnet.SparseCptTableFactor;
+import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -43,6 +44,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   private final VariableNumMap ruleVar;
   
   private final int nGramLength;
+  private final boolean loglinear;
 
   public static final String TERMINAL = "terminal";
   public static final String FORWARD_APPLICATION = "fa";
@@ -52,7 +54,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
 
   public ParametricCfgAlignmentModel(ParametricFactor ruleFactor, ParametricFactor nonterminalFactor,
       ParametricFactor terminalFactor, VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar,
-      VariableNumMap parentVar, VariableNumMap ruleVar, int nGramLength) {
+      VariableNumMap parentVar, VariableNumMap ruleVar, int nGramLength, boolean loglinear) {
     this.ruleFactor = Preconditions.checkNotNull(ruleFactor);
     this.nonterminalFactor = Preconditions.checkNotNull(nonterminalFactor);
     this.terminalFactor = Preconditions.checkNotNull(terminalFactor);
@@ -64,22 +66,23 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     this.ruleVar = Preconditions.checkNotNull(ruleVar);
     
     this.nGramLength = nGramLength;
+    this.loglinear = loglinear;
   }
 
   public static ParametricCfgAlignmentModel buildAlignmentModelWithNGrams(
       Collection<AlignmentExample> examples, FeatureVectorGenerator<Expression2> featureVectorGenerator,
-      int nGramLength, boolean discriminative) {
+      int nGramLength, boolean discriminative, boolean loglinear) {
     Set<List<String>> terminalVarValues = Sets.newHashSet();
     for (AlignmentExample example : examples) {
       terminalVarValues.addAll(example.getNGrams(nGramLength));
     }
     return buildAlignmentModel(examples, featureVectorGenerator, terminalVarValues,
-        discriminative);
+        discriminative, loglinear);
   }
 
   public static ParametricCfgAlignmentModel buildAlignmentModel(Collection<AlignmentExample> examples,
       FeatureVectorGenerator<Expression2> featureVectorGenerator, Set<List<String>> terminalVarValues,
-      boolean discriminative) {
+      boolean discriminative, boolean loglinear) {
     Set<ExpressionNode> expressions = Sets.newHashSet();
     expressions.add(SKIP_EXPRESSION);
 
@@ -106,11 +109,6 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     VariableNumMap parentVar = VariableNumMap.singleton(3, "parent", expressionVarType);
     VariableNumMap ruleVar = VariableNumMap.singleton(4, "rule", ruleVarType);
     
-    // Probability distribution over the different CFG rule types
-    CptTableFactor ruleFactor = new CptTableFactor(parentVar, ruleVar);
-    // ParametricFactor ruleFactor = new ConstantParametricFactor(parentVar.union(ruleVar),
-    // TableFactor.unity(parentVar.union(ruleVar)));
-
     VariableNumMap nonterminalVars = VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar);
     TableFactor ones = TableFactor.logUnity(nonterminalVars);
     TableFactorBuilder nonterminalBuilder = new TableFactorBuilder(nonterminalVars,
@@ -126,18 +124,31 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     DiscreteFactor constantFactor = TableFactor.zero(VariableNumMap.unionAll(terminalVar, parentVar, ruleVar));
 
     // Learn the nonterminal probabilities
+    ParametricFactor ruleFactor = null;
     ParametricFactor nonterminalFactor = null;
     ParametricFactor terminalFactor = null;
-    if (!discriminative) {
+    if (!discriminative) {      
       // Maximize P(word | logical form). This works better.
-      nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
-          leftVar.union(rightVar), nonterminalSparsityFactor, nonterminalConstantFactor);
-      terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
-          terminalVar, sparsityFactor, constantFactor);
+      if (loglinear) {
+        ruleFactor = IndicatorLogLinearFactor.createDenseFactor(parentVar.union(ruleVar));
+        nonterminalFactor = new IndicatorLogLinearFactor(nonterminalVars, nonterminalSparsityFactor);
+        terminalFactor = new IndicatorLogLinearFactor(sparsityFactor.getVars(), sparsityFactor);
+      } else {
+        ruleFactor = new CptTableFactor(parentVar, ruleVar);
+        nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
+            leftVar.union(rightVar), nonterminalSparsityFactor, nonterminalConstantFactor);
+        terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
+            terminalVar, sparsityFactor, constantFactor);
+      }
     } else {
+      // Probability distribution over the different CFG rule types
       // Assign all binary rules probability 1
       nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
-      // Maximize P(logical form | word)
+      // Constant probability of invoking a rule or not.
+      ruleFactor = new ConstantParametricFactor(parentVar.union(ruleVar),
+          TableFactor.unity(parentVar.union(ruleVar)));
+
+      // Maximize P(logical form | word) for the terminals.
       terminalFactor = new SparseCptTableFactor(terminalVar.union(ruleVar),
           parentVar, sparsityFactor, constantFactor);
     }
@@ -154,11 +165,19 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
         */
 
     return new ParametricCfgAlignmentModel(ruleFactor, nonterminalFactor, terminalFactor,
-        terminalVar, leftVar, rightVar, parentVar, ruleVar, nGramLength);
+        terminalVar, leftVar, rightVar, parentVar, ruleVar, nGramLength, loglinear);
+  }
+
+  public boolean isLoglinear() {
+    return loglinear;
   }
 
   public VariableNumMap getNonterminalVar() {
     return parentVar;
+  }
+  
+  public VariableNumMap getRuleVar() {
+    return ruleVar;
   }
 
   public VariableNumMap getTerminalVar() {
@@ -188,12 +207,24 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   public CfgAlignmentModel getModelFromParameters(SufficientStatistics parameters) {
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
 
-    DiscreteFactor rules = ruleFactor.getModelFromParameters(parameterList.get(0)).coerceToDiscrete();
+    DiscreteFactor rules = ruleFactor.getModelFromParameters(parameterList.get(0))
+        .coerceToDiscrete();
     DiscreteFactor ntf = nonterminalFactor.getModelFromParameters(parameterList.get(1))
-        .coerceToDiscrete().product(rules);
+        .coerceToDiscrete();
     DiscreteFactor tf = terminalFactor.getModelFromParameters(parameterList.get(2))
-        .coerceToDiscrete().product(rules);
+        .coerceToDiscrete();
 
+    if (loglinear) {
+      // Normalize each distribution.
+      rules = rules.product(rules.marginalize(ruleVar).inverse());
+      ntf = ntf.product(ntf.marginalize(ruleVar.union(parentVar)).inverse());
+      tf = tf.product(tf.marginalize(ruleVar.union(parentVar)).inverse());
+    }
+    
+    // Incorporate the conditional probabilities of choosing terminals vs. nonterminals.
+    ntf = ntf.product(rules);
+    tf = tf.product(rules);
+    
     return new CfgAlignmentModel(ntf, tf, terminalVar, leftVar, rightVar, parentVar, ruleVar,
         nGramLength);
   }

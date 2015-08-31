@@ -307,7 +307,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     terminalVarValues.addAll(attestedEntityNames);
 
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModel(
-        trainingData, vectorGenerator, terminalVarValues, discriminative);
+        trainingData, vectorGenerator, terminalVarValues, discriminative, false);
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(smoothingAmount);
 

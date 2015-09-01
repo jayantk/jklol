@@ -15,11 +15,11 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
-import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.EmOracle;
 import com.jayantkrish.jklol.training.FactorLoglikelihoodOracle;
 import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.NullLogFunction;
 
 public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, AlignmentExample, CfgExpectation, CfgExpectation>{
 
@@ -97,7 +97,7 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
   
   private static SufficientStatistics trainFamily(ParametricFactor family, Factor target,
       VariableNumMap conditionalVars) {
-    Lbfgs lbfgs = new Lbfgs(100, 10, 0.01, new DefaultLogFunction(1, false));
+    Lbfgs lbfgs = new Lbfgs(100, 10, 0.01, new NullLogFunction());
     FactorLoglikelihoodOracle oracle = new FactorLoglikelihoodOracle(family, target, conditionalVars);
     return lbfgs.train(oracle, family.getNewSufficientStatistics(), Arrays.asList((Void) null));
   }

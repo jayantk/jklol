@@ -66,7 +66,7 @@ public class AlignmentModelTrainingTest extends TestCase {
 
   public void testTrainingCfg() {
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
-        examples, featureGenerator, 1, false, true);
+        examples, featureGenerator, 1, false, false);
 
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(0.1);
@@ -87,6 +87,28 @@ public class AlignmentModelTrainingTest extends TestCase {
     }
   }
   
+  public void testTrainingCfgLoglinear() {
+    ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
+        examples, featureGenerator, 1, false, true);
+
+    SufficientStatistics smoothing = pam.getNewSufficientStatistics();
+    smoothing.increment(0.1);
+
+    SufficientStatistics initial = pam.getNewSufficientStatistics();
+
+    ExpectationMaximization em = new ExpectationMaximization(30, new DefaultLogFunction());
+    SufficientStatistics trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, smoothing),
+        initial, examples);
+
+    // TODO: put in an actual test here.
+    System.out.println(pam.getParameterDescription(trainedParameters2, 30));
+    CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters2);
+    for (AlignmentExample example : examples) {
+      System.out.println(example.getWords());
+      System.out.println(model.getBestAlignment(example));
+    }
+  }
+
   public void testLagrangianRelaxationTraining() {
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
         examples, featureGenerator, 1, false, false);

@@ -147,12 +147,15 @@ public class AlignmentLexiconInduction extends AbstractCli {
     for (AlignmentExample example : examples) {
       AlignedExpressionTree tree = model.getBestAlignment(example);
       
+      System.out.println(example.getWords());
       System.out.println(tree);
 
       for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
         alignments.incrementOutcome(entry.getWords(), entry, 1);
         System.out.println("   " + entry);
       }
+      System.out.println("");
+
     }
     return alignments;
   }

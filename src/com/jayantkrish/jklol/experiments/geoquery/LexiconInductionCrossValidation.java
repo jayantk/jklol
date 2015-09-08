@@ -306,7 +306,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     terminalVarValues.addAll(attestedEntityNames);
 
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModel(
-        trainingData, vectorGenerator, terminalVarValues, discriminative, false);
+        trainingData, vectorGenerator, terminalVarValues, discriminative, true);
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(smoothingAmount);
 
@@ -319,6 +319,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing),
           initial, trainingData);
 
+      System.out.println(pam.getParameterDescription(trainedParameters));
+      
       CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
 
       return AlignmentLexiconInduction.generateLexiconFromAlignmentModel(model, trainingData, typeReplacements);

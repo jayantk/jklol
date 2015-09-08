@@ -153,10 +153,20 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   public Tensor elementwiseLog() {
     return logWeights;
   }
+  
+  @Override
+  public Tensor elementwiseLogSparse() {
+    return elementwiseLog();
+  }
 
   @Override
   public Tensor elementwiseExp() {
     return new LogSpaceTensorAdapter(logWeights.elementwiseExp());
+  }
+  
+  @Override
+  public Tensor elementwiseExpSparse() {
+    return elementwiseExp();
   }
   
   @Override

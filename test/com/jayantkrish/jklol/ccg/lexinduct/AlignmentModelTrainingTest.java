@@ -26,12 +26,23 @@ import com.jayantkrish.jklol.training.ExpectationMaximization;
 
 public class AlignmentModelTrainingTest extends TestCase {
 
-  String[][] dataSet1 = new String[][] {{"plano in texas", "(in plano texas)"},
-      {"what plano in us", "(in plano us)"},
-      {"texas in us", "(in texas us)"},
-      {"us in plano", "(in us plano)"},
-      {"what texas borders plano", "(border texas plano)"},
-      {"cities in texas", "(lambda x (and (city x) (in x texas)))"}};
+  /*
+  String[][] dataSet1 = new String[][] {{"is plano in texas", "(in:<e,<e,t>> plano:e texas:e)"},
+//      {"what plano in us", "(in:<e,<e,t>> plano:e us:e)"},
+//      {"texas in us", "(in:<e,<e,t>> texas:e us:e)"},
+//      {"us in plano", "(in:<e,<e,t>> us:e plano:e)"},
+      {"does texas border plano ?", "(border:<e,<e,t>> texas:e plano:e)"},
+//      {"cities in texas", "(lambda x (and:<t*,t> (city:<e,t> x) (in:<e,<e,t>> x texas:e)))"}
+      };
+      */
+  
+  String[][] dataSet1 = new String[][] {{"in plano texas", "(in:<e,<e,t>> plano:e texas:e)"},
+      {"in plano texas", "(in:<e,<e,t>> plano:e texas:e)"},
+      {"border texas does plano ?", "(border:<e,<e,t>> texas:e plano:e)"},
+      {"border texas plano ?", "(border:<e,<e,t>> texas:e plano:e)"},
+      {"plano", "plano:e"},
+      {"texas", "texas:e"},
+  };
 
   VariableNumMap wordVarPattern, expressionVarPattern;
   
@@ -74,7 +85,7 @@ public class AlignmentModelTrainingTest extends TestCase {
     SufficientStatistics initial = pam.getNewSufficientStatistics();
     initial.increment(1);
 
-    ExpectationMaximization em = new ExpectationMaximization(30, new DefaultLogFunction());
+    ExpectationMaximization em = new ExpectationMaximization(1, new DefaultLogFunction());
     SufficientStatistics trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, smoothing),
         initial, examples);
 

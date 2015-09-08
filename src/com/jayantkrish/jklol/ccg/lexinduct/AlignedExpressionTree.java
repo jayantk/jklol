@@ -21,6 +21,7 @@ import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 
 public class AlignedExpressionTree {
   private final Expression2 expression;
+  private final Type type;
 
   // Number of arguments of expression that get
   // applied in this tree.
@@ -42,10 +43,11 @@ public class AlignedExpressionTree {
   // The words are consecutive in the sentence.
   private final List<String> words;
 
-  private AlignedExpressionTree(Expression2 expression, int numAppliedArguments,
+  private AlignedExpressionTree(Expression2 expression, Type type, int numAppliedArguments,
       int[] possibleSpanStarts, int[] possibleSpanEnds, AlignedExpressionTree left,
       AlignedExpressionTree right, List<String> words) {
     this.expression = Preconditions.checkNotNull(expression);
+    this.type = Preconditions.checkNotNull(type);
     this.numAppliedArguments = numAppliedArguments;
     Preconditions.checkArgument(possibleSpanStarts.length == possibleSpanEnds.length);
     this.possibleSpanStarts = possibleSpanStarts;
@@ -59,14 +61,14 @@ public class AlignedExpressionTree {
     this.words = words;
   }
 
-  public static AlignedExpressionTree forTerminal(Expression2 expression, int numAppliedArguments,
-      int[] possibleSpanStarts, int[] possibleSpanEnds, List<String> words) {
-    return new AlignedExpressionTree(expression, numAppliedArguments, 
+  public static AlignedExpressionTree forTerminal(Expression2 expression, Type type,
+      int numAppliedArguments, int[] possibleSpanStarts, int[] possibleSpanEnds, List<String> words) {
+    return new AlignedExpressionTree(expression, type, numAppliedArguments, 
         possibleSpanStarts, possibleSpanEnds, null, null, words);
   }
 
-  public static AlignedExpressionTree forNonterminal(Expression2 expression, int numAppliedArguments,
-      AlignedExpressionTree left, AlignedExpressionTree right) {
+  public static AlignedExpressionTree forNonterminal(Expression2 expression, Type type,
+      int numAppliedArguments, AlignedExpressionTree left, AlignedExpressionTree right) {
 
     List<Integer> spanStarts = Lists.newArrayList();
     List<Integer> spanEnds = Lists.newArrayList();
@@ -85,7 +87,7 @@ public class AlignedExpressionTree {
       }
     }
 
-    return new AlignedExpressionTree(expression, numAppliedArguments, Ints.toArray(spanStarts),
+    return new AlignedExpressionTree(expression, type, numAppliedArguments, Ints.toArray(spanStarts),
         Ints.toArray(spanEnds), left, right, null);
   }
 
@@ -279,6 +281,8 @@ public class AlignedExpressionTree {
       sb.append(" ");
     }
     sb.append(tree.expression);
+    sb.append(" : ");
+    sb.append(tree.type);
     sb.append(" ");
     sb.append(tree.numAppliedArguments);
     sb.append(" ");

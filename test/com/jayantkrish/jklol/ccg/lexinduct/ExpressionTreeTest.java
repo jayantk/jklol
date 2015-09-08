@@ -8,11 +8,12 @@ import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 public class ExpressionTreeTest extends TestCase {
   
   String[] expressionStrings = new String[] {
-      "(lambda $0 (lambda $1 (and:<t*,t> (state:<s,t> $1) (next_to:<lo,<lo,t>> $0 $1))))",
-      "(lambda $0 (lambda $1 (and:<t*,t> (state:<s,t> $1) (next_to:<lo,<lo,t>> $0 texas:s))))",
-      "(lambda $0 (and:<t*,t> (major:<lo,t> $0) (river:<r,t> $0) (loc:<lo,<lo,t>> $0 texas:s)))",
+      "(lambda $0 (lambda $1 (and:<t*,t> (state:<lo,t> $1) (next_to:<lo,<lo,t>> $0 $1))))",
+      "(lambda $0 (lambda $1 (and:<t*,t> (state:<lo,t> $1) (next_to:<lo,<lo,t>> $0 texas:lo))))",
+      "(lambda $0 (and:<t*,t> (major:<lo,t> $0) (river:<lo,t> $0) (loc:<lo,<lo,t>> $0 texas:lo)))",
+      "(count:<<e,t>,i> (lambda $0 (and:<t*,t> (state:<s,t> $0) (exists:<<e,t>,t> (lambda $1 (and:<t*,t> (city:<c,t> $1) (named:<e,<n,t>> $1 springfield:n) (loc:<lo,<lo,t>> $1 $0)))))))",
   };
-  
+
   Expression2[] expressions = new Expression2[expressionStrings.length];
   
   public void setUp() {
@@ -36,5 +37,11 @@ public class ExpressionTreeTest extends TestCase {
     System.out.println(tree);
 
     assertTrue(tree.size() > 1);
+  }
+  
+  public void testAnd3() {
+    ExpressionTree tree = ExpressionTree.fromExpression(expressions[3]);
+    
+    System.out.println(tree);
   }
 }

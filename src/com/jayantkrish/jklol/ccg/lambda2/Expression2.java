@@ -236,17 +236,35 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
    * @return
    */
   public boolean hasSubexpression(Expression2 subexpression) {
-    if (this.equals(subexpression)) {
-      return true;
+    return find(subexpression) >= 0;
+  }
+  
+  /**
+   * Returns the index of the first occurrence of {@code expression}
+   * within {@code this} expression. Returns -1 if {@code expression}
+   * is not found.
+   * 
+   * @param expression
+   * @return
+   */
+  public int find(Expression2 expression) {
+    return findHelper(expression, 0);
+  }
+  
+  private int findHelper(Expression2 expression, int index) {
+    if (this.equals(expression)) {
+      return index;
     } else if (this.isConstant()) {
-      return false;
+      return -1;
     } else {
-      for (Expression2 sub : subexpressions) {
-        if (sub.hasSubexpression(subexpression)) {
-          return true;
+      int[] childIndexes = getChildIndexes(0);
+      for (int i = 0; i < subexpressions.size(); i++) {
+        int subexpressionIndex = subexpressions.get(i).findHelper(expression, childIndexes[i]);
+        if (subexpressionIndex >= 0) {
+          return subexpressionIndex;
         }
       }
-      return false;
+      return -1;
     }
   }
 

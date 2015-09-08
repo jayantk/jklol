@@ -7,7 +7,6 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
@@ -95,6 +94,8 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     Factor rootFactor = getRootFactor(tree, parser.getParentVariable());
     CfgParseChart chart = parser.parseMarginal(example.getWords(), rootFactor, false);
     CfgParseTree parseTree = chart.getBestParseTree();
+    
+    System.out.println(parseTree);
 
     return decodeCfgParse(parseTree, 0);
   }
@@ -114,8 +115,8 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
       for (Object o : t.getTerminalProductions()) {
         words.add((String) o);
       }
-      Expression2 expression = ((ExpressionNode) t.getRoot()).getExpression();
-      return AlignedExpressionTree.forTerminal(expression,
+      ExpressionNode root = ((ExpressionNode) t.getRoot());
+      return AlignedExpressionTree.forTerminal(root.getExpression(), root.getType(), 
           numAppliedArguments, spanStarts, spanEnds, words);
     } else {
       ExpressionNode parent = ((ExpressionNode) t.getRoot());
@@ -145,8 +146,8 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
         AlignedExpressionTree leftTree = decodeCfgParse(argTree, 0);
         AlignedExpressionTree rightTree = decodeCfgParse(funcTree, numAppliedArguments + 1);
 
-        return AlignedExpressionTree.forNonterminal(parent.getExpression(), numAppliedArguments,
-            leftTree, rightTree);
+        return AlignedExpressionTree.forNonterminal(parent.getExpression(), parent.getType(), 
+            numAppliedArguments, leftTree, rightTree);
       }
     }
   }

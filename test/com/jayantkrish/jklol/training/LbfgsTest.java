@@ -77,7 +77,7 @@ public class LbfgsTest extends TestCase {
 
 	public void testTrainRegularized() {
 	  DefaultLogFunction log = new DefaultLogFunction(1, false);
-	  Lbfgs lbfgs = new Lbfgs(50, 100, 0.0001, log);
+	  Lbfgs lbfgs = new Lbfgs(50, 10, 0.0001, log);
 	  runTest(lbfgs);
 	}
 	

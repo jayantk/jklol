@@ -362,6 +362,11 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     }
     return outputBuilder.buildNoCopy();
   }
+  
+  @Override
+  public DenseTensor elementwiseLogSparse() {
+    return elementwiseLog();
+  }
 
   @Override
   public DenseTensor elementwiseExp() {
@@ -371,6 +376,11 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       outputBuilder.values[i] = Math.exp(values[i]);
     }
     return outputBuilder.buildNoCopy();
+  }
+  
+  @Override
+  public DenseTensor elementwiseExpSparse() {
+    return elementwiseExp();
   }
 
   @Override

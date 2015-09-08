@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.models.loglinear;
 
-import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -63,19 +62,16 @@ public class BackoffLogLinearFactor extends AbstractParametricFactor {
   @Override
   public Factor getModelFromParameters(SufficientStatistics parameters) {
     DiscreteFactor f = family.getModelFromParameters(parameters).coerceToDiscrete();
-    Tensor originalWeights = f.getWeights().elementwiseLog();
-    Tensor weights = originalWeights;
-    
-    System.out.println("weights: " + Arrays.toString(weights.getDimensionNumbers()));
-    
+    Tensor originalWeights = f.getWeights();
+    Tensor weights = originalWeights.elementwiseLogSparse();
+
     for (Tensor dimMap : inverseDimensionMaps) {
       if (dimMap != null) {
-        System.out.println("map: " + Arrays.toString(dimMap.getDimensionNumbers()));
         weights = weights.matrixInnerProduct(dimMap);
       }
     }
     return new TableFactor(getVars(), weights.relabelDimensions(
-        originalWeights.getDimensionNumbers()).elementwiseExp());
+        getVars().getVariableNumsArray()).elementwiseExp());
   }
 
   @Override

@@ -82,9 +82,19 @@ public class SparseLogSpaceTensorAdapter extends AbstractTensor {
   public Tensor elementwiseLog() {
     throw new UnsupportedOperationException("Not implemented.");
   }
+  
+  @Override
+  public Tensor elementwiseLogSparse() {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
 
   @Override
   public Tensor elementwiseExp() {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
+
+  @Override
+  public Tensor elementwiseExpSparse() {
     throw new UnsupportedOperationException("Not implemented.");
   }
   

@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.util.Arrays;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.cfg.CfgExpectation;
@@ -15,11 +16,12 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
+import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.EmOracle;
 import com.jayantkrish.jklol.training.FactorLoglikelihoodOracle;
 import com.jayantkrish.jklol.training.Lbfgs;
+import com.jayantkrish.jklol.training.LbfgsConvergenceError;
 import com.jayantkrish.jklol.training.LogFunction;
-import com.jayantkrish.jklol.training.NullLogFunction;
 
 public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, AlignmentExample, CfgExpectation, CfgExpectation>{
 
@@ -71,19 +73,22 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
   public SufficientStatistics maximizeParameters(CfgExpectation expectations,
       SufficientStatistics currentParameters, LogFunction log) {
     if (pam.isLoglinear()) {
+      List<SufficientStatistics> paramList = currentParameters.coerceToList().getStatistics();
+      
       DiscreteFactor ruleTarget = expectations.getRuleBuilder().build();
       ParametricFactor ruleFamily = pam.getRuleFactor();
-      SufficientStatistics ruleParameters = trainFamily(ruleFamily, ruleTarget, pam.getNonterminalVar());
+      SufficientStatistics ruleParameters = trainFamily(ruleFamily, ruleTarget, pam.getNonterminalVar(),
+          paramList.get(0));
 
       DiscreteFactor nonterminalTarget = expectations.getNonterminalBuilder().build();
       ParametricFactor nonterminalFamily = pam.getNonterminalFactor();
       SufficientStatistics nonterminalParameters = trainFamily(nonterminalFamily, nonterminalTarget,
-          pam.getNonterminalVar().union(pam.getRuleVar()));
+          pam.getNonterminalVar().union(pam.getRuleVar()), paramList.get(1));
 
       DiscreteFactor terminalTarget = expectations.getTerminalBuilder().build();
       ParametricFactor terminalFamily = pam.getTerminalFactor();
       SufficientStatistics terminalParameters = trainFamily(terminalFamily, terminalTarget,
-          pam.getNonterminalVar().union(pam.getRuleVar()));
+          pam.getNonterminalVar().union(pam.getRuleVar()), paramList.get(2));
 
       return new ListSufficientStatistics(Arrays.asList("rules", "nonterminals", "terminals"),
           Arrays.asList(ruleParameters, nonterminalParameters, terminalParameters));
@@ -96,12 +101,20 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
   }
   
   private static SufficientStatistics trainFamily(ParametricFactor family, Factor target,
-      VariableNumMap conditionalVars) {
-    Lbfgs lbfgs = new Lbfgs(100, 10, 0.01, new NullLogFunction());
-    FactorLoglikelihoodOracle oracle = new FactorLoglikelihoodOracle(family, target, conditionalVars);
-    return lbfgs.train(oracle, family.getNewSufficientStatistics(), Arrays.asList((Void) null));
+      VariableNumMap conditionalVars, SufficientStatistics currentParameters) {
+    int numIterations = 1000;
+    // TODO: fix regularization?
+    SufficientStatistics optimizedParameters = null;
+    try {
+      Lbfgs lbfgs = new Lbfgs(numIterations, 10, 1e-8, new DefaultLogFunction(numIterations - 1, false));
+      FactorLoglikelihoodOracle oracle = new FactorLoglikelihoodOracle(family, target, conditionalVars);
+      optimizedParameters = lbfgs.train(oracle, currentParameters.duplicate(), Arrays.asList((Void) null));
+    } catch (LbfgsConvergenceError e) {
+      optimizedParameters = e.getFinalParameters();
+    }
+    return optimizedParameters;
   }
-  
+
   @Override
   public CfgExpectation combineAccumulators(CfgExpectation accumulator1,
       CfgExpectation accumulator2) {

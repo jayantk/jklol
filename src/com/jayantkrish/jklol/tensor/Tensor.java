@@ -199,6 +199,14 @@ public interface Tensor extends TensorBase, Serializable {
   Tensor elementwiseLog();
 
   /**
+   * Takes the natural log of each nonzero value in {@code this}.
+   * Behavior for entries with zero values is undefined.
+   *
+   * @return
+   */
+  Tensor elementwiseLogSparse();
+  
+  /**
    * Computes {@code e} to the power of each element in this tensor.
    * This operation applies {@code Math.exp} to every element of this
    * and returns the result in a new tensor.
@@ -206,6 +214,14 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor elementwiseExp();
+
+  /**
+   * Computes {@code e} to the power of each nonzero value in {@code this}.
+   * Behavior for entries with zero values is undefined.
+   *
+   * @return
+   */
+  Tensor elementwiseExpSparse();
   
   /**
    * Get the hyperbolic tangent of this tensor.

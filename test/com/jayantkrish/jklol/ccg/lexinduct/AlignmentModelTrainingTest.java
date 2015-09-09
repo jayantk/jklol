@@ -37,9 +37,10 @@ public class AlignmentModelTrainingTest extends TestCase {
       */
   
   String[][] dataSet1 = new String[][] {{"in plano texas", "(in:<e,<e,t>> plano:e texas:e)"},
-      {"in plano texas", "(in:<e,<e,t>> plano:e texas:e)"},
+      {"in plano the texas", "(in:<e,<e,t>> plano:e texas:e)"},
       {"border texas does plano ?", "(border:<e,<e,t>> texas:e plano:e)"},
       {"border texas plano ?", "(border:<e,<e,t>> texas:e plano:e)"},
+      {"border texas the plano ?", "(border:<e,<e,t>> texas:e plano:e)"},
       {"plano", "plano:e"},
       {"texas", "texas:e"},
   };
@@ -107,7 +108,7 @@ public class AlignmentModelTrainingTest extends TestCase {
 
     SufficientStatistics initial = pam.getNewSufficientStatistics();
 
-    ExpectationMaximization em = new ExpectationMaximization(30, new DefaultLogFunction());
+    ExpectationMaximization em = new ExpectationMaximization(50, new DefaultLogFunction());
     SufficientStatistics trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, smoothing),
         initial, examples);
 

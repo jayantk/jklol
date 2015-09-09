@@ -121,7 +121,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     pam.getModelFromParameters(trainedParameters).printStuffOut();
 
     PairCountAccumulator<List<String>, LexiconEntry> alignments = generateLexiconFromAlignmentModel(
-        model, examples, typeReplacements);
+        model, examples, 1, typeReplacements);
     for (List<String> words : alignments.keySet()) {
       System.out.println(words);
       for (LexiconEntry entry : alignments.getValues(words)) {
@@ -141,7 +141,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
   }
   
   public static PairCountAccumulator<List<String>, LexiconEntry> generateLexiconFromAlignmentModel(
-      AlignmentModelInterface model, Collection<AlignmentExample> examples,
+      AlignmentModelInterface model, Collection<AlignmentExample> examples, int lexiconNumParses,
       Map<String, String> typeReplacements) {
     PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
     for (AlignmentExample example : examples) {

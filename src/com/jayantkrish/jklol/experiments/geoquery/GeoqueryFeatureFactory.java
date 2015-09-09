@@ -54,12 +54,6 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
     return new DiscreteVariable("semanticPredicates", semanticPredicates);
   }
   
-  /*
-  private DiscreteVariable getPartialPredicateVar(List<String> semanticPredicates) {
-    
-  }
-  */
-
   @Override
   public ParametricFactor getDependencyFeatures(VariableNumMap dependencyHeadVar,
       VariableNumMap headSyntaxVar, VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,

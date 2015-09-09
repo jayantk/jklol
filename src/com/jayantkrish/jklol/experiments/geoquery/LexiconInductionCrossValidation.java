@@ -77,6 +77,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   private OptionSpec<Integer> emIterations;
   private OptionSpec<Double> smoothingParam;
   private OptionSpec<Integer> nGramLength;
+  private OptionSpec<Integer> lexiconNumParses;
   
   // Configuration for the semantic parser.
   private OptionSpec<Integer> parserIterations;
@@ -122,6 +123,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     emIterations = parser.accepts("emIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(0.01);
     nGramLength = parser.accepts("nGramLength").withRequiredArg().ofType(Integer.class).defaultsTo(1);
+    lexiconNumParses = parser.accepts("lexiconNumParses").withRequiredArg().ofType(Integer.class).defaultsTo(1);
     
     parserIterations = parser.accepts("parserIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
@@ -166,8 +168,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       String testErrorOutputFilename = outputDirString + "/test_error." + foldName + ".json";
 
       SemanticParserLoss loss = runFold(trainingData, heldOut, options.valueOf(emIterations),
-          options.valueOf(smoothingParam), options.valueOf(nGramLength), options.valueOf(parserIterations),
-          options.valueOf(l2Regularization), options.valueOf(beamSize),
+          options.valueOf(smoothingParam), options.valueOf(nGramLength), options.valueOf(lexiconNumParses),
+          options.valueOf(parserIterations), options.valueOf(l2Regularization), options.valueOf(beamSize),
           options.valueOf(unknownWordThreshold), additionalLexiconEntries, 
           lexiconOutputFilename, trainingErrorOutputFilename, testErrorOutputFilename,
           alignmentModelOutputFilename, parserModelOutputFilename);
@@ -190,8 +192,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   }
   
   private static SemanticParserLoss runFold(List<AlignmentExample> trainingData, List<AlignmentExample> testData,
-      int emIterations, double smoothingAmount, int nGramLength, int parserIterations, double l2Regularization, int beamSize,
-      int unknownWordThreshold, List<String> additionalLexiconEntries, String lexiconOutputFilename,
+      int emIterations, double smoothingAmount, int nGramLength, int lexiconNumParses, int parserIterations,
+      double l2Regularization, int beamSize, int unknownWordThreshold, List<String> additionalLexiconEntries, String lexiconOutputFilename,
       String trainingErrorOutputFilename, String testErrorOutputFilename, String alignmentModelOutputFilename,
       String parserModelOutputFilename) {
 
@@ -203,7 +205,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     
     // Train the alignment model and generate lexicon entries.
     PairCountAccumulator<List<String>, LexiconEntry> alignments = trainAlignmentModel(trainingData,
-        entityNames, smoothingAmount, emIterations, nGramLength, false, false);
+        entityNames, smoothingAmount, emIterations, nGramLength, lexiconNumParses, false, false);
     
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (AlignmentExample trainingExample : trainingData) {
@@ -285,7 +287,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
   public static PairCountAccumulator<List<String>, LexiconEntry> trainAlignmentModel(
       List<AlignmentExample> trainingData, Set<List<String>> entityNames, double smoothingAmount,
-      int emIterations, int nGramLength, boolean useLagrangianRelaxation, boolean discriminative) {
+      int emIterations, int nGramLength, int lexiconNumParses, boolean useLagrangianRelaxation, boolean discriminative) {
     // Preprocess data to generate features.
     FeatureVectorGenerator<Expression2> vectorGenerator = AlignmentLexiconInduction
         .buildFeatureVectorGenerator(trainingData, Collections.<String>emptyList());
@@ -323,7 +325,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       
       CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
 
-      return AlignmentLexiconInduction.generateLexiconFromAlignmentModel(model, trainingData, typeReplacements);
+      return AlignmentLexiconInduction.generateLexiconFromAlignmentModel(model, trainingData, lexiconNumParses, typeReplacements);
     } else {
       DiscreteFactor lexiconFactor = TableFactor.unity(pam.getNonterminalVar().union(pam.getTerminalVar()))
           .product(Math.log(0.01));

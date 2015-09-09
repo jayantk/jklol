@@ -94,8 +94,6 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     Factor rootFactor = getRootFactor(tree, parser.getParentVariable());
     CfgParseChart chart = parser.parseMarginal(example.getWords(), rootFactor, false);
     CfgParseTree parseTree = chart.getBestParseTree();
-    
-    System.out.println(parseTree);
 
     return decodeCfgParse(parseTree, 0);
   }

@@ -2,15 +2,20 @@ package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
 import com.jayantkrish.jklol.cfg.CfgExpectation;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
@@ -21,21 +26,17 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.bayesnet.SparseCptTableFactor;
-import com.jayantkrish.jklol.models.loglinear.BackoffLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
-import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
-import com.jayantkrish.jklol.models.parametric.CombiningParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
-import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmentModel> {
@@ -57,8 +58,9 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   public static final String FORWARD_APPLICATION = "fa";
   public static final String BACKWARD_APPLICATION = "ba";
   public static final String SKIP_RULE = "skip";
-  public static final ExpressionNode SKIP_EXPRESSION = new ExpressionNode(Expression2.constant("**skip**"),
-      Type.createAtomic("**skip**"), 0);
+  public static final String SKIP_CONSTANT = "**skip**";
+  public static final ExpressionNode SKIP_EXPRESSION = new ExpressionNode(Expression2.constant(SKIP_CONSTANT),
+      Type.createAtomic(SKIP_CONSTANT), 0);
 
   public ParametricCfgAlignmentModel(ParametricFactor ruleFactor, ParametricFactor nonterminalFactor,
       ParametricFactor terminalFactor, VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar,
@@ -172,56 +174,25 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     if (!discriminative) {      
       // Maximize P(word | logical form). This works better.
       if (loglinear) {
-        // ruleFactor = IndicatorLogLinearFactor.createDenseFactor(parentVar.union(ruleVar));
-        // nonterminalFactor = new IndicatorLogLinearFactor(nonterminalVars, nonterminalSparsityFactor);
-        terminalFactor = new IndicatorLogLinearFactor(sparsityFactor.getVars(), sparsityFactor);
-
-        // Build backoff maps from expression nodes to their types. 
-        VariableNumMap leftTypeVar = VariableNumMap.singleton(4, "leftType", typeVarType);
-        VariableNumMap rightTypeVar = VariableNumMap.singleton(7, "rightType", typeVarType);
-        VariableNumMap parentTypeVar = VariableNumMap.singleton(10, "parentType", typeVarType);
-        TableFactorBuilder typeBackoffBuilder = new TableFactorBuilder(parentVar.union(parentTypeVar),
-            SparseTensorBuilder.getFactory());
-        for (ExpressionNode expression : expressions) {
-          typeBackoffBuilder.setWeight(1.0, expression, expression.getType());
-        }
-        TableFactor parentTypeMap = typeBackoffBuilder.build();
-        TableFactor leftTypeMap = parentTypeMap.relabelVariables(VariableRelabeling.createFromVariables(
-            parentVar.union(parentTypeVar), leftVar.union(leftTypeVar)));
-        TableFactor rightTypeMap = parentTypeMap.relabelVariables(VariableRelabeling.createFromVariables(
-            parentVar.union(parentTypeVar), rightVar.union(rightTypeVar)));
-        
-        List<Tensor> ruleDimMaps = Lists.newArrayList();
-        ruleDimMaps.add(parentTypeMap.getWeights());
-        ruleFactor = new BackoffLogLinearFactor(parentVar.union(ruleVar),
-            IndicatorLogLinearFactor.createDenseFactor(parentTypeVar.union(ruleVar)), ruleDimMaps);
-
-        VariableNumMap nonterminalTypeVars = VariableNumMap.unionAll(leftTypeVar, rightTypeVar, parentTypeVar, ruleVar);
-        
-        List<Tensor> nonterminalDimMaps = Lists.newArrayList();
-        nonterminalDimMaps.add(leftTypeMap.getWeights());
-        nonterminalDimMaps.add(rightTypeMap.getWeights());
-        nonterminalDimMaps.add(parentTypeMap.getWeights());
-        
-        Tensor weights = nonterminalSparsityFactor.getWeights();
-        for (Tensor dimMap : nonterminalDimMaps) {
-          weights = weights.matrixInnerProduct(dimMap);
-        }
-        Tensor nonterminalTypeIndicatorTensor = weights.findKeysLargerThan(0.0);
-        DiscreteFactor nonterminalTypeIndicator = new TableFactor(nonterminalTypeVars, nonterminalTypeIndicatorTensor);
-
+        /*
+        ruleFactor = IndicatorLogLinearFactor.createDenseFactor(parentVar.union(ruleVar));
         nonterminalFactor = new IndicatorLogLinearFactor(nonterminalVars, nonterminalSparsityFactor);
-        /*
-        nonterminalFactor = new DiscreteLogLinearFactor(nonterminalVars.union(nonterminalTypeVars),
-            nonterminalTypeVars, featureValues)
-         */
-        /*
-        ParametricFactor nonterminalIndicatorFactor = new IndicatorLogLinearFactor(nonterminalVars, nonterminalSparsityFactor);
-        ParametricFactor nonterminalTypeIndicatorFactor = new BackoffLogLinearFactor(nonterminalVars,
-            new IndicatorLogLinearFactor(nonterminalTypeVars, nonterminalTypeIndicator), nonterminalDimMaps);
-        nonterminalFactor = new CombiningParametricFactor(nonterminalVars, Arrays.asList("indicators", "types"),
-            Arrays.asList(nonterminalIndicatorFactor, nonterminalTypeIndicatorFactor), false);
+        terminalFactor = new IndicatorLogLinearFactor(sparsityFactor.getVars(), sparsityFactor);
         */
+        
+        // Assign all binary rules probability 1
+        // nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
+        // Constant probability of invoking a rule or not.
+        // ruleFactor = new ConstantParametricFactor(parentVar.union(ruleVar),
+        // TableFactor.unity(parentVar.union(ruleVar)));
+
+        ruleFactor = DiscreteLogLinearFactor.fromFeatureGeneratorSparse(TableFactor.unity(parentVar.union(ruleVar)),
+            new RuleFeatureGen());
+        
+        nonterminalFactor = DiscreteLogLinearFactor.fromFeatureGeneratorSparse(nonterminalSparsityFactor,
+            new NonterminalFeatureGen());
+        
+        terminalFactor = DiscreteLogLinearFactor.fromFeatureGeneratorSparse(sparsityFactor, new TerminalFeatureGen());
       } else {
         ruleFactor = new CptTableFactor(parentVar, ruleVar);
         nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
@@ -256,7 +227,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     return new ParametricCfgAlignmentModel(ruleFactor, nonterminalFactor, terminalFactor,
         terminalVar, leftVar, rightVar, parentVar, ruleVar, nGramLength, loglinear);
   }
-
+  
   public boolean isLoglinear() {
     return loglinear;
   }
@@ -306,8 +277,8 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     if (loglinear) {
       // Normalize each distribution.
       rules = rules.product(rules.marginalize(ruleVar).inverse());
-      ntf = ntf.product(ntf.marginalize(ruleVar.union(parentVar)).inverse());
-      tf = tf.product(tf.marginalize(ruleVar.union(parentVar)).inverse());
+      ntf = ntf.product(ntf.marginalize(ntf.getVars().removeAll(ruleVar.union(parentVar))).inverse());
+      tf = tf.product(tf.marginalize(tf.getVars().removeAll(ruleVar.union(parentVar))).inverse());
     }
     
     // Incorporate the conditional probabilities of choosing terminals vs. nonterminals.
@@ -403,12 +374,91 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
 
     StringBuilder sb = new StringBuilder();
-    sb.append("rules:");
+    sb.append("rules:\n");
     sb.append(ruleFactor.getParameterDescription(parameterList.get(0), numFeatures));
-    sb.append("nonterminals:");
+    sb.append("nonterminals:\n");
     sb.append(nonterminalFactor.getParameterDescription(parameterList.get(1), numFeatures));
-    sb.append("terminals:");
+    sb.append("terminals:\n");
     sb.append(terminalFactor.getParameterDescription(parameterList.get(2), numFeatures));
     return sb.toString();
+  }
+  
+  private static class NonterminalFeatureGen implements FeatureGenerator<Assignment, String> {
+    private static final long serialVersionUID = 1L;
+
+    @Override
+    public Map<String, Double> generateFeatures(Assignment item) {
+      List<Object> values = item.getValues();
+      List<Object> featureValue = Lists.newArrayList();
+      for (int i = 0; i < 3; i++) {
+        Type t = ((ExpressionNode) values.get(i)).getType();
+        featureValue.add(t);
+      }
+      featureValue.add(values.get(3));
+
+      Map<String, Double> featureVals = Maps.newHashMap();
+      String featureName = Joiner.on(" ").join(featureValue);
+      featureVals.put(featureName, 1.0);
+      /*
+      if (!values.get(3).equals(SKIP_RULE)) {
+        String featureName = Joiner.on(" ").join(featureValue);
+        featureVals.put(featureName, 1.0);
+      }
+      */
+      return featureVals;
+    }
+  }
+  
+  private static class RuleFeatureGen implements FeatureGenerator<Assignment, String> {
+    private static final long serialVersionUID = 1L;
+
+    @Override
+    public Map<String, Double> generateFeatures(Assignment item) {
+      List<Object> values = item.getValues();
+      List<Object> featureValue = Lists.newArrayList();
+      Type t = ((ExpressionNode) values.get(0)).getType();
+      featureValue.add(t);
+      featureValue.add(values.get(1));
+
+      Map<String, Double> featureVals = Maps.newHashMap();
+      String featureName = Joiner.on(" ").join(featureValue);
+      featureVals.put(featureName, 1.0);
+      /*
+      if (values.get(1).equals(SKIP_RULE)) {
+        String featureName = "skip";
+        featureVals.put(featureName, 1.0);
+      } else {
+        String featureName = Joiner.on(" ").join(featureValue);
+        featureVals.put(featureName, 1.0);
+      }
+      */
+      return featureVals;
+    }
+  }
+  
+  private static class TerminalFeatureGen implements FeatureGenerator<Assignment, String> {
+    private static final long serialVersionUID = 1L;
+
+    @Override
+    public Map<String, Double> generateFeatures(Assignment item) {
+      List<Object> values = item.getValues();
+      Expression2 e = ((ExpressionNode) values.get(1)).getExpression();
+      List<String> freeVars = Lists.newArrayList(StaticAnalysis.getFreeVariables(e));
+      Collections.sort(freeVars);
+      Object terminals = values.get(0);
+
+      Map<String, Double> featureVals = Maps.newHashMap();
+      // One feature for the combined set of predicates
+      // String featureName = Joiner.on(" ").join(freeVars) + " -> " + terminals.toString();
+      // featureVals.put(featureName, 1.0);
+      // One feature per predicate
+      for (String freeVar : freeVars) {
+        // if (!freeVar.equals(SKIP_CONSTANT)) {
+          String featureName = freeVar + " -> " + terminals.toString();
+          featureVals.put(featureName, 1.0);
+          // }
+      }
+      return featureVals;
+    }
   }
 }

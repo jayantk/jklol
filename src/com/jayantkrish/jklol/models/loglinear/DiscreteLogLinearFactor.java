@@ -51,6 +51,10 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   // a set of 0 probability assignments). If null, then no sparsity pattern is
   // enforced.
   private final DiscreteFactor initialWeights;
+  
+  // Variable name assigned to the feature variable created by static methods
+  // of this class.
+  public static String FEATURE_VAR_NAME = "features";
 
   /**
    * Creates a {@code DiscreteLogLinearFactor} over {@code variables},
@@ -287,9 +291,9 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
     List<String> featureNamesSorted = Lists.newArrayList(featureNames);
     Collections.sort(featureNamesSorted);
     
-    DiscreteVariable featureType = new DiscreteVariable("features", featureNamesSorted);
+    DiscreteVariable featureType = new DiscreteVariable(FEATURE_VAR_NAME, featureNamesSorted);
     VariableNumMap featureVar = VariableNumMap.singleton(
-        Ints.max(factor.getVars().getVariableNumsArray()) + 1, "features", featureType);
+        Ints.max(factor.getVars().getVariableNumsArray()) + 1, FEATURE_VAR_NAME, featureType);
     TableFactorBuilder builder = new TableFactorBuilder(
         factor.getVars().union(featureVar), SparseTensorBuilder.getFactory());
     

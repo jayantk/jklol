@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -14,10 +15,15 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
+import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis.Scope;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis.ScopeSet;
+import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
@@ -481,7 +487,91 @@ public class ExpressionTree {
     public Expression2 getExpression() {
       return expression;
     }
+
+    public Expression2 getExpressionTemplate(Map<String, String> typeReplacements, int maxDepth) {
+      Map<Integer, Type> locTypeMap = StaticAnalysis.inferTypeMap(expression, type, typeReplacements);
+
+      ScopeSet scopes = StaticAnalysis.getScopes(expression);
+      Expression2 uncanonicalTemplate = toTemplate(expression, scopes, locTypeMap, 0, 0, maxDepth);
+      
+      ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
+        <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
+            new VariableCanonicalizationReplacementRule(),
+            new CommutativeReplacementRule("<t,t>"),
+            new CommutativeReplacementRule("<t,<t,t>>"),
+            new CommutativeReplacementRule("<t,<t,<t,t>>>"),
+            new CommutativeReplacementRule("<t,<t,<t,<t,t>>>>"),
+            new CommutativeReplacementRule("<t,<t,<t,<t,<t,t>>>>>")));
+
+      return simplifier.apply(uncanonicalTemplate);
+      /*
+      Collection<String> freeVars = StaticAnalysis.getFreeVariables(expression);
+      Expression2 result = expression;
+      for (String freeVar : freeVars) {
+        result = result.substitute(freeVar, "c");
+      }
+      return result;
+      */
+    }
     
+    private static Expression2 toTemplate(Expression2 expression, ScopeSet scopes, Map<Integer, Type> locTypeMap,
+        int index, int depth, int maxDepth) {
+      Expression2 subexpression = expression.getSubexpression(index);
+      Scope scope = scopes.getScope(index);
+
+      if (subexpression.isConstant()) {
+        if (subexpression.getConstant().equals(StaticAnalysis.LAMBDA) || scope.isBound(subexpression.getConstant())) {
+          return subexpression;
+        } else {
+          return Expression2.constant(locTypeMap.get(index).toString());
+        }
+      } else {
+        if (depth > maxDepth) {
+          Set<String> freeVars = Sets.newHashSet(StaticAnalysis.getFreeVariables(subexpression));
+          Set<String> usedBoundVars = Sets.newHashSet(freeVars);
+          usedBoundVars.retainAll(scope.getBoundVariables());
+          freeVars.removeAll(usedBoundVars);
+
+          Type type = locTypeMap.get(index);
+          if (usedBoundVars.size() == 0) {
+            return Expression2.constant(type.toString());
+          } else if (freeVars.size() == 0) {
+            return subexpression;
+          } else {
+            List<String> sortedBoundVars = Lists.newArrayList(usedBoundVars);
+            Collections.sort(sortedBoundVars);
+
+            // Generate a type for the function that takes the arguments and
+            // returns the appropriate type.
+            for (int i = sortedBoundVars.size() -  1; i >= 0; i--) {
+              String sortedBoundVar = sortedBoundVars.get(i);
+              type = type.addArgument(locTypeMap.get(scope.getBindingIndex(sortedBoundVar)));
+            }
+
+            List<Expression2> components = Lists.newArrayList();
+            components.add(Expression2.constant(type.toString()));
+            components.addAll(Expression2.constants(sortedBoundVars));
+
+            return Expression2.nested(components);
+          }
+        }
+
+        // Recursively generate a template from this expression's children.
+        int[] children = expression.getChildIndexes(index);
+        // Only non-lambda expressions count toward depth.
+        int nextDepth = depth;
+        if (!StaticAnalysis.isLambda(expression, index)) {
+          nextDepth++;
+        }
+
+        List<Expression2> templates = Lists.newArrayList(); 
+        for (int i = 0; i < children.length; i++) {
+          templates.add(toTemplate(expression, scopes, locTypeMap, children[i], nextDepth, maxDepth));
+        }
+        return Expression2.nested(templates);
+      }
+    }
+
     public Type getType() {
       return type;
     }

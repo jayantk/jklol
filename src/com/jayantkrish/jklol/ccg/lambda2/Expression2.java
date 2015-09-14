@@ -173,10 +173,26 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
     }
   }
 
+  /**
+   * Replaces the expression at {@code index} in this expression
+   * with {@code newConstantExpression} (as a constant expression).
+   *   
+   * @param index
+   * @param newConstantExpression
+   * @return
+   */
   public Expression2 substitute(int index, String newConstantExpression) {
     return substitute(index, Expression2.constant(newConstantExpression));
   }
 
+  /**
+   * Replaces the expression at {@code index} in this expression 
+   * with {@code newExpression}.
+   * 
+   * @param index
+   * @param newExpression
+   * @return
+   */
   public Expression2 substitute(int index, Expression2 newExpression) {
     Preconditions.checkArgument(index < size);
     if (index == 0) {
@@ -191,14 +207,38 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
     }
   }
 
+  /**
+   * Replaces all occurrences of {@code value} in this
+   * expression with {@code replacement}. 
+   * 
+   * @param value
+   * @param replacement
+   * @return
+   */
   public Expression2 substitute(String value, String replacement) {
     return substitute(Expression2.constant(value), Expression2.constant(replacement));
   }
 
+  /**
+   * Replaces all occurrences of {@code value} in this
+   * expression with {@code replacement}. 
+   * 
+   * @param value
+   * @param replacement
+   * @return
+   */
   public Expression2 substitute(String value, Expression2 replacement) {
     return substitute(Expression2.constant(value), replacement);
   }
 
+  /**
+   * Replaces all occurrences of {@code value} in this
+   * expression with {@code replacement}. 
+   * 
+   * @param value
+   * @param replacement
+   * @return
+   */
   public Expression2 substitute(Expression2 value, Expression2 replacement) {
     if (this.equals(value)) {
       return replacement;

@@ -1,5 +1,7 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
+import java.util.Collections;
+
 import junit.framework.TestCase;
 
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
@@ -43,5 +45,13 @@ public class ExpressionTreeTest extends TestCase {
     ExpressionTree tree = ExpressionTree.fromExpression(expressions[3]);
     
     System.out.println(tree);
+  }
+  
+  public void testExpressionTemplate() {
+    ExpressionTree tree = ExpressionTree.fromExpression(expressions[0]);
+    System.out.println(tree.getExpressionNode());
+    System.out.println(tree.getExpressionNode().getExpressionTemplate(Collections.emptyMap(), 0));
+    System.out.println(tree.getExpressionNode().getExpressionTemplate(Collections.emptyMap(), 1));
+    System.out.println(tree.getExpressionNode().getExpressionTemplate(Collections.emptyMap(), 2));
   }
 }

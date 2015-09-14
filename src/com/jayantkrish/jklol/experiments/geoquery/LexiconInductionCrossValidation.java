@@ -87,7 +87,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
   // TODO: this shouldn't be hard coded. Replace with 
   // an input unification lattice for types.
-  private static final Map<String, String> typeReplacements = Maps.newHashMap();
+  public static final Map<String, String> typeReplacements = Maps.newHashMap();
   static {
     typeReplacements.put("lo", "e");
     typeReplacements.put("c", "e");

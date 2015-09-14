@@ -106,7 +106,7 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
     // TODO: fix regularization?
     SufficientStatistics optimizedParameters = null;
     try {
-      Lbfgs lbfgs = new Lbfgs(numIterations, 10, 1e-8, new DefaultLogFunction(numIterations - 1, false));
+      Lbfgs lbfgs = new Lbfgs(numIterations, 10, 1e-6, new DefaultLogFunction(numIterations - 1, false));
       FactorLoglikelihoodOracle oracle = new FactorLoglikelihoodOracle(family, target, conditionalVars);
       optimizedParameters = lbfgs.train(oracle, currentParameters.duplicate(), Arrays.asList((Void) null));
     } catch (LbfgsConvergenceError e) {

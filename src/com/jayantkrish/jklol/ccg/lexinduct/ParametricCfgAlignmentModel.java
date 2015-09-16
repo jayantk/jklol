@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
@@ -24,12 +23,12 @@ import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.experiments.geoquery.LexiconInductionCrossValidation;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
 import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.bayesnet.SparseCptTableFactor;
@@ -61,9 +60,9 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   private final boolean loglinear;
 
   public static final String TERMINAL = "terminal";
-  public static final String FORWARD_APPLICATION = "fa";
-  public static final String BACKWARD_APPLICATION = "ba";
-  public static final String SKIP_RULE = "skip";
+  public static final String APPLICATION = "app";
+  public static final String SKIP_LEFT = "skip_left";
+  public static final String SKIP_RIGHT = "skip_right";
   public static final String SKIP_CONSTANT = "**skip**";
   public static final ExpressionNode SKIP_EXPRESSION = new ExpressionNode(Expression2.constant(SKIP_CONSTANT),
       Type.createAtomic(SKIP_CONSTANT), 0);
@@ -139,7 +138,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     DiscreteVariable typeVarType = new DiscreteVariable("types", types); 
     DiscreteVariable terminalVarType = new DiscreteVariable("words", terminalVarValues);
     DiscreteVariable ruleVarType = new DiscreteVariable("rule", Arrays.asList(TERMINAL,
-        FORWARD_APPLICATION, BACKWARD_APPLICATION, SKIP_RULE));
+        APPLICATION, SKIP_LEFT, SKIP_RIGHT));
 
     VariableNumMap terminalVar = VariableNumMap.singleton(0, "terminal", terminalVarType);
     VariableNumMap leftVar = VariableNumMap.singleton(3, "left", expressionVarType);
@@ -205,7 +204,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
         // Constant probability of invoking a rule or not.
         // ruleFactor = new ConstantParametricFactor(parentVar.union(ruleVar),
         // TableFactor.unity(parentVar.union(ruleVar)));
-
+        
         ParametricFactor ruleFeatureFactor = DiscreteLogLinearFactor.fromFeatureGeneratorSparse(
             TableFactor.unity(parentVar.union(ruleVar)), new RuleFeatureGen());
         DiscreteLogLinearFactor nonterminalFeatureFactor = DiscreteLogLinearFactor.fromFeatureGeneratorSparse(
@@ -222,7 +221,9 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
         VariableRelabeling relabeling = VariableRelabeling.identity(otherVars).union(
             VariableRelabeling.createFromVariables(featureVar, featureVar.relabelVariableNums(new int[] {0})));
         f = f.relabelVariables(relabeling);
-        System.out.println(f.getParameterDescription());
+        // System.out.println(f.getParameterDescription());
+        // System.out.println(nonterminalFeatureFactor.getModelFromParameters(nonterminalFeatureFactor.getNewSufficientStatistics()).getParameterDescription());
+        // System.out.println(nonterminalSparsityFactor.getParameterDescription());
 
         /*
         List<String> factorNames = Arrays.asList("indicators", "features");
@@ -432,51 +433,39 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
 
     @Override
     public Map<String, Double> generateFeatures(Assignment item) {
-      Map<String, Double> featureVals = Maps.newHashMap();
-      for (int i = 0; i < 2; i++) {
-        List<Object> values = item.getValues();
-        List<Object> featureValue = Lists.newArrayList();
-        /*
-        featureValue.add(((ExpressionNode) values.get(0)).getType());
-        featureValue.add(((ExpressionNode) values.get(0)).getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i));
-        featureValue.add(((ExpressionNode) values.get(1)).getType());
-        featureValue.add(((ExpressionNode) values.get(1)).getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i));
-        featureValue.add(((ExpressionNode) values.get(2)).getType());
-        featureValue.add(((ExpressionNode) values.get(2)).getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i));
-        featureValue.add(values.get(3));
-        */
-        
-        ExpressionNode root = (ExpressionNode) values.get(2);
-        ExpressionNode func = null;
-        String rootPosition = null;
-        if (values.get(3).equals(FORWARD_APPLICATION)) {
+      List<Object> values = item.getValues();
+      ExpressionNode left = (ExpressionNode) values.get(0);
+      ExpressionNode right = (ExpressionNode) values.get(1);
+      ExpressionNode root = (ExpressionNode) values.get(2);
+      Object rule = values.get(3);
+      String leftSyntax = left.getNumAppliedArguments() + ":" + left.getType();
+      String rightSyntax = right.getNumAppliedArguments() + ":" + right.getType();
+      String rootSyntax = root.getNumAppliedArguments() + ":" + root.getType();
+      
+      ExpressionNode func = null;
+      if (values.get(3).equals(APPLICATION)) {
+        if (right.getNumAppliedArguments() == 0) {
           func = (ExpressionNode) values.get(0);
-          rootPosition = "left";
-        } else if (values.get(3).equals(BACKWARD_APPLICATION)) {
+        } else if (left.getNumAppliedArguments() == 0) {
           func = (ExpressionNode) values.get(1);
-          rootPosition = "right";
-        } else if (values.get(3).equals(SKIP_RULE)) {
-          func = root;
-          if (values.get(0).equals(SKIP_EXPRESSION)) {
-            rootPosition = "right";
-          } else {
-            rootPosition = "left";
-          }
         }
-        Preconditions.checkNotNull(func, "Unknown rule: %s", values.get(3));
-
-        featureValue.add(root.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i));
-        featureValue.add(func.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i));
-        featureValue.add(rootPosition);
-
-        String featureName = Joiner.on("->").join(featureValue);
-        featureVals.put(featureName, 1.0);
-        /*
-      if (!values.get(3).equals(SKIP_RULE)) {
-        String featureName = Joiner.on(" ").join(featureValue);
-        featureVals.put(featureName, 1.0);
       }
-         */
+
+      Map<String, Double> featureVals = Maps.newHashMap();
+      String baseFeatureName = rootSyntax + " -" + rule + "-> " + leftSyntax + " " + rightSyntax;
+      featureVals.put(baseFeatureName, 1.0);
+      
+      if (func != null) {
+        for (int i = 0; i < 2; i++) {
+          Expression2 rootTemplate = root.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i);
+          Expression2 funcTemplate = func.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i);
+          String featureName = baseFeatureName + " + " + rootTemplate + " -> " + funcTemplate;
+          featureVals.put(featureName, 1.0);
+        }
+        
+        // Backoff features for the generated syntactic types.
+        featureVals.put("generated=" + leftSyntax, 1.0);
+        featureVals.put("generated=" + rightSyntax, 1.0);
       }
       return featureVals;
     }
@@ -487,34 +476,23 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
 
     @Override
     public Map<String, Double> generateFeatures(Assignment item) {
-      Map<String, Double> featureVals = Maps.newHashMap();
-      for (int i = 0; i < 2; i++) {
-        List<Object> values = item.getValues();
-        List<Object> featureValue = Lists.newArrayList();
-        ExpressionNode expressionNode = (ExpressionNode) values.get(0);
-        Type t = expressionNode.getType();
-        Expression2 template = expressionNode.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i);
-        featureValue.add(t);
-        featureValue.add(template);
-        featureValue.add(expressionNode.getNumAppliedArguments());
-        featureValue.add(values.get(1));
+      List<Object> values = item.getValues();
+      ExpressionNode expressionNode = (ExpressionNode) values.get(0);
+      Type type = expressionNode.getType();
+      String approximateSyntax = expressionNode.getNumAppliedArguments() + ":" + type;
 
-        String featureName = Joiner.on(" ").join(featureValue);
-        featureVals.put(featureName, 1.0);
-        /*
-      if (values.get(1).equals(SKIP_RULE)) {
-        String featureName = "skip";
-        featureVals.put(featureName, 1.0);
-      } else {
-        String featureName = Joiner.on(" ").join(featureValue);
-        featureVals.put(featureName, 1.0);
-      }
-         */
+      Object ruleName = values.get(1);
+
+      Map<String, Double> featureVals = Maps.newHashMap();
+      featureVals.put(approximateSyntax + " " + ruleName, 1.0);
+      for (int i = 0; i < 2; i++) {
+        Expression2 template = expressionNode.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i);
+        featureVals.put(approximateSyntax + " " + template + " " + ruleName, 1.0);
       }
       return featureVals;
     }
   }
-  
+
   private static class TerminalFeatureGen implements FeatureGenerator<Assignment, String> {
     private static final long serialVersionUID = 1L;
 
@@ -529,8 +507,9 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
       Map<String, Double> featureVals = Maps.newHashMap();
       // One feature for the combined set of predicates
       // String featureName = Joiner.on(" ").join(freeVars) + " -> " + terminals.toString();
-      // featureVals.put(featureName, 1.0);
+      // featureVals.put(item.toString(), 1.0);
       // One feature per predicate
+
       for (String freeVar : freeVars) {
         if (!(freeVar.equals("and:<t*,t>") || freeVar.equals("exists:<<e,t>,t>"))) {
           String featureName = freeVar + " -> " + terminals.toString();

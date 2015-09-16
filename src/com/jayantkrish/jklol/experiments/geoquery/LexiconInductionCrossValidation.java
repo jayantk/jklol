@@ -307,13 +307,16 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     attestedEntityNames.retainAll(entityNames);
     terminalVarValues.addAll(attestedEntityNames);
 
+    boolean loglinear = true;
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModel(
-        trainingData, vectorGenerator, terminalVarValues, discriminative, true);
+        trainingData, vectorGenerator, terminalVarValues, discriminative, loglinear);
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(smoothingAmount);
 
     SufficientStatistics initial = pam.getNewSufficientStatistics();
-    initial.increment(1);
+    if (!loglinear) {
+      initial.increment(1);
+    }
 
     // Train the alignment model with EM.
     if (!useLagrangianRelaxation) {

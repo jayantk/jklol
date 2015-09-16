@@ -129,16 +129,19 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
         // A combination of expressions.
         CfgParseTree argTree = null;
         CfgParseTree funcTree = null;
-        
-        if (t.getRuleType().equals(ParametricCfgAlignmentModel.FORWARD_APPLICATION)) {
-          // Thing on the left is the function
-          funcTree = t.getLeft();
-          argTree = t.getRight();
-        } else if (t.getRuleType().equals(ParametricCfgAlignmentModel.BACKWARD_APPLICATION)) {
+
+        // The argument's expression node must have 0 applied arguments
+        // while the function's node must have > 0.
+        if (left.getNumAppliedArguments() == 0) {
           // Thing on the right is the function
           funcTree = t.getRight();
           argTree = t.getLeft();
+        } else if (right.getNumAppliedArguments() == 0) {
+          // Thing on the left is the function
+          funcTree = t.getLeft();
+          argTree = t.getRight();
         }
+
         Preconditions.checkState(funcTree != null && argTree!= null, "Tree is broken %s", t); 
         
         AlignedExpressionTree leftTree = decodeCfgParse(argTree, 0);
@@ -206,6 +209,11 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
 
     return new CfgParser(newParentVar, newLeftVar, newRightVar, newTerminalVar, ruleVar,
         binaryDistribution, newTerminalFactor.build(), -1, false, null);
+    // Skip assignment:
+    /*
+        newParentVar.outcomeArrayToAssignment(ParametricCfgAlignmentModel.SKIP_EXPRESSION)
+        .union(ruleVar.outcomeArrayToAssignment(ParametricCfgAlignmentModel.TERMINAL)));
+        */
   }  
 
   /**

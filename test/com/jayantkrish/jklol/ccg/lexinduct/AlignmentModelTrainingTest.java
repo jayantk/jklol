@@ -26,25 +26,18 @@ import com.jayantkrish.jklol.training.ExpectationMaximization;
 
 public class AlignmentModelTrainingTest extends TestCase {
 
-  /*
   String[][] dataSet1 = new String[][] {{"is plano in texas", "(in:<e,<e,t>> plano:e texas:e)"},
-//      {"what plano in us", "(in:<e,<e,t>> plano:e us:e)"},
-//      {"texas in us", "(in:<e,<e,t>> texas:e us:e)"},
-//      {"us in plano", "(in:<e,<e,t>> us:e plano:e)"},
+      {"what plano in us", "(in:<e,<e,t>> plano:e us:e)"},
+      {"texas in us", "(in:<e,<e,t>> texas:e us:e)"},
+      {"us in plano", "(in:<e,<e,t>> us:e plano:e)"},
       {"does texas border plano ?", "(border:<e,<e,t>> texas:e plano:e)"},
-//      {"cities in texas", "(lambda x (and:<t*,t> (city:<e,t> x) (in:<e,<e,t>> x texas:e)))"}
-      };
-      */
-  
-  String[][] dataSet1 = new String[][] {{"in plano texas", "(in:<e,<e,t>> plano:e texas:e)"},
-      {"in plano the texas", "(in:<e,<e,t>> plano:e texas:e)"},
-      {"border texas does plano ?", "(border:<e,<e,t>> texas:e plano:e)"},
-      {"border texas plano ?", "(border:<e,<e,t>> texas:e plano:e)"},
-      {"border texas the plano ?", "(border:<e,<e,t>> texas:e plano:e)"},
-      {"plano", "plano:e"},
-      {"texas", "texas:e"},
+      {"city in texas", "(lambda x (and:<t*,t> (city:<e,t> x) (in:<e,<e,t>> x texas:e)))"},
+      {"state in us", "(lambda x (and:<t*,t> (state:<e,t> x) (in:<e,<e,t>> x us:e)))"},
+      {"biggest city", "(argmax:<<e,t>,<<e,i>,e>> (lambda x (city:<e,t> x)) (lambda x (size:<e,i> x)))"},
+      {"biggest state", "(argmax:<<e,t>,<<e,i>,e>> (lambda x (state:<e,t> x)) (lambda x (size:<e,i> x)))"},
+      {"what city is the biggest in texas", "(argmax:<<e,t>,<<e,i>,e>> (lambda x (and:<t*,t> (city:<e,t> x) (in:<e,<e,t>> x texas:e))) (lambda x (size:<e,i> x)))"}
   };
-
+  
   VariableNumMap wordVarPattern, expressionVarPattern;
   
   List<AlignmentExample> examples;
@@ -86,7 +79,7 @@ public class AlignmentModelTrainingTest extends TestCase {
     SufficientStatistics initial = pam.getNewSufficientStatistics();
     initial.increment(1);
 
-    ExpectationMaximization em = new ExpectationMaximization(1, new DefaultLogFunction());
+    ExpectationMaximization em = new ExpectationMaximization(1, new DefaultLogFunction(10, false));
     SufficientStatistics trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, smoothing),
         initial, examples);
 
@@ -113,7 +106,7 @@ public class AlignmentModelTrainingTest extends TestCase {
         initial, examples);
 
     // TODO: put in an actual test here.
-    System.out.println(pam.getParameterDescription(trainedParameters2, 30));
+    System.out.println(pam.getParameterDescription(trainedParameters2));
     CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters2);
     for (AlignmentExample example : examples) {
       System.out.println(example.getWords());

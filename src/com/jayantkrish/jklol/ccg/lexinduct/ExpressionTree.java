@@ -62,7 +62,7 @@ public class ExpressionTree {
     Map<String, String> typeReplacements = Collections.<String, String>emptyMap();
     Type type = StaticAnalysis.inferType(expression, typeReplacements);
     return fromExpression(expression, type, ExpressionSimplifier.lambdaCalculus(),
-        typeReplacements, Collections.<String>emptySet(), 0, 2, 2);
+        typeReplacements, Collections.<String>emptySet(), 0, 2, 3);
   }
 
   public static ExpressionTree fromExpression(Expression2 expression, int numAppliedArguments) {
@@ -77,7 +77,7 @@ public class ExpressionTree {
       Set<String> constantsToIgnore, int numAppliedArguments, int maxDepth, int maxAppliedArguments) {
     Type type = StaticAnalysis.inferType(expression, typeReplacements);
     return fromExpression(expression, type, ExpressionSimplifier.lambdaCalculus(),
-        typeReplacements, constantsToIgnore, numAppliedArguments, 2, 2);
+        typeReplacements, constantsToIgnore, numAppliedArguments, maxDepth, maxAppliedArguments);
   }
 
   public static ExpressionTree fromExpression(Expression2 expression, Type type,
@@ -413,15 +413,18 @@ public class ExpressionTree {
 
         // Add binary rule for this combination of expressions. Note
         // that the expressions can occur in either order in the sentence.
+        // Backward application'
         double prob = binaryRuleProbs.getUnnormalizedProbability(arg.getExpressionNode(),
-            func.getExpressionNode(), root, ParametricCfgAlignmentModel.BACKWARD_APPLICATION);
+            func.getExpressionNode(), root, ParametricCfgAlignmentModel.APPLICATION);
         builder.setWeight(prob, arg.getExpressionNode(),
-            func.getExpressionNode(), root, ParametricCfgAlignmentModel.BACKWARD_APPLICATION);
-        prob = binaryRuleProbs.getUnnormalizedProbability(func.getExpressionNode(),
-            arg.getExpressionNode(), root, ParametricCfgAlignmentModel.FORWARD_APPLICATION);
-        builder.setWeight(prob, func.getExpressionNode(),
-            arg.getExpressionNode(), root, ParametricCfgAlignmentModel.FORWARD_APPLICATION);
+            func.getExpressionNode(), root, ParametricCfgAlignmentModel.APPLICATION);
 
+        // Forward application
+        prob = binaryRuleProbs.getUnnormalizedProbability(func.getExpressionNode(),
+            arg.getExpressionNode(), root, ParametricCfgAlignmentModel.APPLICATION);
+        builder.setWeight(prob, func.getExpressionNode(),
+            arg.getExpressionNode(), root, ParametricCfgAlignmentModel.APPLICATION);
+        
         // Populate children
         arg.populateBinaryRuleDistribution(builder, binaryRuleProbs);
         func.populateBinaryRuleDistribution(builder, binaryRuleProbs);
@@ -430,13 +433,13 @@ public class ExpressionTree {
 
     // Add word-skipping rules.
     double prob = binaryRuleProbs.getUnnormalizedProbability(ParametricCfgAlignmentModel.SKIP_EXPRESSION, root,
-         root, ParametricCfgAlignmentModel.SKIP_RULE);
+         root, ParametricCfgAlignmentModel.SKIP_LEFT);
     builder.setWeight(prob, ParametricCfgAlignmentModel.SKIP_EXPRESSION, root,
-         root, ParametricCfgAlignmentModel.SKIP_RULE);
+         root, ParametricCfgAlignmentModel.SKIP_LEFT);
     prob = binaryRuleProbs.getUnnormalizedProbability(root, ParametricCfgAlignmentModel.SKIP_EXPRESSION,
-        root, ParametricCfgAlignmentModel.SKIP_RULE);
+        root, ParametricCfgAlignmentModel.SKIP_RIGHT);
     builder.setWeight(prob, root, ParametricCfgAlignmentModel.SKIP_EXPRESSION,
-        root, ParametricCfgAlignmentModel.SKIP_RULE);
+        root, ParametricCfgAlignmentModel.SKIP_RIGHT);
 
     List<ExpressionTree> substitutions = getSubstitutions();
     for (int i = 0; i < substitutions.size(); i++) {

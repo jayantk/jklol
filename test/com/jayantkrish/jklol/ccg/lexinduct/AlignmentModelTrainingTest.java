@@ -32,6 +32,7 @@ public class AlignmentModelTrainingTest extends TestCase {
       {"us in plano", "(in:<e,<e,t>> us:e plano:e)"},
       {"does texas border plano ?", "(border:<e,<e,t>> texas:e plano:e)"},
       {"city in texas", "(lambda x (and:<t*,t> (city:<e,t> x) (in:<e,<e,t>> x texas:e)))"},
+      {"major city in texas", "(lambda x (and:<t*,t> (major:<e,t> x) (city:<e,t> x) (in:<e,<e,t>> x texas:e)))"},
       {"state in us", "(lambda x (and:<t*,t> (state:<e,t> x) (in:<e,<e,t>> x us:e)))"},
       {"biggest city", "(argmax:<<e,t>,<<e,i>,e>> (lambda x (city:<e,t> x)) (lambda x (size:<e,i> x)))"},
       {"biggest state", "(argmax:<<e,t>,<<e,i>,e>> (lambda x (state:<e,t> x)) (lambda x (size:<e,i> x)))"},

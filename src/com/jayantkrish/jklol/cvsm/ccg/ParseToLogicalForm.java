@@ -17,6 +17,8 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser.CcgParseResult;
+import com.jayantkrish.jklol.ccg.chart.ChartCost;
+import com.jayantkrish.jklol.ccg.chart.HackChartCost;
 import com.jayantkrish.jklol.ccg.lambda.ApplicationExpression;
 import com.jayantkrish.jklol.ccg.lambda.CommutativeOperator;
 import com.jayantkrish.jklol.ccg.lambda.ConstantExpression;
@@ -40,6 +42,7 @@ public class ParseToLogicalForm extends AbstractCli {
   private OptionSpec<Long> maxParseTimeMillis;
   private OptionSpec<Integer> maxChartSize;
   private OptionSpec<Integer> parserThreads;
+  private OptionSpec<Void> useHackConstraints;
   
   public ParseToLogicalForm() {
     super();
@@ -64,6 +67,7 @@ public class ParseToLogicalForm extends AbstractCli {
         .defaultsTo(Integer.MAX_VALUE);
     parserThreads = optionParser.accepts("parserThreads").withRequiredArg().ofType(Integer.class)
         .defaultsTo(1);
+    useHackConstraints = optionParser.accepts("useHackConstraints");    
   }
 
   @Override
@@ -91,8 +95,13 @@ public class ParseToLogicalForm extends AbstractCli {
 
       CcgParseResult result = null;
       Expression lf = null;
-      try { 
-        result = supertaggingParser.parse(ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags));
+      try {
+        ChartCost cost = null;
+        if (options.has(useHackConstraints)) {
+          cost = new HackChartCost(words, posTags);
+        }
+
+        result = supertaggingParser.parse(ListSupertaggedSentence.createWithUnobservedSupertags(words, posTags), cost);
         if (result != null && result.getParse().getSyntacticCategory().isAtomic()) {
           CcgParse parse = result.getParse();
           CcgParse augmentedParse = augmenter.addLogicalForms(parse);

@@ -15,6 +15,7 @@ import com.jayantkrish.jklol.cvsm.lrt.TensorLowRankTensor;
 import com.jayantkrish.jklol.cvsm.tree.CvsmAdditionTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmConstantTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmDiagTree;
+import com.jayantkrish.jklol.cvsm.tree.CvsmExpTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmInnerProductTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmLaplaceSigmoidTree;
 import com.jayantkrish.jklol.cvsm.tree.CvsmLogTree;
@@ -98,6 +99,11 @@ public class Cvsm implements Serializable {
 
         CvsmTree subtree = getInterpretationTree(args.get(0));
         return CvsmLogTree.create(subtree);
+      } else if (functionName.equals("op:exp")) {
+        Preconditions.checkArgument(args.size() == 1);
+        
+        CvsmTree subtree = getInterpretationTree(args.get(0));
+        return CvsmExpTree.create(subtree);
       } else if (functionName.equals("op:logistic")) {
         Preconditions.checkArgument(args.size() == 1);
 

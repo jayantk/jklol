@@ -161,6 +161,14 @@ public class CvsmTrainingTest extends TestCase {
   private static final double[][] logTargets = {
     { 0.0, -0.5, -1.0 }
   };
+  
+  private static final String[] expExamples = {
+    "(op:exp vec:log)"
+  };
+
+  private static final double[][] expTargets = {
+    { 1.0, 0.5, 2.0 }
+  };
 
   private static final String[] tprodExamples = {
       "vec:block",
@@ -334,6 +342,10 @@ public class CvsmTrainingTest extends TestCase {
   
   public void testLowRankCvsmLogTraining() {
     runCvsmTrainingTest(parseExamples(logExamples, logTargets), lowRankCvsmFamily, new CvsmSquareLoss(), -1);
+  }
+  
+  public void testCvsmExpTraining() {
+    runCvsmTrainingTest(parseExamples(expExamples, expTargets), cvsmFamily, new CvsmSquareLoss(), -1);
   }
 
   public void testCvsmTensorTraining() {

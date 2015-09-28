@@ -97,6 +97,20 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
 
     return decodeCfgParse(parseTree, 0);
   }
+  
+  public List<AlignedExpressionTree> getBestAlignments(AlignmentExample example, int num) {
+    TableFactor expressionTerminalWeights = TableFactor.logUnity(parentVar);
+
+    CfgParser parser = getCfgParser(example, expressionTerminalWeights);
+    ExpressionTree tree = example.getTree();
+    
+    Factor rootFactor = getRootFactor(tree, parser.getParentVariable());
+    CfgParseChart chart = parser.parseMarginal(example.getWords(), rootFactor, false);
+    CfgParseTree parseTree = chart.getBestParseTree();
+
+    return decodeCfgParse(parseTree, 0);
+  }
+
 
   public AlignedExpressionTree decodeCfgParse(CfgParseTree t) {
     return decodeCfgParse(t, 0);

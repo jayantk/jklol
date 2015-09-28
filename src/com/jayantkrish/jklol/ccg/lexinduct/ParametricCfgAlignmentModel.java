@@ -34,6 +34,7 @@ import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.bayesnet.SparseCptTableFactor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
+import com.jayantkrish.jklol.models.parametric.CombiningParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
@@ -225,19 +226,17 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
         // System.out.println(nonterminalFeatureFactor.getModelFromParameters(nonterminalFeatureFactor.getNewSufficientStatistics()).getParameterDescription());
         // System.out.println(nonterminalSparsityFactor.getParameterDescription());
 
-        /*
         List<String> factorNames = Arrays.asList("indicators", "features");
-        ruleFactor = new CombiningParametricFactor(ruleFeatureFactor.getVars(), factorNames,
-            Arrays.asList(ruleIndicatorFactor, ruleFeatureFactor), false);
-        nonterminalFactor = new CombiningParametricFactor(nonterminalFeatureFactor.getVars(), factorNames,
-            Arrays.asList(nonterminalIndicatorFactor, nonterminalFeatureFactor), false);
+        // ruleFactor = new CombiningParametricFactor(ruleFeatureFactor.getVars(), factorNames,
+        // Arrays.asList(ruleIndicatorFactor, ruleFeatureFactor), false);
+        // nonterminalFactor = new CombiningParametricFactor(nonterminalFeatureFactor.getVars(), factorNames,
+        // Arrays.asList(nonterminalIndicatorFactor, nonterminalFeatureFactor), false);
         terminalFactor = new CombiningParametricFactor(terminalFeatureFactor.getVars(), factorNames,
             Arrays.asList(terminalIndicatorFactor, terminalFeatureFactor), false);
-            */
         
         ruleFactor = ruleFeatureFactor;
         nonterminalFactor = nonterminalFeatureFactor;
-        terminalFactor = terminalFeatureFactor;
+        // terminalFactor = terminalFeatureFactor;
       } else {
         ruleFactor = new CptTableFactor(parentVar, ruleVar);
         nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),

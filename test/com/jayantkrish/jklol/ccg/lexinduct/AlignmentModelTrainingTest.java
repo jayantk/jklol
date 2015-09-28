@@ -23,6 +23,7 @@ import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.ExpectationMaximization;
+import com.jayantkrish.jklol.training.Lbfgs;
 
 public class AlignmentModelTrainingTest extends TestCase {
 
@@ -81,7 +82,7 @@ public class AlignmentModelTrainingTest extends TestCase {
     initial.increment(1);
 
     ExpectationMaximization em = new ExpectationMaximization(1, new DefaultLogFunction(10, false));
-    SufficientStatistics trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, smoothing),
+    SufficientStatistics trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, smoothing, null),
         initial, examples);
 
     // TODO: put in an actual test here.
@@ -97,13 +98,14 @@ public class AlignmentModelTrainingTest extends TestCase {
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
         examples, featureGenerator, 1, false, true);
 
-    SufficientStatistics smoothing = pam.getNewSufficientStatistics();
-    smoothing.increment(0.1);
-
     SufficientStatistics initial = pam.getNewSufficientStatistics();
+    initial.increment(1.0);
+    
+    int numIterations = 1000;
+    Lbfgs lbfgs = new Lbfgs(numIterations, 10, 1e-6, new DefaultLogFunction(numIterations - 1, false));
 
     ExpectationMaximization em = new ExpectationMaximization(50, new DefaultLogFunction());
-    SufficientStatistics trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, smoothing),
+    SufficientStatistics trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, null, lbfgs),
         initial, examples);
 
     // TODO: put in an actual test here.

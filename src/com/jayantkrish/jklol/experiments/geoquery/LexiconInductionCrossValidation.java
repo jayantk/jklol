@@ -38,15 +38,16 @@ import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder;
-import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder.LagrangianDecodingResult;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer;
-import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer.ParametersAndLagrangeMultipliers;
 import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
+import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder.LagrangianDecodingResult;
+import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer.ParametersAndLagrangeMultipliers;
 import com.jayantkrish.jklol.ccg.util.SemanticParserExampleLoss;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils.SemanticParserLoss;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.cli.AbstractCli;
+import com.jayantkrish.jklol.cli.AbstractCli.CommonOptions;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -58,6 +59,7 @@ import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.ExpectationMaximization;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
+import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -205,7 +207,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     
     // Train the alignment model and generate lexicon entries.
     PairCountAccumulator<List<String>, LexiconEntry> alignments = trainAlignmentModel(trainingData,
-        entityNames, smoothingAmount, emIterations, nGramLength, lexiconNumParses, false, false);
+        entityNames, smoothingAmount, emIterations, nGramLength, lexiconNumParses, false, false, true);
     
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (AlignmentExample trainingExample : trainingData) {
@@ -287,7 +289,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
   public static PairCountAccumulator<List<String>, LexiconEntry> trainAlignmentModel(
       List<AlignmentExample> trainingData, Set<List<String>> entityNames, double smoothingAmount,
-      int emIterations, int nGramLength, int lexiconNumParses, boolean useLagrangianRelaxation, boolean discriminative) {
+      int emIterations, int nGramLength, int lexiconNumParses, boolean useLagrangianRelaxation, boolean discriminative,
+      boolean loglinear) {
     // Preprocess data to generate features.
     FeatureVectorGenerator<Expression2> vectorGenerator = AlignmentLexiconInduction
         .buildFeatureVectorGenerator(trainingData, Collections.<String>emptyList());
@@ -307,21 +310,24 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     attestedEntityNames.retainAll(entityNames);
     terminalVarValues.addAll(attestedEntityNames);
 
-    boolean loglinear = true;
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModel(
         trainingData, vectorGenerator, terminalVarValues, discriminative, loglinear);
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(smoothingAmount);
 
     SufficientStatistics initial = pam.getNewSufficientStatistics();
+    GradientOptimizer optimizer = null;
     if (!loglinear) {
       initial.increment(1);
+    } else {
+      int numIterations = 100;
+      optimizer = new Lbfgs(numIterations, 10, 1e-6, new DefaultLogFunction(numIterations - 1, false));
     }
 
     // Train the alignment model with EM.
     if (!useLagrangianRelaxation) {
       ExpectationMaximization em = new ExpectationMaximization(emIterations, new DefaultLogFunction(1, false));
-      SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing),
+      SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, optimizer),
           initial, trainingData);
 
       System.out.println(pam.getParameterDescription(trainedParameters));

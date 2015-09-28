@@ -110,7 +110,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     initial.increment(1);
 
     ExpectationMaximization em = new ExpectationMaximization(options.valueOf(emIterations), new DefaultLogFunction());
-    SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing),
+    SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, null),
         initial, examples);
 
     if (options.has(printParameters)) {

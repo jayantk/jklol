@@ -16,21 +16,34 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
-import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.EmOracle;
 import com.jayantkrish.jklol.training.FactorLoglikelihoodOracle;
-import com.jayantkrish.jklol.training.Lbfgs;
+import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.LbfgsConvergenceError;
 import com.jayantkrish.jklol.training.LogFunction;
 
 public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, AlignmentExample, CfgExpectation, CfgExpectation>{
 
   private final ParametricCfgAlignmentModel pam;
+
+  // Smoothing for estimating parameters of non-loglinear factors.
   private final SufficientStatistics smoothing;
   
-  public CfgAlignmentEmOracle(ParametricCfgAlignmentModel pam, SufficientStatistics smoothing) {
+  // Optimizer for estimating the parameters of any loglinear models
+  // embedded in the alignment model.
+  private final GradientOptimizer optimizer;
+  
+  public CfgAlignmentEmOracle(ParametricCfgAlignmentModel pam, SufficientStatistics smoothing,
+      GradientOptimizer optimizer) {
     this.pam = Preconditions.checkNotNull(pam);
-    this.smoothing = Preconditions.checkNotNull(smoothing);
+    this.smoothing = smoothing;
+    this.optimizer = optimizer;
+    
+    Preconditions.checkArgument(pam.isLoglinear() || smoothing != null, 
+        "Must provide smoothing if model does not use loglinear factors");
+    
+    Preconditions.checkArgument(!pam.isLoglinear() || optimizer != null,
+        "Must provide a gradient optimizer if the alignment model uses loglinear factors.");
   }
 
   @Override
@@ -100,15 +113,12 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
     }
   }
   
-  private static SufficientStatistics trainFamily(ParametricFactor family, Factor target,
+  private SufficientStatistics trainFamily(ParametricFactor family, Factor target,
       VariableNumMap conditionalVars, SufficientStatistics currentParameters) {
-    int numIterations = 1000;
-    // TODO: fix regularization?
     SufficientStatistics optimizedParameters = null;
     try {
-      Lbfgs lbfgs = new Lbfgs(numIterations, 10, 1e-6, new DefaultLogFunction(numIterations - 1, false));
       FactorLoglikelihoodOracle oracle = new FactorLoglikelihoodOracle(family, target, conditionalVars);
-      optimizedParameters = lbfgs.train(oracle, currentParameters.duplicate(), Arrays.asList((Void) null));
+      optimizedParameters = optimizer.train(oracle, currentParameters.duplicate(), Arrays.asList((Void) null));
     } catch (LbfgsConvergenceError e) {
       optimizedParameters = e.getFinalParameters();
     }

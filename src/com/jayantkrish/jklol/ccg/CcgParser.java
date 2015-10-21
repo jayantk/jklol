@@ -5,8 +5,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -65,7 +67,7 @@ public class CcgParser implements Serializable {
   private static final int SYNTACTIC_CATEGORY_BITS = 13;
   private static final long SYNTACTIC_CATEGORY_MASK = ~(-1L << SYNTACTIC_CATEGORY_BITS);
   private static final int MAX_SYNTACTIC_CATEGORIES = 1 << SYNTACTIC_CATEGORY_BITS;
-  private static final int ARG_NUM_BITS = 3;
+  private static final int ARG_NUM_BITS = 4;
   private static final long ARG_NUM_MASK = ~(-1L << ARG_NUM_BITS);
   private static final int WORD_IND_BITS = 8;
   private static final long WORD_IND_MASK = ~(-1L << WORD_IND_BITS);
@@ -373,7 +375,7 @@ public class CcgParser implements Serializable {
   }
 
   public static Set<HeadedSyntacticCategory> getSyntacticCategoryClosure(
-      Iterable<HeadedSyntacticCategory> syntacticCategories) {
+      Collection<HeadedSyntacticCategory> syntacticCategories) {
     Set<String> featureValues = Sets.newHashSet();
     for (HeadedSyntacticCategory cat : syntacticCategories) {
       getAllFeatureValues(cat.getSyntax(), featureValues);
@@ -381,7 +383,29 @@ public class CcgParser implements Serializable {
 
     // Compute the closure of syntactic categories, assuming the only
     // operations are function application and feature assignment.
+    Queue<HeadedSyntacticCategory> unprocessed = new LinkedList<HeadedSyntacticCategory>();
+    unprocessed.addAll(syntacticCategories);
+    
     Set<HeadedSyntacticCategory> allCategories = Sets.newHashSet();
+    while (unprocessed.size() > 0) {
+      HeadedSyntacticCategory cat = unprocessed.poll();
+      Preconditions.checkArgument(cat.isCanonicalForm());
+      
+      allCategories.addAll(canonicalizeCategories(cat.getSubcategories(featureValues)));
+      
+      if (!cat.isAtomic()) {
+        HeadedSyntacticCategory ret = cat.getReturnType().getCanonicalForm();
+        if (!allCategories.contains(ret) && !unprocessed.contains(ret)) {
+          unprocessed.offer(ret);
+        }
+
+        HeadedSyntacticCategory arg = cat.getArgumentType().getCanonicalForm();
+        if (!allCategories.contains(arg) && !unprocessed.contains(arg)) {
+          unprocessed.offer(arg);
+        }
+      }
+    }
+
     for (HeadedSyntacticCategory cat : syntacticCategories) {
       Preconditions.checkArgument(cat.isCanonicalForm());
       allCategories.addAll(canonicalizeCategories(cat.getSubcategories(featureValues)));
@@ -648,6 +672,10 @@ public class CcgParser implements Serializable {
     // argument. Identify said features and update the return type.
     functionReturnType = functionReturnType.assignFeatures(assignedFeatures, relabeledFeatures);
 
+    Preconditions.checkState(syntaxVarType.canTakeValue(functionReturnType),
+        "Could not build application combinator for %s applied to %s producing %s",
+        functionCat, argumentCat, functionReturnType);
+    
     int functionReturnTypeInt = syntaxVarType.getValueIndex(functionReturnType);
     int[] functionReturnTypeVars = functionReturnType.getUniqueVariables();
     int functionReturnHead = functionReturnType.getHeadVariable();

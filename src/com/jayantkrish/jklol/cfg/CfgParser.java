@@ -51,10 +51,6 @@ public class CfgParser implements Serializable {
   // in order to improve parsing speed.
   private final Tensor binaryDistributionWeights;
 
-  // If greater than 0, this parser performs a beam search over trees,
-  // maintaining up to beamSize trees at each chart node.
-  private final int beamSize;
-
   // If true, the parser is allowed to skip portions of the terminal symbols
   // during parsing.
   private final boolean canSkipTerminals;
@@ -72,14 +68,12 @@ public class CfgParser implements Serializable {
    * @param ruleTypeVar
    * @param binaryDistribution
    * @param terminalDistribution
-   * @param beamSize
    * @param canSkipTerminals
    * @param skipSymbol
    */
   public CfgParser(VariableNumMap parentVar, VariableNumMap leftVar, VariableNumMap rightVar,
       VariableNumMap terminalVar, VariableNumMap ruleTypeVar, DiscreteFactor binaryDistribution,
-      DiscreteFactor terminalDistribution, int beamSize, boolean canSkipTerminals,
-      Assignment skipSymbol) {
+      DiscreteFactor terminalDistribution, boolean canSkipTerminals, Assignment skipSymbol) {
     Preconditions.checkArgument(parentVar.size() == 1 && leftVar.size() == 1
         && rightVar.size() == 1 && terminalVar.size() == 1 && ruleTypeVar.size() == 1);
     Preconditions.checkArgument(binaryDistribution.getVars().equals(VariableNumMap.unionAll(
@@ -101,7 +95,6 @@ public class CfgParser implements Serializable {
     this.nonterminalVariableType = parentVar.getDiscreteVariables().get(0);
     this.binaryDistributionWeights = binaryDistribution.getWeights();
 
-    this.beamSize = beamSize;
     this.canSkipTerminals = canSkipTerminals;
     this.skipSymbol = skipSymbol;
   }
@@ -117,21 +110,9 @@ public class CfgParser implements Serializable {
   public VariableNumMap getParentVariable() {
     return parentVar;
   }
-
-  public int getBeamSize() {
-    return beamSize;
-  }
-
-  /**
-   * Gets a new {@code CfgParser} with different values for {@code beamSize} and
-   * {@code canSkipTerminals}.
-   * 
-   * @return
-   */
-  public CfgParser setParameters(int newBeamSize, boolean newCanSkipTerminals,
-      Assignment skipSymbol) {
-    return new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar, binaryDistribution,
-        terminalDistribution, newBeamSize, newCanSkipTerminals, skipSymbol);
+  
+  public VariableNumMap getTerminalVariable() {
+    return terminalVar;
   }
 
   // //////////////////////////////////////////////////////////////////////
@@ -173,7 +154,7 @@ public class CfgParser implements Serializable {
 
   /**
    * Performs a beam search over parse trees maintaining up to
-   * {@code this.getBeamSize()} trees at each node of the parse tree. This
+   * {@code beamSize} trees at each node of the parse tree. This
    * method can be used to approximate the marginal distribution over parse
    * trees. The returned list of trees is sorted from most to least probable.
    * 
@@ -182,7 +163,7 @@ public class CfgParser implements Serializable {
    * @return
    */
   @SuppressWarnings("unchecked")
-  public List<CfgParseTree> beamSearch(List<?> terminals) {
+  public List<CfgParseTree> beamSearch(List<?> terminals, int beamSize) {
     if (terminals.size() == 0) {
       // Zero size inputs occur because unknown words may be automatically skipped.
       return Collections.emptyList();
@@ -232,16 +213,12 @@ public class CfgParser implements Serializable {
 
     // Map the integer encodings of trees back to tree objects.
     List<CfgParseTree> trees;
-    if (canSkipTerminals) {
-      trees = populateParseTreesFromChartSkippingTerminals(chart, treeKeyOffsets);
-    } else {
-      trees = Lists.newArrayList();
-      int numRootTrees = chart.getNumParseTreeKeysForSpan(0, terminals.size() - 1);
-      long[] rootKeys = chart.getParseTreeKeysForSpan(0, terminals.size() - 1);
-      double[] rootProbs = chart.getParseTreeProbsForSpan(0, terminals.size() - 1);
-      for (int i = 0; i < numRootTrees; i++) {
-        trees.add(mapTreeKeyToParseTree(rootKeys[i], rootProbs[i], 0, terminals.size() - 1, chart, treeKeyOffsets));
-      }
+    trees = Lists.newArrayList();
+    int numRootTrees = chart.getNumParseTreeKeysForSpan(0, terminals.size() - 1);
+    long[] rootKeys = chart.getParseTreeKeysForSpan(0, terminals.size() - 1);
+    double[] rootProbs = chart.getParseTreeProbsForSpan(0, terminals.size() - 1);
+    for (int i = 0; i < numRootTrees; i++) {
+      trees.add(mapTreeKeyToParseTree(rootKeys[i], rootProbs[i], 0, terminals.size() - 1, chart, treeKeyOffsets));
     }
 
     Collections.sort(trees);
@@ -250,7 +227,7 @@ public class CfgParser implements Serializable {
   }
 
   private List<CfgParseTree> populateParseTreesFromChartSkippingTerminals(BeamSearchCfgParseChart chart,
-      long[] treeEncodingOffsets) {
+      long[] treeEncodingOffsets, int beamSize) {
     // If we can skip terminals, a parse for any subtree of the sentence
     // is a parse for the entire sentence. Identify a probability threshold
     // which all returned parse trees must be above.

@@ -9,6 +9,7 @@ import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParser;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
@@ -33,11 +34,15 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
   // embedded in the alignment model.
   private final GradientOptimizer optimizer;
   
+  private final boolean convex;
+  
   public CfgAlignmentEmOracle(ParametricCfgAlignmentModel pam, SufficientStatistics smoothing,
-      GradientOptimizer optimizer) {
+      GradientOptimizer optimizer, boolean convex) {
     this.pam = Preconditions.checkNotNull(pam);
     this.smoothing = smoothing;
     this.optimizer = optimizer;
+    
+    this.convex = convex;
     
     Preconditions.checkArgument(pam.isLoglinear() || smoothing != null, 
         "Must provide smoothing if model does not use loglinear factors");
@@ -66,20 +71,50 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
   public CfgExpectation computeExpectations(CfgAlignmentModel model,
       SufficientStatistics currentParameters, AlignmentExample example,
       CfgExpectation accumulator, LogFunction log) {
-    log.startTimer("e_step/getCfg");
-    CfgParser parser = model.getCfgParser(example);
-    log.stopTimer("e_step/getCfg");
+    if (convex) {
+      log.startTimer("e_step/getCfg");
+      CfgParser parser = model.getUniformCfgParser(example);
+      log.stopTimer("e_step/getCfg");
 
-    log.startTimer("e_step/marginals");
-    Factor rootFactor = model.getRootFactor(example.getTree(), parser.getParentVariable());
-    CfgParseChart chart = parser.parseMarginal(example.getWords(), rootFactor, true);
-    log.stopTimer("e_step/marginals");
+      log.startTimer("e_step/marginals");
+      Factor rootFactor = model.getRootFactor(example.getTree(), parser.getParentVariable());
+      CfgParseChart chart = parser.parseMarginal(example.getWords(), rootFactor, true);
+      log.stopTimer("e_step/marginals");
 
-    log.startTimer("e_step/compute_expectations");
-    pam.incrementExpectations(accumulator, chart, 1.0);
-    log.stopTimer("e_step/compute_expectations");
-    
-    return accumulator;
+      log.startTimer("e_step/compute_expectations");
+
+      Factor terminalTreeExpectations = chart.getTerminalRuleExpectations();
+      TableFactorBuilder builder = new TableFactorBuilder(terminalTreeExpectations.getVars(),
+          DenseTensorBuilder.getFactory());
+      model.populateTerminalDistribution(example.getWords(), parser.getParentVariable().getDiscreteVariables().get(0).getValues(),
+          model.getTerminalFactor(), TableFactor.logUnity(model.getTerminalFactor().getVars()), builder);
+      DiscreteFactor terminalExpectations = terminalTreeExpectations.product(builder.build()).coerceToDiscrete();
+      
+      VariableNumMap varsExceptTerminal = terminalExpectations.getVars().removeAll(parser.getTerminalVariable());
+      DiscreteFactor partitionFunction = terminalExpectations.marginalize(varsExceptTerminal);
+      terminalExpectations = terminalExpectations.product(partitionFunction.inverse());
+
+      pam.incrementExpectations(accumulator, chart.getBinaryRuleExpectations().coerceToDiscrete(),
+          terminalExpectations.coerceToDiscrete(), 1.0, chart.getPartitionFunction());
+
+      log.stopTimer("e_step/compute_expectations");
+      return accumulator;
+    } else {
+      log.startTimer("e_step/getCfg");
+      CfgParser parser = model.getCfgParser(example);
+      log.stopTimer("e_step/getCfg");
+
+      log.startTimer("e_step/marginals");
+      Factor rootFactor = model.getRootFactor(example.getTree(), parser.getParentVariable());
+      CfgParseChart chart = parser.parseMarginal(example.getWords(), rootFactor, true);
+      log.stopTimer("e_step/marginals");
+
+      log.startTimer("e_step/compute_expectations");
+      pam.incrementExpectations(accumulator, chart, 1.0);
+      log.stopTimer("e_step/compute_expectations");
+
+      return accumulator;
+    }
   }
 
   @Override

@@ -23,6 +23,8 @@ import com.jayantkrish.jklol.ccg.lambda.Type;
 public class StaticAnalysis {
   
   public static final String LAMBDA = "lambda";
+  
+  public static final Type TOP = Type.createAtomic("unknown");
 
   private StaticAnalysis() {
     // Prevent instantiation

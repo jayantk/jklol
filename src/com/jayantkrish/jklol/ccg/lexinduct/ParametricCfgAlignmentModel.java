@@ -30,7 +30,6 @@ import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
-import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.bayesnet.SparseCptTableFactor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
@@ -238,9 +237,17 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
         nonterminalFactor = nonterminalFeatureFactor;
         // terminalFactor = terminalFeatureFactor;
       } else {
+        // Assign all binary rules probability 1
+        nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
+        // Constant probability of invoking a rule or not.
+        ruleFactor = new ConstantParametricFactor(parentVar.union(ruleVar),
+            TableFactor.unity(parentVar.union(ruleVar)));
+
+        /*
         ruleFactor = new CptTableFactor(parentVar, ruleVar);
         nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
             leftVar.union(rightVar), nonterminalSparsityFactor, nonterminalConstantFactor);
+        */
         terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
             terminalVar, sparsityFactor, constantFactor);
       }
@@ -333,14 +340,13 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
         nGramLength);
   }
   
-  public void incrementExpectations(CfgExpectation expectations, CfgParseChart chart, double count) {
+  public void incrementExpectations(CfgExpectation expectations, DiscreteFactor nonterminalExpectations,
+      DiscreteFactor terminalExpectations, double count, double partitionFunction) {
     TableFactorBuilder ruleBuilder = expectations.getRuleBuilder();
     TableFactorBuilder terminalBuilder = expectations.getTerminalBuilder();
     TableFactorBuilder nonterminalBuilder = expectations.getNonterminalBuilder();
     
-    DiscreteFactor terminalExpectations = chart.getTerminalRuleExpectations().coerceToDiscrete();
     Iterator<Outcome> iter = terminalExpectations.outcomeIterator();
-    double partitionFunction = chart.getPartitionFunction();
     while (iter.hasNext()) {
       Outcome o = iter.next();
       Assignment a = o.getAssignment();
@@ -350,7 +356,6 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
       terminalBuilder.incrementWeight(a, amount);
     }
 
-    DiscreteFactor nonterminalExpectations = chart.getBinaryRuleExpectations().coerceToDiscrete();
     iter = nonterminalExpectations.outcomeIterator();
     while (iter.hasNext()) {
       Outcome o = iter.next();
@@ -360,6 +365,11 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
       ruleBuilder.incrementWeight(a.intersection(ruleFactor.getVars().getVariableNumsArray()), amount);
       nonterminalBuilder.incrementWeight(a, amount);
     }
+  }
+  
+  public void incrementExpectations(CfgExpectation expectations, CfgParseChart chart, double count) {
+    incrementExpectations(expectations, chart.getBinaryRuleExpectations().coerceToDiscrete(),
+        chart.getTerminalRuleExpectations().coerceToDiscrete(), count, chart.getPartitionFunction());
   }
   
   public void incrementExpectations(CfgExpectation expectations, CfgParseTree tree, double count) {

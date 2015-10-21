@@ -299,7 +299,6 @@ public class ExpressionTree {
   
   public ExpressionNode getExpressionNode() {
     return new ExpressionNode(rootExpression, rootType, numAppliedArguments);
-    // return new ExpressionNode(rootExpression, -1);
   }
   
   public int getNumAppliedArguments() {

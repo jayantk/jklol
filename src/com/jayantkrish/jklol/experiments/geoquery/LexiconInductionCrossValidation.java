@@ -38,16 +38,15 @@ import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder;
-import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer;
-import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder.LagrangianDecodingResult;
+import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer.ParametersAndLagrangeMultipliers;
+import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.util.SemanticParserExampleLoss;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils.SemanticParserLoss;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.cli.AbstractCli;
-import com.jayantkrish.jklol.cli.AbstractCli.CommonOptions;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -125,7 +124,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     emIterations = parser.accepts("emIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(0.01);
     nGramLength = parser.accepts("nGramLength").withRequiredArg().ofType(Integer.class).defaultsTo(1);
-    lexiconNumParses = parser.accepts("lexiconNumParses").withRequiredArg().ofType(Integer.class).defaultsTo(1);
+    lexiconNumParses = parser.accepts("lexiconNumParses").withRequiredArg().ofType(Integer.class).defaultsTo(-1);
     
     parserIterations = parser.accepts("parserIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
@@ -204,10 +203,10 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     for (LexiconEntry lexiconEntry : LexiconEntry.parseLexiconEntries(additionalLexiconEntries)) {
       entityNames.add(lexiconEntry.getWords());
     }
-    
+
     // Train the alignment model and generate lexicon entries.
     PairCountAccumulator<List<String>, LexiconEntry> alignments = trainAlignmentModel(trainingData,
-        entityNames, smoothingAmount, emIterations, nGramLength, lexiconNumParses, false, false, true);
+        entityNames, smoothingAmount, emIterations, nGramLength, lexiconNumParses, false, false, true, false);
     
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (AlignmentExample trainingExample : trainingData) {
@@ -290,7 +289,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   public static PairCountAccumulator<List<String>, LexiconEntry> trainAlignmentModel(
       List<AlignmentExample> trainingData, Set<List<String>> entityNames, double smoothingAmount,
       int emIterations, int nGramLength, int lexiconNumParses, boolean useLagrangianRelaxation, boolean discriminative,
-      boolean loglinear) {
+      boolean loglinear, boolean convex) {
     // Preprocess data to generate features.
     FeatureVectorGenerator<Expression2> vectorGenerator = AlignmentLexiconInduction
         .buildFeatureVectorGenerator(trainingData, Collections.<String>emptyList());
@@ -327,8 +326,14 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     // Train the alignment model with EM.
     if (!useLagrangianRelaxation) {
       ExpectationMaximization em = new ExpectationMaximization(emIterations, new DefaultLogFunction(1, false));
-      SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, optimizer),
+      SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, optimizer, true),
           initial, trainingData);
+
+      if (!convex) {
+        // If training a nonconvex model, initialize the parameters using the convex model.
+        trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, optimizer, convex),
+          trainedParameters, trainingData);
+      }
 
       System.out.println(pam.getParameterDescription(trainedParameters));
       

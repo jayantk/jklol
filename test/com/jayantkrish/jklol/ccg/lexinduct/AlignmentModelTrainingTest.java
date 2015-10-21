@@ -81,12 +81,16 @@ public class AlignmentModelTrainingTest extends TestCase {
     SufficientStatistics initial = pam.getNewSufficientStatistics();
     initial.increment(1);
 
-    ExpectationMaximization em = new ExpectationMaximization(1, new DefaultLogFunction(10, false));
-    SufficientStatistics trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, smoothing, null),
+    ExpectationMaximization em = new ExpectationMaximization(20, new DefaultLogFunction(10, false));
+    SufficientStatistics trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, smoothing, null, true),
         initial, examples);
+    
+    trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, smoothing, null, false),
+        trainedParameters2, examples);
+    
 
     // TODO: put in an actual test here.
-    System.out.println(pam.getParameterDescription(trainedParameters2, 30));
+    System.out.println(pam.getParameterDescription(trainedParameters2, 50));
     CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters2);
     for (AlignmentExample example : examples) {
       System.out.println(example.getWords());
@@ -105,7 +109,7 @@ public class AlignmentModelTrainingTest extends TestCase {
     Lbfgs lbfgs = new Lbfgs(numIterations, 10, 1e-6, new DefaultLogFunction(numIterations - 1, false));
 
     ExpectationMaximization em = new ExpectationMaximization(50, new DefaultLogFunction());
-    SufficientStatistics trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, null, lbfgs),
+    SufficientStatistics trainedParameters2 = em.train(new CfgAlignmentEmOracle(pam, null, lbfgs, false),
         initial, examples);
 
     // TODO: put in an actual test here.

@@ -110,7 +110,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     initial.increment(1);
 
     ExpectationMaximization em = new ExpectationMaximization(options.valueOf(emIterations), new DefaultLogFunction());
-    SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, null),
+    SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, null, false),
         initial, examples);
 
     if (options.has(printParameters)) {
@@ -145,17 +145,24 @@ public class AlignmentLexiconInduction extends AbstractCli {
       Map<String, String> typeReplacements) {
     PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
     for (AlignmentExample example : examples) {
-      AlignedExpressionTree tree = model.getBestAlignment(example);
+      List<AlignedExpressionTree> trees = Lists.newArrayList();
       
-      System.out.println(example.getWords());
-      System.out.println(tree);
-
-      for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
-        alignments.incrementOutcome(entry.getWords(), entry, 1);
-        System.out.println("   " + entry);
+      if (lexiconNumParses <= 0) {
+        trees.add(model.getBestAlignment(example));
+      } else {
+        trees.addAll(model.getBestAlignments(example, lexiconNumParses));
       }
-      System.out.println("");
 
+      System.out.println(example.getWords());
+      for (AlignedExpressionTree tree : trees) {
+        System.out.println(tree);
+
+        for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
+          alignments.incrementOutcome(entry.getWords(), entry, 1);
+          System.out.println("   " + entry);
+        }
+        System.out.println("");
+      }
     }
     return alignments;
   }

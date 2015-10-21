@@ -28,7 +28,6 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
   private final ParametricFactor nonterminalFactor;
   private final ParametricFactor terminalFactor;
 
-  private final int beamSize;
   private final boolean canSkipTerminals;
 
   private static final List<String> STATISTIC_NAMES = Arrays.asList("nonterminals", "terminals");
@@ -36,7 +35,7 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
   public ParametricCfgParser(VariableNumMap parentVar, VariableNumMap leftVar,
       VariableNumMap rightVar, VariableNumMap terminalVar, VariableNumMap ruleTypeVar,
       ParametricFactor nonterminalFactor, ParametricFactor terminalFactor,
-      int beamSize, boolean canSkipTerminals) {
+      boolean canSkipTerminals) {
     this.parentVar = parentVar;
     this.leftVar = leftVar;
     this.rightVar = rightVar;
@@ -45,7 +44,6 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
 
     this.nonterminalFactor = nonterminalFactor;
     this.terminalFactor = terminalFactor;
-    this.beamSize = beamSize;
     this.canSkipTerminals = canSkipTerminals;
   }
 
@@ -59,7 +57,7 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
 
     CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar,
         (DiscreteFactor) nonterminalFactor.getModelFromParameters(nonterminalStatistics),
-        (DiscreteFactor) terminalFactor.getModelFromParameters(terminalStatistics), beamSize,
+        (DiscreteFactor) terminalFactor.getModelFromParameters(terminalStatistics),
         canSkipTerminals, null);
     return parser;
   }

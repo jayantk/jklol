@@ -7,12 +7,12 @@ public interface AlignmentModelInterface {
   public AlignedExpressionTree getBestAlignment(AlignmentExample example);
   
   /**
-   * Gets the {@code num} (approximate) best alignments for {@code example}.
+   * Gets the {@code beamSize} (approximate) best alignments for {@code example}.
    * 
    * @param example
-   * @param num
+   * @param beamSize
    * @return
    */
-  public List<AlignedExpressionTree> getBestAlignments(AlignmentExample example, int num);
+  public List<AlignedExpressionTree> getBestAlignments(AlignmentExample example, int beamSize);
   
 }

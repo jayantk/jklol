@@ -236,6 +236,40 @@ public class CcgCategory implements Serializable {
 
     return new CcgCategory(syntax, logicalForm, subjects, argumentNumbers, objects, values);
   }
+  
+  /**
+   * Generates a CCG category with head and dependency information
+   * automatically populated from the syntactic category and 
+   * logical form. The logical form itself is used as the semantic
+   * head of the returned category. 
+   * 
+   * @param cat
+   * @param logicalForm
+   * @return
+   */
+  public static CcgCategory fromSyntaxLf(HeadedSyntacticCategory cat, Expression2 lf) {
+    String head = lf.toString();
+    head = head.replaceAll(" ", "_");
+    List<String> subjects = Lists.newArrayList();
+    List<Integer> argumentNums = Lists.newArrayList();
+    List<Integer> objects = Lists.newArrayList();
+    List<Set<String>> assignments = Lists.newArrayList();
+    assignments.add(Sets.newHashSet(head));
+
+    List<HeadedSyntacticCategory> argumentCats = Lists.newArrayList(cat.getArgumentTypes());
+    Collections.reverse(argumentCats);
+    for (int i = 0; i < argumentCats.size(); i++) {
+      subjects.add(head);
+      argumentNums.add(i + 1);
+      objects.add(argumentCats.get(i).getHeadVariable());
+    }
+
+    for (int i = 0; i < cat.getUniqueVariables().length - 1; i++) {
+      assignments.add(Collections.<String>emptySet());
+    }
+
+    return new CcgCategory(cat, lf, subjects, argumentNums, objects, assignments);
+  }
 
   /**
    * Gets the syntactic type of this category.

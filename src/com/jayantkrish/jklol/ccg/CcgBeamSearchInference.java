@@ -52,6 +52,10 @@ public class CcgBeamSearchInference implements CcgInference {
 
     this.verbose = verbose;
   }
+  
+  public static CcgBeamSearchInference getDefault(int beamSize) {
+    return new CcgBeamSearchInference(null, null, beamSize, -1, Integer.MAX_VALUE, 1, false);
+  }
 
   @Override
   public CcgParse getBestParse(CcgParser parser, AnnotatedSentence sentence,

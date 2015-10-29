@@ -3,13 +3,11 @@ package com.jayantkrish.jklol.ccg.lexinduct;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
@@ -202,38 +200,14 @@ public class AlignedExpressionTree {
       // number of arguments it accepted in the sentence. Simultaneously
       // generate its dependencies and head assignment.
       for (List<String> curWords : possibleWords) {
-        // String head = Joiner.on("_").join(curWords) + "#" + getExpression().toString();
-        String head = getExpression().toString();
-        // TODO: move the normalization elsewhere:
-        head = head.replaceAll(" ", "_");
-
         HeadedSyntacticCategory syntax = typeToSyntax(returnType, 0);
         for (int i = 0; i < getNumAppliedArguments(); i++) {
           int nextVar = Ints.max(syntax.getUniqueVariables()) + 1;
           HeadedSyntacticCategory argSyntax = typeToSyntax(argumentTypes.get(i), nextVar);
           syntax = syntax.addArgument(argSyntax, argDirs.get(i), 0);
         }
-        
-        // Create a dependency for each argument of the syntactic category.
-        List<String> subjects = Lists.newArrayList();
-        List<Integer> argumentNums = Lists.newArrayList();
-        List<Integer> objects = Lists.newArrayList();
-        List<Set<String>> assignments = Lists.newArrayList();
-        assignments.add(Sets.newHashSet(head));
-        List<HeadedSyntacticCategory> argumentCats = Lists.newArrayList(syntax.getArgumentTypes());
-        Collections.reverse(argumentCats);
-        for (int i = 0; i < argumentCats.size(); i++) {
-          subjects.add(head);
-          argumentNums.add(i + 1);
-          objects.add(argumentCats.get(i).getHeadVariable());
-        }
 
-        for (int i = 0; i < syntax.getUniqueVariables().length - 1; i++) {
-          assignments.add(Collections.<String>emptySet());
-        }
-
-        CcgCategory ccgCategory = new CcgCategory(syntax, getExpression(), subjects,
-            argumentNums, objects, assignments);
+        CcgCategory ccgCategory = CcgCategory.fromSyntaxLf(syntax, getExpression());
         LexiconEntry entry = new LexiconEntry(curWords, ccgCategory);
 
         lexiconEntries.add(entry);

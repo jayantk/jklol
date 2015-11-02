@@ -12,6 +12,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
+import com.jayantkrish.jklol.ccg.CcgBinaryRule;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgUnaryRule;
@@ -33,14 +34,16 @@ import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule
 import com.jayantkrish.jklol.ccg.lexinduct.vote.VotingLexiconInduction.ParserInfo;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.training.DefaultLogFunction;
 
 public class VotingLexiconInductionTest extends TestCase {
 
-  String[][] dataSet1 = new String[][] {{"is plano in texas", "(in:<e,<e,t>> plano:e texas:e)"},
+  String[][] dataSet1 = new String[][] {
       {"what plano border us", "(border:<e,<e,t>> plano:e us:e)"},
       {"texas in us", "(in:<e,<e,t>> texas:e us:e)"},
       {"us in plano", "(in:<e,<e,t>> us:e plano:e)"},
       {"does texas border plano ?", "(border:<e,<e,t>> texas:e plano:e)"},
+      {"is plano in texas", "(in:<e,<e,t>> plano:e texas:e)"},
       {"city in texas", "(lambda x (and:<t*,t> (city:<e,t> x) (in:<e,<e,t>> x texas:e)))"},
       {"major city in texas", "(lambda x (and:<t*,t> (major:<e,t> x) (city:<e,t> x) (in:<e,<e,t>> x texas:e)))"},
       {"state in us", "(lambda x (and:<t*,t> (state:<e,t> x) (in:<e,<e,t>> x us:e)))"},
@@ -55,13 +58,13 @@ public class VotingLexiconInductionTest extends TestCase {
       {"((S{0}\\NP{1}){0}/NP{2}){0}", "(lambda y x ($0 x y))", "$0", "<e,<e,t>>"},
       {"((N{0}\\N{0}){1}/NP{2}){1}", "(lambda x f y (and:<t*,t> (f y) ($0 x y)))", "$0", "<e,<e,t>>"},
       {"((N{0}\\N{0}){1}/NP{2}){1}", "(lambda x f y (and:<t*,t> (f y) ($0 y x)))", "$0", "<e,<e,t>>"},
-      {"(S{0}\\S{0}){1}", "(lambda x x)"},
-      {"(S{0}/S{0}){1}", "(lambda x x)"},
-      {"(N{0}/N{0}){1}", "(lambda f x (and:<t*,t> (f x) ($0 x)))", "$0", "<e,t>"}};
+      {"(N{0}/N{0}){1}", "(lambda f x (and:<t*,t> (f x) ($0 x)))", "$0", "<e,t>"},
+      {"SKIP{0}", "skip"},
+  };
   
   String[] initialLexiconStrings = new String[] {
-      "texas,N{0},texas:e,0 texas:e",
-      "plano,N{0},plano:e,0 plano:e",
+      "texas,NP{0},texas:e,0 texas:e",
+      "plano,NP{0},plano:e,0 plano:e",
       "in,((N{0}\\N{0}){1}/N{2}){1},\"(lambda y x (in:<e,<e,t>> x y))\",\"1 in:<e,<e,t>>\",\"in:<e,<e,t>> 1 0\",\"in:<e,<e,t>> 2 2\"",
   };
 
@@ -89,7 +92,7 @@ public class VotingLexiconInductionTest extends TestCase {
     
     templates = parseTemplates(templateStrings);
     examples = parseData(dataSet1);
-    initialLexicon = parseLexicon(initialLexiconStrings);
+    initialLexicon = LexiconEntry.parseLexiconEntries(Arrays.asList(initialLexiconStrings));
     
     Set<String> predicateSet = Sets.newHashSet();
     for (CcgExample example : examples) {
@@ -104,8 +107,18 @@ public class VotingLexiconInductionTest extends TestCase {
       predicateTypes.add(StaticAnalysis.inferType(Expression2.constant(predicate), StaticAnalysis.TOP, typeReplacementMap));
     }
     
-    List<CcgUnaryRule> unaryRules = Lists.newArrayList(CcgUnaryRule.parseFrom("DUMMY{0} BLAH{0}"));
-    factory = new LexiconInductionCcgParserFactory(Collections.emptyList(), unaryRules,
+    String[] ruleLines = {"DUMMY{0} BLAH{0}",
+        "SKIP{0} NP{1} NP{1},(lambda $L $R $R)",
+        "SKIP{0} N{1} N{1},(lambda $L $R $R)",
+        "SKIP{0} S{1} S{1},(lambda $L $R $R)",
+        "NP{1} SKIP{0} NP{1},(lambda $L $R $L)",
+        "N{1} SKIP{0} N{1},(lambda $L $R $L)",
+        "S{1} SKIP{0} S{1},(lambda $L $R $L)",
+    };
+    List<CcgUnaryRule> unaryRules = Lists.newArrayList();
+    List<CcgBinaryRule> binaryRules = Lists.newArrayList();
+    CcgBinaryRule.parseBinaryAndUnaryRules(Arrays.asList(ruleLines), binaryRules, unaryRules);
+    factory = new LexiconInductionCcgParserFactory(binaryRules, unaryRules,
         new DefaultCcgFeatureFactory(false, false), null, true, null, true);
     genlex = new TemplateGenlex(1, templates, predicates, predicateTypes);
   }
@@ -121,7 +134,7 @@ public class VotingLexiconInductionTest extends TestCase {
     }
     return examples;
   }
-  
+
   public static Set<LexicalTemplate> parseTemplates(String[][] templateStrings) {
     Set<LexicalTemplate> templates = Sets.newHashSet();
     for (int i = 0; i < templateStrings.length; i++) {
@@ -139,21 +152,13 @@ public class VotingLexiconInductionTest extends TestCase {
     return templates;
   }
   
-  public static List<LexiconEntry> parseLexicon(String[] lexiconStrings) {
-    List<LexiconEntry> lexicon = Lists.newArrayList();
-    for (int i = 0; i < lexiconStrings.length; i++) {
-      lexicon.add(LexiconEntry.parseLexiconEntry(lexiconStrings[i]));
-    }
-    return lexicon;
-  }
-
   public void test() {
     System.out.println(initialLexicon);
 
     VotingLexiconInduction ind = new VotingLexiconInduction(10, 0.1, 1,
         CcgBeamSearchInference.getDefault(1000), comparator, new MaxVote(extractor));
 
-    ParserInfo info = ind.train(factory, genlex, initialLexicon, examples);
+    ParserInfo info = ind.train(factory, genlex, initialLexicon, examples, new DefaultLogFunction(1, false));
     CcgParser parser = info.getParser();
     ParametricCcgParser family = info.getFamily();
     SufficientStatistics parameters = info.getParameters();

@@ -16,8 +16,13 @@ import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.LexiconEntryInfo;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
+import com.jayantkrish.jklol.ccg.lexicon.SkipLexicon.SkipTrigger;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
+import com.jayantkrish.jklol.parallel.MapReduceExecutor;
+import com.jayantkrish.jklol.parallel.Mapper;
+import com.jayantkrish.jklol.training.LogFunction;
 
 /**
  * Implementation of the global voting lexicon induction
@@ -52,38 +57,52 @@ public class VotingLexiconInduction {
   }
 
   public ParserInfo train(LexiconInductionCcgParserFactory factory, Genlex genlex,
-      Collection<LexiconEntry> initialLexicon, List<CcgExample> examples) {
+      Collection<LexiconEntry> initialLexicon, List<CcgExample> examples, LogFunction log) {
     Set<LexiconEntry> currentLexicon = Sets.newHashSet(initialLexicon);
+    Set<LexiconEntry> allSeenEntries = Sets.newHashSet(currentLexicon);
     SufficientStatistics currentParameters = createParser(factory, null, currentLexicon).getParameters();
 
+    MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
+    
     for (int i = 0; i < iterations; i++) {
-      List<Set<LexiconEntry>> exampleProposals = Lists.newArrayList();
-      for (int j = 0; j < examples.size(); j++) {
-        exampleProposals.add(genEntries(examples.get(j), currentParameters, currentLexicon,
-            genlex, factory));
-      }
+      log.notifyIterationStart(i);
       
+      log.startTimer("gen_entries");
+      GenEntriesMapper mapper = new GenEntriesMapper(currentParameters, currentLexicon, genlex, factory, inference, comparator);
+      List<Set<LexiconEntry>> exampleProposals = executor.map(examples, mapper);
+      log.stopTimer("gen_entries");
+
+      log.startTimer("vote");
       System.out.println(i + " PRE-VOTE: " + currentLexicon);
       currentLexicon = voter.vote(currentLexicon, exampleProposals);
+      allSeenEntries.addAll(currentLexicon);
       System.out.println(i + " VOTED: " + currentLexicon);
+      log.stopTimer("vote");
+
+      currentParameters = createParser(factory, currentParameters, allSeenEntries).getParameters();
+      
       ParserInfo parserInfo = createParser(factory, currentParameters, currentLexicon);
-      currentParameters = parserInfo.getParameters();
       CcgParser parser = parserInfo.getParser();
       ParametricCcgParser family = parserInfo.getFamily();
+      SufficientStatistics parserParameters = parserInfo.getParameters();
       SufficientStatistics gradient = family.getNewSufficientStatistics();
       
+      for (LexiconEntry entry : parserInfo.getLexiconEntries()) {
+        System.out.println(entry);
+      }
+      
+      log.startTimer("compute_gradient");
+      int searchErrors = 0;
       Set<LexiconEntry> usedEntries = Sets.newHashSet();
       for (int j = 0; j < examples.size(); j++) {
         CcgExample example = examples.get(j);
         List<CcgParse> parses = inference.beamSearch(parser, example.getSentence(), null, null);
         System.out.println(example.getSentence());
-        for (CcgParse parse : parses){
-          System.out.println("   " + parse.getLogicalForm());
-        }
-        
+
         List<CcgParse> correctParses = CcgLoglikelihoodOracle.filterParsesByLogicalForm(
             example.getLogicalForm(), comparator, parses);
         List<CcgParse> correctMaxParses = filterToMaxScoring(correctParses);
+        System.out.println("correct parses: "+ correctParses.size() + " max: "+ correctMaxParses.size());
         
         // Track which lexicon entries are used in order to prune
         // entries that are unused across the whole data set. 
@@ -91,6 +110,7 @@ public class VotingLexiconInduction {
 
         if (correctParses.size() == 0) {
           // Don't update the gradient if we have a search error.
+          searchErrors += 1;
           continue;
         }
 
@@ -99,34 +119,38 @@ public class VotingLexiconInduction {
         // Subtract the unconditional expected feature counts.
         double unconditionalPartitionFunction = getPartitionFunction(parses);
         for (CcgParse parse : parses) {
-          family.incrementSufficientStatistics(gradient, currentParameters, sentence, parse, -1.0 * 
+          family.incrementSufficientStatistics(gradient, parserParameters, sentence, parse, -1.0 * 
               parse.getSubtreeProbability() / unconditionalPartitionFunction);
         }
         // Add conditional expected feature counts.
         double conditionalPartitionFunction = getPartitionFunction(correctParses);
         for (CcgParse parse : correctParses) {
-          family.incrementSufficientStatistics(gradient, currentParameters, sentence, parse,
+          family.incrementSufficientStatistics(gradient, parserParameters, sentence, parse,
               parse.getSubtreeProbability() / conditionalPartitionFunction);
         }
       }
-      
+      log.stopTimer("compute_gradient");
+      log.logStatistic(i, "search errors", searchErrors);
+
       // This update is currently using a fixed step size, but could probably
       // use a decaying step size.
       double currentStepSize = initialStepSize;
       currentParameters.multiply(1.0 - (currentStepSize * l2Regularization));
-      currentParameters.increment(gradient, currentStepSize);
+      gradient.multiply(currentStepSize);
+      currentParameters.transferParameters(gradient);
 
       // Keep all of the lexicon entries that were used in at least one example's parse.
       currentLexicon.retainAll(usedEntries);
+      log.notifyIterationEnd(i);
     }
-    
+
     return createParser(factory, currentParameters, currentLexicon);
   }
   
-  private Set<LexiconEntry> genEntries(CcgExample example,
+  private static Set<LexiconEntry> genEntries(CcgExample example,
       SufficientStatistics currentParameters, Collection<LexiconEntry> currentLexicon,
-      Genlex genlex, LexiconInductionCcgParserFactory factory) {
-    // System.out.println("genEntries: " + example.getSentence() + " " + example.getLogicalForm());
+      Genlex genlex, LexiconInductionCcgParserFactory factory, CcgBeamSearchInference inference,
+      ExpressionComparator comparator) {
 
     Set<LexiconEntry> exampleLexicon = Sets.newHashSet(currentLexicon);
     exampleLexicon.addAll(genlex.genlex(example));
@@ -136,13 +160,9 @@ public class VotingLexiconInduction {
     List<CcgParse> parses = inference.beamSearch(currentParser, example.getSentence(), null, null);
     List<CcgParse> correctParses = CcgLoglikelihoodOracle.filterParsesByLogicalForm(example.getLogicalForm(),
         comparator, parses);
-    
-    /*
-    for (CcgParse parse : parses) {
-      System.out.println("  " + parse.getLogicalForm());
-    }
-    System.out.println(correctParses);
-     */
+
+    System.out.println("genEntries: " + example.getSentence() + " " + example.getLogicalForm());
+    System.out.println("  numcorrect: " + correctParses.size());
 
     List<CcgParse> correctMaxParses = filterToMaxScoring(correctParses);
 
@@ -157,7 +177,7 @@ public class VotingLexiconInduction {
    * @param currentLexicon
    * @return
    */
-  private ParserInfo createParser(LexiconInductionCcgParserFactory factory,
+  private static ParserInfo createParser(LexiconInductionCcgParserFactory factory,
       SufficientStatistics currentParameters, Collection<LexiconEntry> currentLexicon) {
     ParametricCcgParser family = factory.getParametricCcgParser(currentLexicon);
     SufficientStatistics newParameters = family.getNewSufficientStatistics();
@@ -176,7 +196,7 @@ public class VotingLexiconInduction {
    * @param parses
    * @return
    */
-  private List<CcgParse> filterToMaxScoring(List<CcgParse> parses) {
+  private static List<CcgParse> filterToMaxScoring(List<CcgParse> parses) {
     List<CcgParse> maxParses = Lists.newArrayList();
     if (parses.size() > 0) {
       double bestScore = parses.get(0).getSubtreeProbability();
@@ -195,13 +215,20 @@ public class VotingLexiconInduction {
    * @param parses
    * @return
    */
-  private Set<LexiconEntry> getLexiconEntriesFromParses(Collection<CcgParse> parses) {
+  private static Set<LexiconEntry> getLexiconEntriesFromParses(Collection<CcgParse> parses) {
     // Generate candidate lexicon entries from the correct max parses.
     Set<LexiconEntry> candidateEntries = Sets.newHashSet();
     for (CcgParse correctMaxParse : parses) {
       for (LexiconEntryInfo info : correctMaxParse.getSpannedLexiconEntries()) {
         CcgCategory category = info.getCategory();
-        List<String> words = (List<String>) info.getLexiconTrigger();
+        Object trigger = info.getLexiconTrigger();
+        List<String> words = null;
+        if (trigger instanceof SkipTrigger) {
+          words = (List<String>) ((SkipTrigger) trigger).getTrigger();
+        } else {
+          words = (List<String>) trigger;
+        }
+        
         candidateEntries.add(new LexiconEntry(words, category));
       }
     }
@@ -252,5 +279,32 @@ public class VotingLexiconInduction {
     public CcgParser getParser() {
       return parser;
     }
-  }  
+  }
+  
+  private static class GenEntriesMapper extends Mapper<CcgExample, Set<LexiconEntry>> {
+    
+    private final SufficientStatistics currentParameters;
+    private final Set<LexiconEntry> currentLexicon;
+    private final Genlex genlex;
+    private final LexiconInductionCcgParserFactory factory;
+    private final CcgBeamSearchInference inference;
+    private final ExpressionComparator comparator;
+
+    public GenEntriesMapper(SufficientStatistics currentParameters,
+        Set<LexiconEntry> currentLexicon, Genlex genlex, LexiconInductionCcgParserFactory factory,
+        CcgBeamSearchInference inference, ExpressionComparator comparator) {
+      super();
+      this.currentParameters = currentParameters;
+      this.currentLexicon = currentLexicon;
+      this.genlex = genlex;
+      this.factory = factory;
+      this.inference = inference;
+      this.comparator = comparator;
+    }
+
+    @Override
+    public Set<LexiconEntry> map(CcgExample item) {
+      return genEntries(item, currentParameters, currentLexicon, genlex, factory, inference, comparator);
+    }
+  }
 }

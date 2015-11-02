@@ -6,13 +6,16 @@ import java.util.Set;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.util.CsvParser;
 
 public class LexicalTemplate {
 
@@ -28,6 +31,31 @@ public class LexicalTemplate {
     this.lf = Preconditions.checkNotNull(lf);
     this.args = ImmutableList.copyOf(args);
     this.argTypes = ImmutableList.copyOf(argTypes);
+  }
+  
+  public static LexicalTemplate fromCsv(String csvString) {
+    CsvParser parser = LexiconEntry.getCsvParser();
+    String[] parts = parser.parseLine(csvString);
+    
+    HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(parts[0]);
+    Expression2 lf = ExpressionParser.expression2().parseSingleExpression(parts[1]);
+
+    List<String> vars = Lists.newArrayList();
+    List<Type> varTypes = Lists.newArrayList();
+    for (int j = 2; j < parts.length; j += 2) {
+      vars.add(parts[j]);
+      varTypes.add(ExpressionParser.typeParser().parseSingleExpression(parts[j + 1]));
+    }
+
+    return new LexicalTemplate(cat, lf, vars, varTypes);
+  }
+
+  public static List<LexicalTemplate> fromCsv(Iterable<String> csvStrings) {
+    List<LexicalTemplate> templates = Lists.newArrayList();
+    for (String csvString : csvStrings) {
+      templates.add(LexicalTemplate.fromCsv(csvString));
+    }
+    return templates;
   }
 
   public Set<LexiconEntry> instantiate(List<String> tokens,

@@ -393,7 +393,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       CcgBeamSearchInference inferenceAlgorithm, ExpressionComparator comparator,
       int iterations, double l2Penalty) {
     ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntryLines,
-        unknownLexiconEntryLines, ruleEntries, featureFactory, null, true, null, true);
+        unknownLexiconEntryLines, ruleEntries, featureFactory, CcgExample.getPosTagVocabulary(trainingExamples),
+        true, null, true);
 
     /*
     GradientOracle<CcgParser, CcgExample> oracle = new CcgPerceptronOracle(family,

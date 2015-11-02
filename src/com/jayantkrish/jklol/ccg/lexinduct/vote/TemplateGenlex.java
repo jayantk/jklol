@@ -2,13 +2,17 @@ package com.jayantkrish.jklol.ccg.lexinduct.vote;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
 public class TemplateGenlex implements Genlex {
@@ -20,12 +24,26 @@ public class TemplateGenlex implements Genlex {
   private final List<String> predicates;
   private final List<Type> predicateTypes;
   
-  public TemplateGenlex(int maxTokens, Set<LexicalTemplate> templates, List<String> predicates,
+  public TemplateGenlex(int maxTokens, Iterable<LexicalTemplate> templates, List<String> predicates,
       List<Type> predicateTypes) {
     this.maxTokens = maxTokens;
     this.templates = Sets.newHashSet(templates);
     this.predicates = ImmutableList.copyOf(predicates);
     this.predicateTypes = ImmutableList.copyOf(predicateTypes);
+  }
+  
+  public static void extractPredicatesFromExamples(Collection<CcgExample> examples,
+      List<String> predicates, List<Type> predicateTypes) {
+    Set<String> predicateSet = Sets.newHashSet();
+    for (CcgExample example : examples) {
+      predicateSet.addAll(StaticAnalysis.getFreeVariables(example.getLogicalForm()));
+    }
+
+    Map<String, String> typeReplacementMap = Maps.newHashMap();
+    for (String predicate : predicateSet) {
+      predicates.add(predicate);
+      predicateTypes.add(StaticAnalysis.inferType(Expression2.constant(predicate), StaticAnalysis.TOP, typeReplacementMap));
+    }
   }
 
   @Override

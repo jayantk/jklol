@@ -30,6 +30,7 @@ import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.models.bayesnet.CptTableFactor;
 import com.jayantkrish.jklol.models.bayesnet.SparseCptTableFactor;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
@@ -127,12 +128,14 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
       }
     }
 
+    /*
     for (Expression2 template : templateExpressionMap.keySet()) {
       System.out.println(template);
       for (ExpressionNode node : templateExpressionMap.get(template)) {
         System.out.println("  " + node);
       }
     }
+    */
 
     DiscreteVariable expressionVarType = new DiscreteVariable("expressions", expressions);
     DiscreteVariable typeVarType = new DiscreteVariable("types", types); 
@@ -230,12 +233,12 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
         // Arrays.asList(ruleIndicatorFactor, ruleFeatureFactor), false);
         // nonterminalFactor = new CombiningParametricFactor(nonterminalFeatureFactor.getVars(), factorNames,
         // Arrays.asList(nonterminalIndicatorFactor, nonterminalFeatureFactor), false);
-        terminalFactor = new CombiningParametricFactor(terminalFeatureFactor.getVars(), factorNames,
-            Arrays.asList(terminalIndicatorFactor, terminalFeatureFactor), false);
+        // terminalFactor = new CombiningParametricFactor(terminalFeatureFactor.getVars(), factorNames,
+        // Arrays.asList(terminalIndicatorFactor, terminalFeatureFactor), false);
         
         ruleFactor = ruleFeatureFactor;
         nonterminalFactor = nonterminalFeatureFactor;
-        // terminalFactor = terminalFeatureFactor;
+        terminalFactor = terminalFeatureFactor;
       } else {
         // Assign all binary rules probability 1
         nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);

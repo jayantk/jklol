@@ -206,7 +206,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
     // Train the alignment model and generate lexicon entries.
     PairCountAccumulator<List<String>, LexiconEntry> alignments = trainAlignmentModel(trainingData,
-        entityNames, smoothingAmount, emIterations, nGramLength, lexiconNumParses, false, false, true, false);
+        entityNames, smoothingAmount, emIterations, nGramLength, lexiconNumParses, false, false,
+        true, false, false);
     
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (AlignmentExample trainingExample : trainingData) {
@@ -289,7 +290,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   public static PairCountAccumulator<List<String>, LexiconEntry> trainAlignmentModel(
       List<AlignmentExample> trainingData, Set<List<String>> entityNames, double smoothingAmount,
       int emIterations, int nGramLength, int lexiconNumParses, boolean useLagrangianRelaxation, boolean discriminative,
-      boolean loglinear, boolean convex) {
+      boolean loglinear, boolean convex, boolean initializeConvex) {
     // Preprocess data to generate features.
     FeatureVectorGenerator<Expression2> vectorGenerator = AlignmentLexiconInduction
         .buildFeatureVectorGenerator(trainingData, Collections.<String>emptyList());
@@ -319,7 +320,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     if (!loglinear) {
       initial.increment(1);
     } else {
-      int numIterations = 100;
+      int numIterations = 1000;
       optimizer = new Lbfgs(numIterations, 10, 1e-6, new DefaultLogFunction(numIterations - 1, false));
     }
 
@@ -329,7 +330,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, optimizer, true),
           initial, trainingData);
 
-      if (!convex) {
+      if (!convex && initializeConvex) {
         // If training a nonconvex model, initialize the parameters using the convex model.
         trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, optimizer, convex),
           trainedParameters, trainingData);

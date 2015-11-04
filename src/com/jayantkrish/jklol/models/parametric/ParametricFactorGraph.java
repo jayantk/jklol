@@ -81,6 +81,13 @@ public class ParametricFactorGraph implements ParametricFamily<DynamicFactorGrap
     int index = factorNames.getIndex(name);
     return parametricFactors.get(index);
   }
+  
+  public SufficientStatistics getFactorParameters(String factorName, 
+        SufficientStatistics parameters) {
+    List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
+    Preconditions.checkArgument(parameterList.size() == parametricFactors.size());
+    return parameterList.get(factorNames.getIndex(factorName));
+  }
 
   /**
    * Gets a {@code DynamicFactorGraph} which is the member of this

@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.ccg.lexicon;
 
-import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -50,6 +49,8 @@ public class SkipLexicon implements CcgLexicon {
       ChartEntry[] alreadyGenerated, int numAlreadyGenerated,
       List<Object> triggerAccumulator, List<CcgCategory> accumulator, List<Double> probAccumulator) {
     // TODO: this method doesn't totally do the right thing.
+    // jayant 11/5/2015 -- I have no idea when or why I made the above comment.
+    // at the moment, I think this is correct.
 
     for (int i = spanStart; i <= spanEnd; i++) {
       for (int j = i; j <= spanEnd; j++) {

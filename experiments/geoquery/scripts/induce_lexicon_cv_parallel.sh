@@ -7,7 +7,9 @@ ENTITY_LEXICON=$OUT_DIR/entity_lexicon.txt
 
 mkdir -p $OUT_DIR
 
-./experiments/geoquery/scripts/generate_lexicon.py > $ENTITY_LEXICON
+# ./experiments/geoquery/scripts/generate_lexicon.py > $ENTITY_LEXICON
+
+./experiments/geoquery/scripts/convert_np_list.py experiments/geoquery/grammar/np-list.lex > $ENTITY_LEXICON
 
 PROC=()
 for i in `seq 0 9`;

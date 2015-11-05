@@ -31,29 +31,26 @@ import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
-import com.jayantkrish.jklol.ccg.lexicon.SpanFeatureAnnotation;
 import com.jayantkrish.jklol.ccg.lexicon.StringContext;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder;
-import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer;
-import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder.LagrangianDecodingResult;
+import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer.ParametersAndLagrangeMultipliers;
+import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.util.SemanticParserExampleLoss;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils.SemanticParserLoss;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.cli.AbstractCli;
-import com.jayantkrish.jklol.cli.AbstractCli.CommonOptions;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
-import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.ExpectationMaximization;
@@ -100,8 +97,6 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     typeReplacements.put("m", "e");
     typeReplacements.put("p", "e");
   }
-  
-  private static final String FEATURE_ANNOTATION_NAME = "features"; 
   
   public LexiconInductionCrossValidation() {
     super(CommonOptions.MAP_REDUCE);
@@ -252,10 +247,16 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     List<CcgExample> ccgTrainingExamples = alignmentExamplesToCcgExamples(trainingData);
     List<String> ruleEntries = Arrays.asList("\"DUMMY{0} DUMMY{0}\",\"(lambda $L $L)\"");
 
-    FeatureVectorGenerator<StringContext> featureGen = getCcgFeatureFactory(ccgTrainingExamples);
-    ccgTrainingExamples = featurizeExamples(ccgTrainingExamples, featureGen);
+    // Generate a dictionary of string context features.
+    List<StringContext> contexts = StringContext.getContextsFromExamples(ccgTrainingExamples);
+    FeatureVectorGenerator<StringContext> featureGen = DictionaryFeatureVectorGenerator
+        .createFromData(contexts, new GeoqueryFeatureGenerator(), true);
+
+    ccgTrainingExamples = SemanticParserUtils.annotateFeatures(ccgTrainingExamples, featureGen,
+        GeoqueryUtil.FEATURE_ANNOTATION_NAME);
     CcgFeatureFactory featureFactory = new GeoqueryFeatureFactory(true, true,
-        FEATURE_ANNOTATION_NAME, featureGen.getFeatureDictionary());
+        GeoqueryUtil.FEATURE_ANNOTATION_NAME, featureGen.getFeatureDictionary(),
+        LexiconEntry.parseLexiconEntries(additionalLexiconEntries));
 
     ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
         <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
@@ -278,7 +279,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     SemanticParserExampleLoss.writeJsonToFile(trainingErrorOutputFilename, trainingExampleLosses);
 
     List<CcgExample> ccgTestExamples = alignmentExamplesToCcgExamples(testData);
-    ccgTestExamples = featurizeExamples(ccgTestExamples, featureGen);
+    ccgTestExamples = SemanticParserUtils.annotateFeatures(ccgTestExamples, featureGen, GeoqueryUtil.FEATURE_ANNOTATION_NAME);
     List<SemanticParserExampleLoss> testExampleLosses = Lists.newArrayList();    
     SemanticParserLoss testLoss = SemanticParserUtils.testSemanticParser(ccgTestExamples, ccgParser,
         inferenceAlgorithm, simplifier, comparator, testExampleLosses);
@@ -320,7 +321,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     if (!loglinear) {
       initial.increment(1);
     } else {
-      int numIterations = 100;
+      int numIterations = 1000;
       optimizer = new Lbfgs(numIterations, 10, 1e-6, new DefaultLogFunction(numIterations - 1, false));
     }
 
@@ -434,27 +435,6 @@ public class LexiconInductionCrossValidation extends AbstractCli {
           example.getTree().getExpression()));
     }
     return ccgExamples;
-  }
-  
-  private static FeatureVectorGenerator<StringContext> getCcgFeatureFactory(List<CcgExample> examples) {
-    List<StringContext> contexts = StringContext.getContextsFromExamples(examples);
-    FeatureGenerator<StringContext, String> featureGen = new GeoqueryFeatureGenerator();
-    return DictionaryFeatureVectorGenerator.createFromData(contexts, featureGen, true);
-  }
-
-  private static List<CcgExample> featurizeExamples(List<CcgExample> examples,
-      FeatureVectorGenerator<StringContext> featureGen) {
-    List<CcgExample> newExamples = Lists.newArrayList();
-    for (CcgExample example : examples) {
-      AnnotatedSentence sentence = example.getSentence();
-      SpanFeatureAnnotation annotation = SpanFeatureAnnotation.annotate(sentence, featureGen);
-      
-      AnnotatedSentence annotatedSentence = sentence.addAnnotation(FEATURE_ANNOTATION_NAME, annotation);
-      
-      newExamples.add(new CcgExample(annotatedSentence, example.getDependencies(),
-          example.getSyntacticParse(), example.getLogicalForm()));
-    }
-    return newExamples;
   }
 
   public static void readFolds(String foldDir, List<String> foldNames, List<List<AlignmentExample>> folds,

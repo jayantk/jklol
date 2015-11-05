@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.ccg.util;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
@@ -13,6 +14,10 @@ import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplificationException;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
+import com.jayantkrish.jklol.ccg.lexicon.SpanFeatureAnnotation;
+import com.jayantkrish.jklol.ccg.lexicon.StringContext;
+import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
 
@@ -109,6 +114,22 @@ public class SemanticParserUtils {
     return new SemanticParserLoss(testExamples.size(), numParsed,
         numCorrect, numCorrectLfPossible);
   }
+
+  public static List<CcgExample> annotateFeatures(List<CcgExample> examples,
+      FeatureVectorGenerator<StringContext> featureGen, String annotationName) {
+    List<CcgExample> newExamples = Lists.newArrayList();
+    for (CcgExample example : examples) {
+      AnnotatedSentence sentence = example.getSentence();
+      SpanFeatureAnnotation annotation = SpanFeatureAnnotation.annotate(sentence, featureGen);
+
+      AnnotatedSentence annotatedSentence = sentence.addAnnotation(annotationName, annotation);
+
+      newExamples.add(new CcgExample(annotatedSentence, example.getDependencies(),
+          example.getSyntacticParse(), example.getLogicalForm()));
+    }
+    return newExamples;
+  }
+
   
   private SemanticParserUtils() {
     // Prevent instantiation.

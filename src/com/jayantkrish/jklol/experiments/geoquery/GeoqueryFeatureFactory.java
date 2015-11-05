@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Functions;
-import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgCategory;
@@ -41,12 +40,16 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
   private final String lexiconFeatureAnnotationName;
   private final DiscreteVariable lexiconFeatureDictionary;
   
+  private final List<LexiconEntry> entityNames;
+  
   public GeoqueryFeatureFactory(boolean useDependencyFeatures, boolean useSyntacticFeatures,
-      String lexiconFeatureAnnotationName, DiscreteVariable lexiconFeatureDictionary) {
+      String lexiconFeatureAnnotationName, DiscreteVariable lexiconFeatureDictionary,
+      List<LexiconEntry> entityNames) {
     this.useDependencyFeatures = useDependencyFeatures;
     this.useSyntacticFeatures = useSyntacticFeatures;
     this.lexiconFeatureAnnotationName = lexiconFeatureAnnotationName;
     this.lexiconFeatureDictionary = lexiconFeatureDictionary;
+    this.entityNames = entityNames;
   }
 
   @Override
@@ -137,33 +140,30 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
     // Additional features that generalize across lexicon entries.
     VariableNumMap terminalVars = terminalWordVar.union(ccgCategoryVar);
     int varNum = Ints.max(VariableNumMap.unionAll(terminalWordVar, ccgCategoryVar).getVariableNumsArray()) + 1;
-    DiscreteVariable featureNames = new DiscreteVariable("featureVar", Arrays.asList("entity-name-match"));
+    DiscreteVariable featureNames = new DiscreteVariable("featureVar", Arrays.asList("entity-match", "entity-name-match"));
     VariableNumMap featureVar = VariableNumMap.singleton(varNum, "lexiconFeatures", featureNames);
     TableFactorBuilder featureBuilder = new TableFactorBuilder(terminalVars.union(featureVar),
         SparseTensorBuilder.getFactory());
-    for (LexiconEntry entry : lexiconEntries) {
-      List<String> words = entry.getWords();
+
+    for (LexiconEntry entry : entityNames) {
       CcgCategory category = entry.getCategory();
       Expression2 lf = category.getLogicalForm();
 
       if (lf.isConstant()) {
         String[] constantNameParts = lf.getConstant().split(":");
-        String constantName = constantNameParts[0];
         String type = "";
         if (constantNameParts.length >= 2) {
           type = constantNameParts[1];
         }
-        if (type.equals("c")) {
-          // Cities have state abbreviations appended.
-          List<String> parts = Arrays.asList(constantName.split("_"));
-          constantName = Joiner.on("_").join(parts.subList(0, parts.size() - 1));
-        }
-        String expectedConstantName = Joiner.on("_").join(words);
-
-        if (constantName.equals(expectedConstantName) && !type.equals("n")) {
+        
+        if (!type.equals("n")) {
+          Assignment assignment = terminalVars.outcomeArrayToAssignment(entry.getWords(), entry.getCategory())
+              .union(featureVar.outcomeArrayToAssignment("entity-match"));
+          featureBuilder.setWeight(assignment, entry.getWords().size());
+        } else {
           Assignment assignment = terminalVars.outcomeArrayToAssignment(entry.getWords(), entry.getCategory())
               .union(featureVar.outcomeArrayToAssignment("entity-name-match"));
-          featureBuilder.setWeight(assignment, 1.0);
+          featureBuilder.setWeight(assignment, entry.getWords().size());
         }
       }
     }

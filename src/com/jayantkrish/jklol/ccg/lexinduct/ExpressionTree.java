@@ -76,7 +76,7 @@ public class ExpressionTree {
       ExpressionSimplifier simplifier, Map<String, String> typeReplacements,
       Set<String> constantsToIgnore, int numAppliedArguments, int maxDepth, int maxAppliedArguments) {
     Type type = StaticAnalysis.inferType(expression, typeReplacements);
-    return fromExpression(expression, type, ExpressionSimplifier.lambdaCalculus(),
+    return fromExpression(expression, type, simplifier,
         typeReplacements, constantsToIgnore, numAppliedArguments, maxDepth, maxAppliedArguments);
   }
 

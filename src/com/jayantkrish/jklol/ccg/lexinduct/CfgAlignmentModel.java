@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -108,7 +109,7 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     CfgParseChart chart = parser.parseMarginal(example.getWords(), rootFactor, false);
     CfgParseTree parseTree = chart.getBestParseTree();
 
-    return decodeCfgParse(parseTree, 0);
+    return Arrays.asList(decodeCfgParse(parseTree, 0));
   }
 
 

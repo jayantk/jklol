@@ -82,6 +82,19 @@ public class FeatureGenerators {
       FeatureGenerator<B, C> generator, Function<A, B> converter) {
     return new ConvertingFeatureGenerator<A, B, C>(generator, converter);
   }
+  
+  /**
+   * Gets a feature generator that applies a generator, then
+   * applies a converter to the generated feature names. 
+   *  
+   * @param generator
+   * @param converter
+   * @return
+   */
+  public static <A, B, C> FeatureGenerator<A, C> postConvertingFeatureGenerator(
+      FeatureGenerator<A, B> generator, Function<B, C> converter) {
+    return new PostConvertingFeatureGenerator<A, B, C>(generator, converter);
+  }
 
   /**
    * Applies {@code featureGenerator} to each data point and
@@ -181,6 +194,29 @@ public class FeatureGenerators {
     @Override
     public Map<C, Double> generateFeatures(A item) {
       return generator.generateFeatures(converter.apply(item));
+    }
+  }
+  
+  private static class PostConvertingFeatureGenerator<A, B, C> implements FeatureGenerator<A, C> {
+    private static final long serialVersionUID = 1L;
+
+    private final FeatureGenerator<A, B> generator;
+    private final Function<B, C> converter;
+
+    public PostConvertingFeatureGenerator(FeatureGenerator<A, B> generator, Function<B, C> converter) {
+      this.generator = Preconditions.checkNotNull(generator);
+      this.converter = Preconditions.checkNotNull(converter);
+    }
+
+    @Override
+    public Map<C, Double> generateFeatures(A item) {
+      Map<B, Double> features = generator.generateFeatures(item);
+      
+      Map<C, Double> convertedFeatures = Maps.newHashMap();
+      for (B key : features.keySet()) {
+        convertedFeatures.put(converter.apply(key), features.get(key));
+      }
+      return convertedFeatures;
     }
   }
   

@@ -60,7 +60,7 @@ public class SemanticParserUtils {
         }
         
         CcgParse conditionalParse = inferenceAlg.getBestConditionalParse(parser,
-            example.getSentence(), null, log, null, null, null, correctLf);
+            example.getSentence(), null, log, null, null, correctLf);
         if (conditionalParse != null) {
           correctLfPossible = 1;
         }
@@ -92,7 +92,8 @@ public class SemanticParserUtils {
 
         if (exampleLossAccumulator != null) {
           exampleLossAccumulator.add(new SemanticParserExampleLoss(example, null,
-              Collections.emptyList(), Collections.emptyList(), correctLf, false, false, false));
+              Collections.<DependencyStructure>emptyList(), Collections.<LexiconEntryInfo>emptyList(),
+              correctLf, false, false, false));
         }
       }
     }

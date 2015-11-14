@@ -3,18 +3,15 @@ package com.jayantkrish.jklol.ccg.lexinduct;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
-import com.jayantkrish.jklol.ccg.LexiconEntryLabels;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -22,6 +19,7 @@ import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 
 public class AlignedExpressionTree {
   private final Expression2 expression;
+  private final Type type;
 
   // Number of arguments of expression that get
   // applied in this tree.
@@ -43,10 +41,11 @@ public class AlignedExpressionTree {
   // The words are consecutive in the sentence.
   private final List<String> words;
 
-  private AlignedExpressionTree(Expression2 expression, int numAppliedArguments,
+  private AlignedExpressionTree(Expression2 expression, Type type, int numAppliedArguments,
       int[] possibleSpanStarts, int[] possibleSpanEnds, AlignedExpressionTree left,
       AlignedExpressionTree right, List<String> words) {
     this.expression = Preconditions.checkNotNull(expression);
+    this.type = Preconditions.checkNotNull(type);
     this.numAppliedArguments = numAppliedArguments;
     Preconditions.checkArgument(possibleSpanStarts.length == possibleSpanEnds.length);
     this.possibleSpanStarts = possibleSpanStarts;
@@ -60,14 +59,14 @@ public class AlignedExpressionTree {
     this.words = words;
   }
 
-  public static AlignedExpressionTree forTerminal(Expression2 expression, int numAppliedArguments,
-      int[] possibleSpanStarts, int[] possibleSpanEnds, List<String> words) {
-    return new AlignedExpressionTree(expression, numAppliedArguments, 
+  public static AlignedExpressionTree forTerminal(Expression2 expression, Type type,
+      int numAppliedArguments, int[] possibleSpanStarts, int[] possibleSpanEnds, List<String> words) {
+    return new AlignedExpressionTree(expression, type, numAppliedArguments, 
         possibleSpanStarts, possibleSpanEnds, null, null, words);
   }
 
-  public static AlignedExpressionTree forNonterminal(Expression2 expression, int numAppliedArguments,
-      AlignedExpressionTree left, AlignedExpressionTree right) {
+  public static AlignedExpressionTree forNonterminal(Expression2 expression, Type type,
+      int numAppliedArguments, AlignedExpressionTree left, AlignedExpressionTree right) {
 
     List<Integer> spanStarts = Lists.newArrayList();
     List<Integer> spanEnds = Lists.newArrayList();
@@ -86,7 +85,7 @@ public class AlignedExpressionTree {
       }
     }
 
-    return new AlignedExpressionTree(expression, numAppliedArguments, Ints.toArray(spanStarts),
+    return new AlignedExpressionTree(expression, type, numAppliedArguments, Ints.toArray(spanStarts),
         Ints.toArray(spanEnds), left, right, null);
   }
 
@@ -140,35 +139,6 @@ public class AlignedExpressionTree {
       left.getWordAlignmentsHelper(map);
       right.getWordAlignmentsHelper(map);
     }
-  }
-
-  public LexiconEntryLabels getLexiconEntryLabels(AlignmentExample example) {
-    Multimap<List<String>, AlignedExpression> alignments = getWordAlignments();
-    List<Integer> spanStarts = Lists.newArrayList();
-    List<Integer> spanEnds = Lists.newArrayList();
-    List<Expression2> lexiconEntries = Lists.newArrayList();
-    for (AlignedExpression alignedExp : alignments.values()) {
-      spanStarts.add(alignedExp.getSpanStart());
-      spanEnds.add(alignedExp.getSpanEnd() - 1);
-      lexiconEntries.add(alignedExp.getExpression());
-    }
-
-    for (int j = 0; j < example.getWords().size(); j++) {
-      boolean mapped = false;
-      for (int i = 0; i < spanStarts.size(); i++) {
-        if (j >= spanStarts.get(i) && j <= spanEnds.get(i)) {
-          mapped = true;
-          break;
-        }
-      }
-
-      if (!mapped) {
-        spanStarts.add(j);
-        spanEnds.add(j);
-      }
-    }
-
-    return new LexiconEntryLabels(Ints.toArray(spanStarts), Ints.toArray(spanEnds), lexiconEntries);
   }
 
   public List<LexiconEntry> generateLexiconEntries(Map<String, String> typeReplacements) {
@@ -230,38 +200,14 @@ public class AlignedExpressionTree {
       // number of arguments it accepted in the sentence. Simultaneously
       // generate its dependencies and head assignment.
       for (List<String> curWords : possibleWords) {
-        // String head = Joiner.on("_").join(curWords) + "#" + getExpression().toString();
-        String head = getExpression().toString();
-        // TODO: move the normalization elsewhere:
-        head = head.replaceAll(" ", "_");
-
         HeadedSyntacticCategory syntax = typeToSyntax(returnType, 0);
         for (int i = 0; i < getNumAppliedArguments(); i++) {
           int nextVar = Ints.max(syntax.getUniqueVariables()) + 1;
           HeadedSyntacticCategory argSyntax = typeToSyntax(argumentTypes.get(i), nextVar);
           syntax = syntax.addArgument(argSyntax, argDirs.get(i), 0);
         }
-        
-        // Create a dependency for each argument of the syntactic category.
-        List<String> subjects = Lists.newArrayList();
-        List<Integer> argumentNums = Lists.newArrayList();
-        List<Integer> objects = Lists.newArrayList();
-        List<Set<String>> assignments = Lists.newArrayList();
-        assignments.add(Sets.newHashSet(head));
-        List<HeadedSyntacticCategory> argumentCats = Lists.newArrayList(syntax.getArgumentTypes());
-        Collections.reverse(argumentCats);
-        for (int i = 0; i < argumentCats.size(); i++) {
-          subjects.add(head);
-          argumentNums.add(i + 1);
-          objects.add(argumentCats.get(i).getHeadVariable());
-        }
 
-        for (int i = 0; i < syntax.getUniqueVariables().length - 1; i++) {
-          assignments.add(Collections.<String>emptySet());
-        }
-
-        CcgCategory ccgCategory = new CcgCategory(syntax, getExpression(), subjects,
-            argumentNums, objects, assignments);
+        CcgCategory ccgCategory = CcgCategory.fromSyntaxLf(syntax, getExpression());
         LexiconEntry entry = new LexiconEntry(curWords, ccgCategory);
 
         lexiconEntries.add(entry);
@@ -309,6 +255,8 @@ public class AlignedExpressionTree {
       sb.append(" ");
     }
     sb.append(tree.expression);
+    sb.append(" : ");
+    sb.append(tree.type);
     sb.append(" ");
     sb.append(tree.numAppliedArguments);
     sb.append(" ");

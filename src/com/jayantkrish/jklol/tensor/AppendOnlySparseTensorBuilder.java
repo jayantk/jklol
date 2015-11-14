@@ -180,6 +180,11 @@ public class AppendOnlySparseTensorBuilder extends AbstractTensorBase implements
   }
 
   @Override
+  public void maximum(TensorBase other) {
+    throw new UnsupportedOperationException("not yet implemented.");
+  }
+
+  @Override
   public double innerProduct(TensorBase other) {
     throw new UnsupportedOperationException();
   }

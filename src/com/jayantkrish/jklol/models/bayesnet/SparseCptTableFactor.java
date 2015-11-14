@@ -63,6 +63,7 @@ public class SparseCptTableFactor extends AbstractParametricFactor {
     Tensor parentCounts = assignmentCounts.sumOutDimensions(childVars.getVariableNumsArray());
     TableFactor learnedDistribution = new TableFactor(getVars(),
         assignmentCounts.elementwiseProduct(parentCounts.elementwiseInverse()));
+    
     return learnedDistribution.add(constantPattern);
   }
 
@@ -93,9 +94,13 @@ public class SparseCptTableFactor extends AbstractParametricFactor {
       VariableNumMap conditionedVars = sparsityPattern.getVars().intersection(
           conditionalAssignment.getVariableNumsArray());
 
-      TableFactor productFactor = (TableFactor) sparsityPattern.product(
-          TableFactor.pointDistribution(conditionedVars, conditionalAssignment.intersection(conditionedVars)))
-          .product(marginal);
+      DiscreteFactor productFactor = null;
+      if (conditionedVars.size() > 0) {
+        productFactor = TableFactor.pointDistribution(conditionedVars,
+            conditionalAssignment.intersection(conditionedVars)).product(marginal).coerceToDiscrete();
+      } else {
+        productFactor = marginal.coerceToDiscrete();
+      }
 
       Tensor sparsityWeights = sparsityPattern.getWeights();
       Tensor productFactorWeights = productFactor.getWeights();
@@ -105,7 +110,9 @@ public class SparseCptTableFactor extends AbstractParametricFactor {
       TensorSufficientStatistics tensorGradient = (TensorSufficientStatistics) statistics;
       for (int i = 0; i < tensorSize; i++) {
         int builderIndex = sparsityWeights.keyNumToIndex(productFactorWeights.indexToKeyNum(i));
-        tensorGradient.incrementFeatureByIndex(productFactorValues[i] * multiplier, builderIndex);
+        if (builderIndex != -1) {
+          tensorGradient.incrementFeatureByIndex(productFactorValues[i] * multiplier, builderIndex);
+        }
       }
     }
   }

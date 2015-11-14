@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -14,10 +15,15 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
+import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis.Scope;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis.ScopeSet;
+import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
@@ -26,6 +32,7 @@ import com.jayantkrish.jklol.util.SubsetIterator;
 
 public class ExpressionTree {
   private final Expression2 rootExpression;
+  private final Type rootType;
   // Number of arguments of expression that get
   // applied in this tree.
   private final int numAppliedArguments;
@@ -37,10 +44,11 @@ public class ExpressionTree {
   private final List<ExpressionTree> lefts;
   private final List<ExpressionTree> rights;
 
-  public ExpressionTree(Expression2 rootExpression, int numAppliedArguments,
+  public ExpressionTree(Expression2 rootExpression, Type rootType, int numAppliedArguments,
       Tensor expressionFeatures, List<ExpressionTree> substitutions, List<ExpressionTree> lefts,
       List<ExpressionTree> rights) {
     this.rootExpression = Preconditions.checkNotNull(rootExpression);
+    this.rootType = Preconditions.checkNotNull(rootType);
     this.numAppliedArguments = numAppliedArguments;
     this.expressionFeatures = expressionFeatures;
 
@@ -51,16 +59,28 @@ public class ExpressionTree {
   }
 
   public static ExpressionTree fromExpression(Expression2 expression) {
-    return fromExpression(expression, ExpressionSimplifier.lambdaCalculus(),
-        Collections.<String, String>emptyMap(), Collections.<String>emptySet(), 0, 2, 2);
+    Map<String, String> typeReplacements = Collections.<String, String>emptyMap();
+    Type type = StaticAnalysis.inferType(expression, typeReplacements);
+    return fromExpression(expression, type, ExpressionSimplifier.lambdaCalculus(),
+        typeReplacements, Collections.<String>emptySet(), 0, 2, 3);
   }
 
   public static ExpressionTree fromExpression(Expression2 expression, int numAppliedArguments) {
-    return fromExpression(expression, ExpressionSimplifier.lambdaCalculus(),
-        Collections.<String, String>emptyMap(), Collections.<String>emptySet(), numAppliedArguments, 2, 2);
+    Map<String, String> typeReplacements = Collections.<String, String>emptyMap();
+    Type type = StaticAnalysis.inferType(expression, typeReplacements);
+    return fromExpression(expression, type, ExpressionSimplifier.lambdaCalculus(),
+        typeReplacements, Collections.<String>emptySet(), numAppliedArguments, 2, 2);
   }
 
   public static ExpressionTree fromExpression(Expression2 expression,
+      ExpressionSimplifier simplifier, Map<String, String> typeReplacements,
+      Set<String> constantsToIgnore, int numAppliedArguments, int maxDepth, int maxAppliedArguments) {
+    Type type = StaticAnalysis.inferType(expression, typeReplacements);
+    return fromExpression(expression, type, ExpressionSimplifier.lambdaCalculus(),
+        typeReplacements, constantsToIgnore, numAppliedArguments, maxDepth, maxAppliedArguments);
+  }
+
+  public static ExpressionTree fromExpression(Expression2 expression, Type type,
       ExpressionSimplifier simplifier, Map<String, String> typeReplacements,
       Set<String> constantsToIgnore, int numAppliedArguments, int maxDepth, int maxAppliedArguments) {
     expression = simplifier.apply(expression);
@@ -69,20 +89,25 @@ public class ExpressionTree {
     List<ExpressionTree> lefts = Lists.newArrayList();
     List<ExpressionTree> rights = Lists.newArrayList();
     
+    Map<Integer, Type> typeMap = StaticAnalysis.inferTypeMap(expression, type, typeReplacements);
     for (int i = 1; i < expression.size(); i++) {
       int depth = expression.getDepth(i);
       Scope scope = StaticAnalysis.getEnclosingScope(expression, i);
       if (depth <= (maxDepth + scope.getDepth()) && !StaticAnalysis.isPartOfSpecialForm(expression, i)) {
 
         List<Expression2> genLefts = Lists.newArrayList();
+        List<Type> leftTypes = Lists.newArrayList();
         List<Expression2> genRights = Lists.newArrayList();
+        List<Type> rightTypes = Lists.newArrayList();
         
-        doBasicGeneration(expression, i, scope, genLefts, genRights);
-        doAndGeneration(expression, i, scope, genLefts, genRights);
+        doBasicGeneration(expression, typeMap, i, scope, genLefts, leftTypes, genRights, rightTypes);
+        doAndGeneration(expression, typeMap, i, scope, genLefts, leftTypes, genRights, rightTypes);
         
         for (int j = 0; j < genLefts.size(); j++) {
           Expression2 argExpression = genLefts.get(j);
           Expression2 funcExpression = genRights.get(j);
+          Type argType = leftTypes.get(j);
+          Type funcType = rightTypes.get(j);
 
           Set<String> funcFreeVars = StaticAnalysis.getFreeVariables(funcExpression);
           Set<String> argFreeVars = StaticAnalysis.getFreeVariables(argExpression);
@@ -94,7 +119,6 @@ public class ExpressionTree {
             continue;
           }
 
-          Type argType = StaticAnalysis.inferType(argExpression, typeReplacements);
           if (argType.isFunctional() && argType.getReturnType().isFunctional()) {
             // The argument has a complex type that is unlikely to be
             // the argument of another category. 
@@ -107,20 +131,21 @@ public class ExpressionTree {
             continue;
           }
 
-          ExpressionTree left = ExpressionTree.fromExpression(argExpression, simplifier,
+          ExpressionTree left = ExpressionTree.fromExpression(argExpression, argType, simplifier,
               typeReplacements, constantsToIgnore, 0, maxDepth, maxAppliedArguments);
-          ExpressionTree right = ExpressionTree.fromExpression(funcExpression, simplifier,
+          ExpressionTree right = ExpressionTree.fromExpression(funcExpression, funcType, simplifier,
               typeReplacements, constantsToIgnore, numAppliedArguments + 1, maxDepth, maxAppliedArguments);
           lefts.add(left);
           rights.add(right);
         }
       }
     }
-    return new ExpressionTree(expression, numAppliedArguments, null, substitutions, lefts, rights);
+    return new ExpressionTree(expression, type, numAppliedArguments, null, substitutions, lefts, rights);
   }
   
-  private static void doBasicGeneration(Expression2 expression, int i, Scope scope,
-      List<Expression2> argExpressions, List<Expression2> funcExpressions) {
+  private static void doBasicGeneration(Expression2 expression, Map<Integer, Type> typeMap, int i, Scope scope,
+      List<Expression2> argExpressions, List<Type> argTypes, List<Expression2> funcExpressions,
+      List<Type> funcTypes) {
     Expression2 lambdaTemplate = ExpressionParser.expression2()
         .parseSingleExpression("(lambda ARGS BODY)");
     Expression2 applicationTemplate = ExpressionParser.expression2()
@@ -143,11 +168,18 @@ public class ExpressionTree {
     Set<String> freeVars = Sets.newHashSet(StaticAnalysis.getFreeVariables(subexpression));
     Set<String> scopeBindings = scope.getBoundVariables();
 
+    Type argType = typeMap.get(i);
     freeVars.retainAll(scopeBindings);
     List<Expression2> args = Lists.newArrayList();
+    List<Type> argArgTypes = Lists.newArrayList();
     for (String freeVar : freeVars) {
-      args.add(Expression2.constant(freeVar));
+      Expression2 freeVarExpr = Expression2.constant(freeVar);
+      args.add(freeVarExpr);
+      Type freeVarType = typeMap.get(scope.getBindingIndex(freeVar));
+      argArgTypes.add(freeVarType);
     }
+    Collections.reverse(argArgTypes);
+    argType = argType.addArguments(argArgTypes);
 
     Expression2 argExpression = subexpression;
     if (args.size() > 0) {
@@ -164,13 +196,17 @@ public class ExpressionTree {
 
     Expression2 funcExpression = lambdaTemplate.substitute("ARGS", newVariable);
     funcExpression = funcExpression.substitute("BODY", expression.substitute(i, bodySub));
+    Type funcType = typeMap.get(0).addArgument(argType); 
 
     argExpressions.add(argExpression);
+    argTypes.add(argType);
     funcExpressions.add(funcExpression);
+    funcTypes.add(funcType);
   }
   
-  private static void doAndGeneration(Expression2 expression, int i, Scope scope,
-      List<Expression2> argExpressions, List<Expression2> funcExpressions) {
+  private static void doAndGeneration(Expression2 expression, Map<Integer, Type> typeMap, int i,
+      Scope scope, List<Expression2> argExpressions, List<Type> argTypes, List<Expression2> funcExpressions,
+      List<Type> funcTypes) {
     Expression2 lambdaTemplate = ExpressionParser.expression2()
         .parseSingleExpression("(lambda ARGS BODY)");
     Expression2 andTemplate = ExpressionParser.expression2()
@@ -220,13 +256,20 @@ public class ExpressionTree {
         freeVars.retainAll(scopeBindings);
         
         List<Expression2> args = Lists.newArrayList();
+        List<Type> argTypeList = Lists.newArrayList();
         for (String freeVar : freeVars) {
-          args.add(Expression2.constant(freeVar));
+          Expression2 freeVarExpression = Expression2.constant(freeVar);
+          args.add(freeVarExpression);
+          Type freeVarType = typeMap.get(scope.getBindingIndex(freeVar)); 
+          argTypeList.add(freeVarType);
         }
+        Collections.reverse(argTypeList);
 
         Expression2 argExpression = andTemplate.substituteInline("BODY", argTerms);
+        Type argExpressionType = Type.createAtomic("t");
         if (args.size() > 0) {
           argExpression = lambdaTemplate.substituteInline("ARGS", args).substitute("BODY", argExpression);
+          argExpressionType = argExpressionType.addArguments(argTypeList);
         }
 
         Expression2 newVariable = Expression2.constant(StaticAnalysis.getNewVariableName(expression));
@@ -240,9 +283,12 @@ public class ExpressionTree {
         Expression2 body = expression.substitute(i, andTemplate.substituteInline("BODY", funcTerms));
         Expression2 funcTerm = lambdaTemplate.substitute("ARGS", newVariable)
             .substitute("BODY", body);
+        Type functionType = typeMap.get(0).addArgument(argExpressionType);
         
         argExpressions.add(argExpression);
+        argTypes.add(argExpressionType);
         funcExpressions.add(funcTerm);
+        funcTypes.add(functionType);
       }
     }
   }
@@ -252,7 +298,7 @@ public class ExpressionTree {
   }
   
   public ExpressionNode getExpressionNode() {
-    return new ExpressionNode(rootExpression, numAppliedArguments);
+    return new ExpressionNode(rootExpression, rootType, numAppliedArguments);
   }
   
   public int getNumAppliedArguments() {
@@ -309,7 +355,7 @@ public class ExpressionTree {
    * @param accumulator
    */
   public void getAllExpressionNodes(Collection<ExpressionNode> accumulator) {
-    accumulator.add(new ExpressionNode(rootExpression, numAppliedArguments));
+    accumulator.add(getExpressionNode());
     
     for (int i = 0; i < substitutions.size(); i++) {
       substitutions.get(i).getAllExpressionNodes(accumulator);
@@ -342,7 +388,7 @@ public class ExpressionTree {
       newRights.add(rights.get(i).applyFeatureVectorGenerator(generator));
     }
 
-    return new ExpressionTree(rootExpression, numAppliedArguments,
+    return new ExpressionTree(rootExpression, rootType, numAppliedArguments,
         generator.apply(rootExpression), newSubstitutions, newLefts, newRights);
   }
 
@@ -366,15 +412,18 @@ public class ExpressionTree {
 
         // Add binary rule for this combination of expressions. Note
         // that the expressions can occur in either order in the sentence.
+        // Backward application'
         double prob = binaryRuleProbs.getUnnormalizedProbability(arg.getExpressionNode(),
-            func.getExpressionNode(), root, ParametricCfgAlignmentModel.BACKWARD_APPLICATION);
+            func.getExpressionNode(), root, ParametricCfgAlignmentModel.APPLICATION);
         builder.setWeight(prob, arg.getExpressionNode(),
-            func.getExpressionNode(), root, ParametricCfgAlignmentModel.BACKWARD_APPLICATION);
-        prob = binaryRuleProbs.getUnnormalizedProbability(func.getExpressionNode(),
-            arg.getExpressionNode(), root, ParametricCfgAlignmentModel.FORWARD_APPLICATION);
-        builder.setWeight(prob, func.getExpressionNode(),
-            arg.getExpressionNode(), root, ParametricCfgAlignmentModel.FORWARD_APPLICATION);
+            func.getExpressionNode(), root, ParametricCfgAlignmentModel.APPLICATION);
 
+        // Forward application
+        prob = binaryRuleProbs.getUnnormalizedProbability(func.getExpressionNode(),
+            arg.getExpressionNode(), root, ParametricCfgAlignmentModel.APPLICATION);
+        builder.setWeight(prob, func.getExpressionNode(),
+            arg.getExpressionNode(), root, ParametricCfgAlignmentModel.APPLICATION);
+        
         // Populate children
         arg.populateBinaryRuleDistribution(builder, binaryRuleProbs);
         func.populateBinaryRuleDistribution(builder, binaryRuleProbs);
@@ -383,13 +432,13 @@ public class ExpressionTree {
 
     // Add word-skipping rules.
     double prob = binaryRuleProbs.getUnnormalizedProbability(ParametricCfgAlignmentModel.SKIP_EXPRESSION, root,
-         root, ParametricCfgAlignmentModel.SKIP_RULE);
+         root, ParametricCfgAlignmentModel.SKIP_LEFT);
     builder.setWeight(prob, ParametricCfgAlignmentModel.SKIP_EXPRESSION, root,
-         root, ParametricCfgAlignmentModel.SKIP_RULE);
+         root, ParametricCfgAlignmentModel.SKIP_LEFT);
     prob = binaryRuleProbs.getUnnormalizedProbability(root, ParametricCfgAlignmentModel.SKIP_EXPRESSION,
-        root, ParametricCfgAlignmentModel.SKIP_RULE);
+        root, ParametricCfgAlignmentModel.SKIP_RIGHT);
     builder.setWeight(prob, root, ParametricCfgAlignmentModel.SKIP_EXPRESSION,
-        root, ParametricCfgAlignmentModel.SKIP_RULE);
+        root, ParametricCfgAlignmentModel.SKIP_RIGHT);
 
     List<ExpressionTree> substitutions = getSubstitutions();
     for (int i = 0; i < substitutions.size(); i++) {
@@ -409,6 +458,8 @@ public class ExpressionTree {
       sb.append(" ");
     }
     sb.append(tree.rootExpression);
+    sb.append(":");
+    sb.append(tree.rootType);
     sb.append("\n");
     
     if (tree.substitutions.size() > 0) {
@@ -426,15 +477,105 @@ public class ExpressionTree {
     private static final long serialVersionUID = 1L;
 
     private final Expression2 expression;
+    private final Type type;
     private final int numAppliedArguments;
-    
-    public ExpressionNode(Expression2 expression, int numAppliedArguments) {
+
+    public ExpressionNode(Expression2 expression, Type type, int numAppliedArguments) {
       this.expression = Preconditions.checkNotNull(expression);
+      this.type = Preconditions.checkNotNull(type);
       this.numAppliedArguments = numAppliedArguments;
     }
 
     public Expression2 getExpression() {
       return expression;
+    }
+
+    public Expression2 getExpressionTemplate(Map<String, String> typeReplacements, int maxDepth) {
+      Map<Integer, Type> locTypeMap = StaticAnalysis.inferTypeMap(expression, type, typeReplacements);
+
+      ScopeSet scopes = StaticAnalysis.getScopes(expression);
+      Expression2 uncanonicalTemplate = toTemplate(expression, scopes, locTypeMap, 0, 0, maxDepth);
+      
+      ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
+        <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
+            new VariableCanonicalizationReplacementRule(),
+            new CommutativeReplacementRule("<t,t>"),
+            new CommutativeReplacementRule("<t,<t,t>>"),
+            new CommutativeReplacementRule("<t,<t,<t,t>>>"),
+            new CommutativeReplacementRule("<t,<t,<t,<t,t>>>>"),
+            new CommutativeReplacementRule("<t,<t,<t,<t,<t,t>>>>>")));
+
+      return simplifier.apply(uncanonicalTemplate);
+      /*
+      Collection<String> freeVars = StaticAnalysis.getFreeVariables(expression);
+      Expression2 result = expression;
+      for (String freeVar : freeVars) {
+        result = result.substitute(freeVar, "c");
+      }
+      return result;
+      */
+    }
+    
+    private static Expression2 toTemplate(Expression2 expression, ScopeSet scopes, Map<Integer, Type> locTypeMap,
+        int index, int depth, int maxDepth) {
+      Expression2 subexpression = expression.getSubexpression(index);
+      Scope scope = scopes.getScope(index);
+
+      if (subexpression.isConstant()) {
+        if (subexpression.getConstant().equals(StaticAnalysis.LAMBDA) || scope.isBound(subexpression.getConstant())) {
+          return subexpression;
+        } else {
+          return Expression2.constant(locTypeMap.get(index).toString());
+        }
+      } else {
+        if (depth > maxDepth) {
+          Set<String> freeVars = Sets.newHashSet(StaticAnalysis.getFreeVariables(subexpression));
+          Set<String> usedBoundVars = Sets.newHashSet(freeVars);
+          usedBoundVars.retainAll(scope.getBoundVariables());
+          freeVars.removeAll(usedBoundVars);
+
+          Type type = locTypeMap.get(index);
+          if (usedBoundVars.size() == 0) {
+            return Expression2.constant(type.toString());
+          } else if (freeVars.size() == 0) {
+            return subexpression;
+          } else {
+            List<String> sortedBoundVars = Lists.newArrayList(usedBoundVars);
+            Collections.sort(sortedBoundVars);
+
+            // Generate a type for the function that takes the arguments and
+            // returns the appropriate type.
+            for (int i = sortedBoundVars.size() -  1; i >= 0; i--) {
+              String sortedBoundVar = sortedBoundVars.get(i);
+              type = type.addArgument(locTypeMap.get(scope.getBindingIndex(sortedBoundVar)));
+            }
+
+            List<Expression2> components = Lists.newArrayList();
+            components.add(Expression2.constant(type.toString()));
+            components.addAll(Expression2.constants(sortedBoundVars));
+
+            return Expression2.nested(components);
+          }
+        }
+
+        // Recursively generate a template from this expression's children.
+        int[] children = expression.getChildIndexes(index);
+        // Only non-lambda expressions count toward depth.
+        int nextDepth = depth;
+        if (!StaticAnalysis.isLambda(expression, index)) {
+          nextDepth++;
+        }
+
+        List<Expression2> templates = Lists.newArrayList(); 
+        for (int i = 0; i < children.length; i++) {
+          templates.add(toTemplate(expression, scopes, locTypeMap, children[i], nextDepth, maxDepth));
+        }
+        return Expression2.nested(templates);
+      }
+    }
+
+    public Type getType() {
+      return type;
     }
 
     public int getNumAppliedArguments() {
@@ -443,15 +584,16 @@ public class ExpressionTree {
 
     @Override
     public String toString() {
-      return numAppliedArguments + ":" + expression;
+      return numAppliedArguments + ":" + expression + " : " + type;
     }
-    
+
     @Override
     public int hashCode() {
       final int prime = 31;
       int result = 1;
       result = prime * result + ((expression == null) ? 0 : expression.hashCode());
       result = prime * result + numAppliedArguments;
+      result = prime * result + ((type == null) ? 0 : type.hashCode());
       return result;
     }
 
@@ -470,6 +612,11 @@ public class ExpressionTree {
       } else if (!expression.equals(other.expression))
         return false;
       if (numAppliedArguments != other.numAppliedArguments)
+        return false;
+      if (type == null) {
+        if (other.type != null)
+          return false;
+      } else if (!type.equals(other.type))
         return false;
       return true;
     }

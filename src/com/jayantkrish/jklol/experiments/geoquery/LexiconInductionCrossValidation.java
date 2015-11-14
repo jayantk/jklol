@@ -21,7 +21,6 @@ import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
-import com.jayantkrish.jklol.ccg.LexiconEntryLabels;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.cli.AlignmentLexiconInduction;
 import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
@@ -38,25 +37,28 @@ import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentModel;
+import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder;
+import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder.LagrangianDecodingResult;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer;
 import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer.ParametersAndLagrangeMultipliers;
 import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.util.SemanticParserExampleLoss;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils.SemanticParserLoss;
+import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.cli.AbstractCli;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
-import com.jayantkrish.jklol.parallel.Mapper;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
-import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.ExpectationMaximization;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
+import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -68,6 +70,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   private OptionSpec<String> outputDir;
   
   private OptionSpec<String> foldNameOpt;
+  private OptionSpec<Void> testOpt;
   
   private OptionSpec<Integer> unknownWordThreshold;
   
@@ -75,6 +78,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   private OptionSpec<Integer> emIterations;
   private OptionSpec<Double> smoothingParam;
   private OptionSpec<Integer> nGramLength;
+  private OptionSpec<Integer> lexiconNumParses;
   
   // Configuration for the semantic parser.
   private OptionSpec<Integer> parserIterations;
@@ -84,7 +88,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
   // TODO: this shouldn't be hard coded. Replace with 
   // an input unification lattice for types.
-  private static final Map<String, String> typeReplacements = Maps.newHashMap();
+  public static final Map<String, String> typeReplacements = Maps.newHashMap();
   static {
     typeReplacements.put("lo", "e");
     typeReplacements.put("c", "e");
@@ -110,6 +114,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     
     // Optional option to only run one fold
     foldNameOpt = parser.accepts("foldName").withRequiredArg().ofType(String.class);
+    testOpt = parser.accepts("test");
     
     // Word count below which the word is mapped to the "unknown" symbol.
     unknownWordThreshold = parser.accepts("unknownWordThreshold").withRequiredArg()
@@ -119,6 +124,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     emIterations = parser.accepts("emIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(0.01);
     nGramLength = parser.accepts("nGramLength").withRequiredArg().ofType(Integer.class).defaultsTo(1);
+    lexiconNumParses = parser.accepts("lexiconNumParses").withRequiredArg().ofType(Integer.class).defaultsTo(-1);
     
     parserIterations = parser.accepts("parserIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
@@ -130,23 +136,45 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   public void run(OptionSet options) {
     List<String> foldNames = Lists.newArrayList();
     List<List<AlignmentExample>> folds = Lists.newArrayList();
-    readFolds(options.valueOf(trainingDataFolds), foldNames, folds);
+    readFolds(options.valueOf(trainingDataFolds), foldNames, folds, options.has(testOpt));
     
     List<String> additionalLexiconEntries = IoUtils.readLines(options.valueOf(additionalLexicon));
-    
-    FoldRunner runner = new FoldRunner(foldNames, folds, options.valueOf(emIterations),
-        options.valueOf(smoothingParam), options.valueOf(nGramLength), options.valueOf(parserIterations),
-        options.valueOf(l2Regularization), options.valueOf(beamSize), options.valueOf(unknownWordThreshold),
-        additionalLexiconEntries, options.valueOf(outputDir));
-    
-    // MapReduceExecutor executor = new LocalMapReduceExecutor(1, 1);
-    List<SemanticParserLoss> losses = Lists.newArrayList();
+
+    List<String> foldsToRun = Lists.newArrayList();
     if (options.has(foldNameOpt)) {
-      losses.add(runner.apply(options.valueOf(foldNameOpt)));
+      foldsToRun.add(options.valueOf(foldNameOpt));
     } else {
-      for (String foldName : foldNames) {
-        losses.add(runner.apply(foldName));
+      foldsToRun.addAll(foldNames);
+    }
+
+    List<SemanticParserLoss> losses = Lists.newArrayList();
+    for (String foldName : foldsToRun) {
+      int foldIndex = foldNames.indexOf(foldName);
+
+      List<AlignmentExample> heldOut = folds.get(foldIndex);
+      List<AlignmentExample> trainingData = Lists.newArrayList();
+      for (int j = 0; j < folds.size(); j++) {
+        if (j == foldIndex) {
+          continue;
+        }
+        trainingData.addAll(folds.get(j));
       }
+
+      String outputDirString = options.valueOf(outputDir);
+      String lexiconOutputFilename = outputDirString + "/lexicon." + foldName + ".txt";
+      String alignmentModelOutputFilename = outputDirString + "/alignment." + foldName + ".ser";
+      String parserModelOutputFilename = outputDirString + "/parser." + foldName + ".ser";
+
+      String trainingErrorOutputFilename = outputDirString + "/training_error." + foldName + ".json";
+      String testErrorOutputFilename = outputDirString + "/test_error." + foldName + ".json";
+
+      SemanticParserLoss loss = runFold(trainingData, heldOut, options.valueOf(emIterations),
+          options.valueOf(smoothingParam), options.valueOf(nGramLength), options.valueOf(lexiconNumParses),
+          options.valueOf(parserIterations), options.valueOf(l2Regularization), options.valueOf(beamSize),
+          options.valueOf(unknownWordThreshold), additionalLexiconEntries, 
+          lexiconOutputFilename, trainingErrorOutputFilename, testErrorOutputFilename,
+          alignmentModelOutputFilename, parserModelOutputFilename);
+      losses.add(loss);
     }
     
     SemanticParserLoss overall = new SemanticParserLoss(0, 0, 0, 0);
@@ -165,8 +193,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   }
   
   private static SemanticParserLoss runFold(List<AlignmentExample> trainingData, List<AlignmentExample> testData,
-      int emIterations, double smoothingAmount, int nGramLength, int parserIterations, double l2Regularization, int beamSize,
-      int unknownWordThreshold, List<String> additionalLexiconEntries, String lexiconOutputFilename,
+      int emIterations, double smoothingAmount, int nGramLength, int lexiconNumParses, int parserIterations,
+      double l2Regularization, int beamSize, int unknownWordThreshold, List<String> additionalLexiconEntries, String lexiconOutputFilename,
       String trainingErrorOutputFilename, String testErrorOutputFilename, String alignmentModelOutputFilename,
       String parserModelOutputFilename) {
 
@@ -175,17 +203,10 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     for (LexiconEntry lexiconEntry : LexiconEntry.parseLexiconEntries(additionalLexiconEntries)) {
       entityNames.add(lexiconEntry.getWords());
     }
-    
-    // Train the alignment model.
-    PairCountAccumulator<List<String>, LexiconEntry> alignments = trainAlignmentModel(trainingData,
-        entityNames, smoothingAmount, emIterations, nGramLength, true);
 
-    // Generate lexicon entries from the training data using the
-    // alignment model's predictions.
-    /*
-    PairCountAccumulator<List<String>, LexiconEntry> alignments = AlignmentLexiconInduction
-        .generateLexiconFromAlignmentModel(model, trainingData, );
-        */
+    // Train the alignment model and generate lexicon entries.
+    PairCountAccumulator<List<String>, LexiconEntry> alignments = trainAlignmentModel(trainingData,
+        entityNames, smoothingAmount, emIterations, nGramLength, lexiconNumParses, false, false, true, false);
     
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (AlignmentExample trainingExample : trainingData) {
@@ -227,7 +248,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     // IoUtils.serializeObjectToFile(model, alignmentModelOutputFilename);
     
     // Initialize CCG parser components.
-    List<CcgExample> ccgTrainingExamples = alignmentExamplesToCcgExamples(trainingData, null);
+    List<CcgExample> ccgTrainingExamples = alignmentExamplesToCcgExamples(trainingData);
     List<String> ruleEntries = Arrays.asList("\"DUMMY{0} DUMMY{0}\",\"(lambda $L $L)\"");
 
     FeatureVectorGenerator<StringContext> featureGen = getCcgFeatureFactory(ccgTrainingExamples);
@@ -255,7 +276,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
         inferenceAlgorithm, simplifier, comparator, trainingExampleLosses);
     SemanticParserExampleLoss.writeJsonToFile(trainingErrorOutputFilename, trainingExampleLosses);
 
-    List<CcgExample> ccgTestExamples = alignmentExamplesToCcgExamples(testData, null);
+    List<CcgExample> ccgTestExamples = alignmentExamplesToCcgExamples(testData);
     ccgTestExamples = featurizeExamples(ccgTestExamples, featureGen);
     List<SemanticParserExampleLoss> testExampleLosses = Lists.newArrayList();    
     SemanticParserLoss testLoss = SemanticParserUtils.testSemanticParser(ccgTestExamples, ccgParser,
@@ -265,12 +286,13 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     return testLoss;
   }
 
-  public static PairCountAccumulator<List<String>, LexiconEntry> trainAlignmentModel(List<AlignmentExample> trainingData,
-      Set<List<String>> entityNames, double smoothingAmount, int emIterations, int nGramLength, boolean useLagrangianRelaxation) {
+  public static PairCountAccumulator<List<String>, LexiconEntry> trainAlignmentModel(
+      List<AlignmentExample> trainingData, Set<List<String>> entityNames, double smoothingAmount,
+      int emIterations, int nGramLength, int lexiconNumParses, boolean useLagrangianRelaxation, boolean discriminative,
+      boolean loglinear, boolean convex) {
     // Preprocess data to generate features.
     FeatureVectorGenerator<Expression2> vectorGenerator = AlignmentLexiconInduction
         .buildFeatureVectorGenerator(trainingData, Collections.<String>emptyList());
-    System.out.println("features: " + vectorGenerator.getFeatureDictionary().getValues());
     trainingData = AlignmentLexiconInduction.applyFeatureVectorGenerator(vectorGenerator, trainingData);
 
     // Add all unigrams to the model.
@@ -288,52 +310,79 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     terminalVarValues.addAll(attestedEntityNames);
 
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModel(
-        trainingData, vectorGenerator, terminalVarValues, false);
+        trainingData, vectorGenerator, terminalVarValues, discriminative, loglinear);
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(smoothingAmount);
 
     SufficientStatistics initial = pam.getNewSufficientStatistics();
-    initial.increment(1);
+    GradientOptimizer optimizer = null;
+    if (!loglinear) {
+      initial.increment(1);
+    } else {
+      int numIterations = 100;
+      optimizer = new Lbfgs(numIterations, 10, 1e-6, new DefaultLogFunction(numIterations - 1, false));
+    }
 
     // Train the alignment model with EM.
     if (!useLagrangianRelaxation) {
       ExpectationMaximization em = new ExpectationMaximization(emIterations, new DefaultLogFunction(1, false));
-      SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing),
+      SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, optimizer, true),
           initial, trainingData);
 
-      CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
-      model.printStuffOut();
+      if (!convex) {
+        // If training a nonconvex model, initialize the parameters using the convex model.
+        trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, optimizer, convex),
+          trainedParameters, trainingData);
+      }
 
-      return AlignmentLexiconInduction.generateLexiconFromAlignmentModel(model, trainingData, typeReplacements);
+      System.out.println(pam.getParameterDescription(trainedParameters));
+      
+      CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
+
+      return AlignmentLexiconInduction.generateLexiconFromAlignmentModel(model, trainingData, lexiconNumParses, typeReplacements);
     } else {
-      ExpectationMaximization em = new ExpectationMaximization(10, new DefaultLogFunction(1, false));
-      LagrangianAlignmentTrainer trainer = new LagrangianAlignmentTrainer(emIterations, em);
-      ParametersAndLagrangeMultipliers trainedParameters = trainer.train(pam, initial, smoothing, trainingData);
+      DiscreteFactor lexiconFactor = TableFactor.unity(pam.getNonterminalVar().union(pam.getTerminalVar()))
+          .product(Math.log(0.01));
+      LagrangianAlignmentTrainer trainer = new LagrangianAlignmentTrainer(emIterations,
+          new LagrangianAlignmentDecoder(20));
+      ParametersAndLagrangeMultipliers trainedParameters = trainer.train(pam, initial, smoothing,
+          trainingData, lexiconFactor);
 
       // System.out.println(pam.getParameterDescription(trainedParameters));
 
       // Get the trained model.
       CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters.getParameters());
-      model.printStuffOut();
+      LagrangianDecodingResult result = trainedParameters.getLagrangeMultipliers();
+
+      /*
+      // EM trained model.
+      ExpectationMaximization em = new ExpectationMaximization(emIterations, new DefaultLogFunction(1, false));
+      SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing),
+          initial, trainingData);
+
+      CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
+      
+      LagrangianAlignmentDecoder decoder = new LagrangianAlignmentDecoder(1000);
+      DiscreteFactor lexiconFactor = TableFactor.unity(model.getParentVar().union(model.getTerminalVar()))
+          .product(Math.log(0.01));
+      VariableNumMap nonterminalVar = model.getParentVar();
+      DiscreteFactor skipIndicatorFactor = TableFactor.pointDistribution(nonterminalVar,
+          nonterminalVar.outcomeArrayToAssignment(ParametricCfgAlignmentModel.SKIP_EXPRESSION)); 
+      lexiconFactor = lexiconFactor.product(TableFactor.unity(nonterminalVar).add(skipIndicatorFactor.product(-1.0)));
+
+      LagrangianDecodingResult result = decoder.decode(model, trainingData, lexiconFactor);
+       */
 
       PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
       for (int i = 0; i < trainingData.size(); i++) {
-        AlignmentExample example = trainingData.get(i);
-        Tensor exampleMultipliers = trainedParameters.getLagrangeMultipliers().slice(
-            new int[] {0}, new int[] {i});
-        TableFactor exampleWeights = new TableFactor(model.getParentVar(),
-            exampleMultipliers.elementwiseProduct(-1.0).elementwiseExp());
-
-        System.out.println(example.getWords());
-        AlignedExpressionTree tree = model.getBestAlignment(example, exampleWeights);
-        System.out.println(tree);
+        CfgParseTree parse = result.getParseTrees().get(i);
+        AlignedExpressionTree tree = model.decodeCfgParse(parse);
 
         for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
-          System.out.println("   " + entry.toCsvString());
           alignments.incrementOutcome(entry.getWords(), entry, 1);
         }
       }
-      
+
       return alignments;
     }
   }
@@ -374,13 +423,11 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     }
     */
 
-    System.out.println(family.getParameterDescription(parameters));
-
     return family.getModelFromParameters(parameters);
   }
 
   public static List<CcgExample> alignmentExamplesToCcgExamples(
-      List<AlignmentExample> alignmentExamples, CfgAlignmentModel model) {
+      List<AlignmentExample> alignmentExamples) {
     // Convert data to CCG training data.
     List<CcgExample> ccgExamples = Lists.newArrayList();
     for (AlignmentExample example : alignmentExamples) {
@@ -388,14 +435,8 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
       AnnotatedSentence supertaggedSentence = new AnnotatedSentence(words, posTags);
 
-      LexiconEntryLabels ccgLexiconEntries = null;
-      if (model != null) {
-        AlignedExpressionTree tree = model.getBestAlignment(example);
-        ccgLexiconEntries = tree.getLexiconEntryLabels(example);
-      }
-
       ccgExamples.add(new CcgExample(supertaggedSentence, null, null,
-          example.getTree().getExpression(), ccgLexiconEntries));
+          example.getTree().getExpression()));
     }
     return ccgExamples;
   }
@@ -416,18 +457,25 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       AnnotatedSentence annotatedSentence = sentence.addAnnotation(FEATURE_ANNOTATION_NAME, annotation);
       
       newExamples.add(new CcgExample(annotatedSentence, example.getDependencies(),
-          example.getSyntacticParse(), example.getLogicalForm(), example.getLexiconEntries()));
+          example.getSyntacticParse(), example.getLogicalForm()));
     }
     return newExamples;
   }
 
-  private static void readFolds(String foldDir, List<String> foldNames, List<List<AlignmentExample>> folds) {
+  public static void readFolds(String foldDir, List<String> foldNames, List<List<AlignmentExample>> folds,
+      boolean test) {
     File dir = new File(foldDir);
     File[] files = dir.listFiles();
     
     for (int i = 0; i < files.length; i++) {
       String name = files[i].getName();
-      if (name.startsWith("fold")) {
+      if (!test && name.startsWith("fold")) {
+        foldNames.add(name);
+        
+        List<AlignmentExample> foldData = AlignmentLexiconInduction
+            .readTrainingData(files[i].getAbsolutePath());
+        folds.add(foldData);
+      } else if (test && (name.startsWith("all_folds") || name.startsWith("test"))) {
         foldNames.add(name);
         
         List<AlignmentExample> foldData = AlignmentLexiconInduction
@@ -439,64 +487,5 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
   public static void main(String[] args) {
     new LexiconInductionCrossValidation().run(args);
-  }
-  
-  private static class FoldRunner extends Mapper<String, SemanticParserLoss> {
-
-    private final List<String> foldNames;
-    private final List<List<AlignmentExample>> folds;
-    
-    private final int emIterations;
-    private final double smoothing;
-    private final int nGramLength;
-    private final int parserIterations;
-    private final double l2Regularization;
-    private final int beamSize;
-    private final int unknownWordThreshold;
-    private final List<String> additionalLexiconEntries;
-    private final String outputDir;
-    
-    public FoldRunner(List<String> foldNames, List<List<AlignmentExample>> folds,
-        int emIterations, double smoothing, int nGramLength, int parserIterations, double l2Regularization,
-        int beamSize, int unknownWordThreshold, List<String> additionalLexiconEntries, String outputDir) {
-      this.foldNames = foldNames;
-      this.folds = folds;
-      
-      this.emIterations = emIterations;
-      this.smoothing = smoothing;
-      this.nGramLength = nGramLength;
-      this.parserIterations = parserIterations;
-      this.l2Regularization = l2Regularization;
-      this.beamSize = beamSize;
-      this.unknownWordThreshold = unknownWordThreshold;
-      this.additionalLexiconEntries = additionalLexiconEntries;
-      this.outputDir = outputDir;
-    }
-
-    @Override
-    public SemanticParserLoss map(String item) {
-      int foldIndex = foldNames.indexOf(item);
-      
-      List<AlignmentExample> heldOut = folds.get(foldIndex);
-      List<AlignmentExample> trainingData = Lists.newArrayList();
-      for (int j = 0; j < folds.size(); j++) {
-        if (j == foldIndex) {
-          continue;
-        }
-        trainingData.addAll(folds.get(j));
-      }
-
-      String lexiconOutputFilename = outputDir + "/lexicon." + item + ".txt";
-      String alignmentModelOutputFilename = outputDir + "/alignment." + item + ".ser";
-      String parserModelOutputFilename = outputDir + "/parser." + item + ".ser";
-      
-      String trainingErrorOutputFilename = outputDir + "/training_error." + item + ".json";
-      String testErrorOutputFilename = outputDir + "/test_error." + item + ".json";
-
-      return runFold(trainingData, heldOut, emIterations, smoothing, nGramLength,
-          parserIterations, l2Regularization, beamSize, unknownWordThreshold, additionalLexiconEntries, 
-          lexiconOutputFilename, trainingErrorOutputFilename, testErrorOutputFilename,
-          alignmentModelOutputFilename, parserModelOutputFilename);
-    }
   }
 }

@@ -69,7 +69,7 @@ public class CfgParserTest extends TestCase {
 		binary = binaryBuilder.build();
 		terminal = terminalBuilder.build();
 		p = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, 
-		    binary, terminal, 10, false, null);
+		    binary, terminal, false, null);
 
 		Assignment skipAssignment = parentVar.outcomeArrayToAssignment("**skip**")
 		    .union(ruleVar.outcomeArrayToAssignment("rule1"));
@@ -79,7 +79,7 @@ public class CfgParserTest extends TestCase {
 		}
 		
 		p2 = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, 
-		    binaryBuilder.build(), terminalBuilder.build(), 10, true, skipAssignment);
+		    binaryBuilder.build(), terminalBuilder.build(), true, skipAssignment);
 	}
 	
 	private void addTerminal(TableFactorBuilder terminalBuilder, String nonterm, 
@@ -218,7 +218,7 @@ public class CfgParserTest extends TestCase {
 	}
 
 	public void testBeamSearch() {
-	  List<CfgParseTree> trees = p.beamSearch(Arrays.asList("baz", "bbb"));
+	  List<CfgParseTree> trees = p.beamSearch(Arrays.asList("baz", "bbb"), 10);
 	  assertEquals(3, trees.size());
 	  
 	  CfgParseTree bestTree = trees.get(0);
@@ -241,9 +241,7 @@ public class CfgParserTest extends TestCase {
 
 	  
 	  // Make sure that the beam truncates the less probable tree.
-	  CfgParser newParser = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, binary,
-	      terminal, 1, false, null);
-	  trees = newParser.beamSearch(Arrays.asList("baz", "bbb"));
+	  trees = p.beamSearch(Arrays.asList("baz", "bbb"), 1);
 	  assertEquals(1, trees.size());
 	  bestTree = trees.get(0);
 	  assertEquals("barP", bestTree.getRoot());
@@ -252,7 +250,7 @@ public class CfgParserTest extends TestCase {
 	}
 	
 	public void testBeamSearch2() {
-	  List<CfgParseTree> trees = p.beamSearch(Arrays.asList("a", "a", "a", "a"));
+	  List<CfgParseTree> trees = p.beamSearch(Arrays.asList("a", "a", "a", "a"), 10);
 	  assertEquals(5, trees.size());
 	  
 	  for (CfgParseTree tree : trees) {

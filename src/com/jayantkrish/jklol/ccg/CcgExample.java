@@ -33,9 +33,6 @@ public class CcgExample {
   // Expected logical form for the parse. May be null,
   // in which case the true logical form is unobserved.
   private final Expression2 logicalForm;
-  // Lexicon entries to use in the correct parse. May be null,
-  // in which case they are unobserved.
-  private final LexiconEntryLabels lexiconEntries;
 
   /**
    * Create a new training example for a CCG parser.
@@ -50,16 +47,14 @@ public class CcgExample {
    * @param logicalForm The logical form of the correct CCG parse of
    * {@code words}. May be {@code null}, in which case the correct
    * value is treated as unobserved.
-   * @param lexiconEntries
    */
   public CcgExample(AnnotatedSentence sentence, Set<DependencyStructure> dependencies,
-      CcgSyntaxTree syntacticParse, Expression2 logicalForm, LexiconEntryLabels lexiconEntries) {
+      CcgSyntaxTree syntacticParse, Expression2 logicalForm) {
     this.sentence = Preconditions.checkNotNull(sentence);
     this.dependencies = dependencies;
     this.syntacticParse = syntacticParse;
     this.logicalForm = logicalForm;
-    this.lexiconEntries = lexiconEntries;
-
+    
     if (syntacticParse != null) {
       List<String> syntaxWords = syntacticParse.getAllSpannedWords();
       Preconditions.checkArgument(syntaxWords.equals(sentence.getWords()),
@@ -115,14 +110,6 @@ public class CcgExample {
 
   public Expression2 getLogicalForm() {
     return logicalForm;
-  }
-  
-  public boolean hasLexiconEntries() {
-    return lexiconEntries != null;
-  }
-
-  public LexiconEntryLabels getLexiconEntries() {
-    return lexiconEntries;
   }
 
   @Override

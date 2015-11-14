@@ -43,8 +43,7 @@ public class TestSemanticParser extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
-    List<CcgExample> testExamples = TrainSemanticParser.readCcgExamples(options.valueOf(testData),
-        null);
+    List<CcgExample> testExamples = TrainSemanticParser.readCcgExamples(options.valueOf(testData));
     System.out.println("Read " + testExamples.size() + " test examples");
 
     CcgParser parser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);

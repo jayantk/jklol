@@ -23,6 +23,8 @@ import com.jayantkrish.jklol.ccg.lambda.Type;
 public class StaticAnalysis {
   
   public static final String LAMBDA = "lambda";
+  
+  public static final Type TOP = Type.createAtomic("unknown");
 
   private StaticAnalysis() {
     // Prevent instantiation
@@ -197,6 +199,11 @@ public class StaticAnalysis {
    * @return
    */
   public static Type inferType(Expression2 expression, Type type, Map<String, String> typeReplacements) {
+    Map<Integer, Type> subexpressionTypeMap = inferTypeMap(expression, type, typeReplacements);
+    return subexpressionTypeMap.get(0);
+  }
+
+  public static Map<Integer, Type> inferTypeMap(Expression2 expression, Type type, Map<String, String> typeReplacements) {
     Map<Integer, Type> subexpressionTypeMap = Maps.newHashMap();
     initializeSubexpressionTypeMap(expression, subexpressionTypeMap);
     updateType(0, type, subexpressionTypeMap, expression);
@@ -293,7 +300,7 @@ public class StaticAnalysis {
         }
       }
     }
-    return subexpressionTypeMap.get(0);
+    return subexpressionTypeMap;
   }
 
   private static Type doTypeReplacements(Type type, Map<String, String> typeReplacements) {

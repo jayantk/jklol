@@ -29,9 +29,15 @@ public class Expression2Test extends TestCase {
     assertArrayEquals(new int[] {4, 5, 6, 11}, expressions[2].getChildIndexes(3));
   }
   
-  public void testFindSubexpression() {
+  public void testGetSubexpression() {
     assertEquals(expressions[0], expressions[0].getSubexpression(0));
     assertEquals(expressions[0], expressions[1].getSubexpression(3));
+  }
+  
+  public void testFind() {
+    assertEquals(0, expressions[0].find(expressions[0]));
+    assertEquals(-1, expressions[0].find(expressions[1]));
+    assertEquals(3, expressions[1].find(expressions[0]));
   }
   
   private void assertArrayEquals(int[] x, int[] y) {

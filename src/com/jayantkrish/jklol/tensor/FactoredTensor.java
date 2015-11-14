@@ -113,7 +113,17 @@ public class FactoredTensor extends AbstractTensor {
   }
 
   @Override
+  public DenseTensor elementwiseLogSparse() {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
+
+  @Override
   public Tensor elementwiseExp() {
+    throw new UnsupportedOperationException("Not implemented.");
+  }
+
+  @Override
+  public DenseTensor elementwiseExpSparse() {
     throw new UnsupportedOperationException("Not implemented.");
   }
   

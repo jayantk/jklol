@@ -53,8 +53,7 @@ public class FeaturizedLexiconScorerTest extends TestCase {
     examples = Lists.newArrayList();
     for (int i = 0; i < trainingData.length; i++) {
       CcgExample example = exampleReader.parseFrom(trainingData[i]);
-      examples.add(new CcgExample(example.getSentence(), null,
-          null, example.getLogicalForm(), null));
+      examples.add(new CcgExample(example.getSentence(), null, null, example.getLogicalForm()));
     }
     List<StringContext> contexts = StringContext.getContextsFromExamples(examples);
     
@@ -80,7 +79,7 @@ public class FeaturizedLexiconScorerTest extends TestCase {
       SpanFeatureAnnotation annotation = SpanFeatureAnnotation.annotate(example.getSentence(), featureVectorGen);
       AnnotatedSentence newSentence = example.getSentence().addAnnotation("features", annotation);
       featurizedExamples.add(new CcgExample(newSentence, example.getDependencies(),
-          example.getSyntacticParse(), example.getLogicalForm(), example.getLexiconEntries()));
+          example.getSyntacticParse(), example.getLogicalForm()));
     }
     examples = featurizedExamples;
     

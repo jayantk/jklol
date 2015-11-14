@@ -8,7 +8,6 @@ import com.jayantkrish.jklol.ccg.chart.SumChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
-import com.jayantkrish.jklol.ccg.lexinduct.LexiconChartCost;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
 
@@ -53,6 +52,10 @@ public class CcgBeamSearchInference implements CcgInference {
 
     this.verbose = verbose;
   }
+  
+  public static CcgBeamSearchInference getDefault(int beamSize) {
+    return new CcgBeamSearchInference(null, null, beamSize, -1, Integer.MAX_VALUE, 1, false);
+  }
 
   @Override
   public CcgParse getBestParse(CcgParser parser, AnnotatedSentence sentence,
@@ -75,8 +78,7 @@ public class CcgBeamSearchInference implements CcgInference {
   @Override
   public CcgParse getBestConditionalParse(CcgParser parser, AnnotatedSentence sentence,
       ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
-      LexiconEntryLabels lexiconEntries, Set<DependencyStructure> observedDependencies,
-      Expression2 observedLogicalForm) {
+      Set<DependencyStructure> observedDependencies, Expression2 observedLogicalForm) {
 
     List<CcgParse> possibleParses = null;
     ChartCost syntacticCost = null;
@@ -84,9 +86,6 @@ public class CcgBeamSearchInference implements CcgInference {
     if (observedSyntacticTree != null) {
       syntacticCost = SyntacticChartCost.createAgreementCost(observedSyntacticTree);
     } 
-    if (lexiconEntries != null) {
-      lexiconCost = new LexiconChartCost(lexiconEntries);
-    }
     
     ChartCost conditionalChartFilter = SumChartCost.create(searchFilter, chartFilter,
         syntacticCost, lexiconCost);

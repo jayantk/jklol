@@ -1,13 +1,18 @@
 package com.jayantkrish.jklol.models.loglinear;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -17,6 +22,7 @@ import com.jayantkrish.jklol.models.parametric.AbstractParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
+import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
@@ -45,6 +51,10 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   // a set of 0 probability assignments). If null, then no sparsity pattern is
   // enforced.
   private final DiscreteFactor initialWeights;
+  
+  // Variable name assigned to the feature variable created by static methods
+  // of this class.
+  public static String FEATURE_VAR_NAME = "features";
 
   /**
    * Creates a {@code DiscreteLogLinearFactor} over {@code variables},
@@ -256,5 +266,47 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
    */
   public static DiscreteLogLinearFactor createIndicatorFactor(VariableNumMap vars) {
     return DiscreteLogLinearFactor.createIndicatorFactor(vars, null);
+  }
+  
+  /**
+   * Creates a {@code DiscreteLogLinearFactor} by applying {@code featureGen}
+   * to each assignment in {@code factor} with non-zero weight. Returns a
+   * sparse factor where only these assignments are assigned non-zero weight.
+   * 
+   * @param factor
+   * @param featureGen
+   * @return
+   */
+  public static DiscreteLogLinearFactor fromFeatureGeneratorSparse(DiscreteFactor factor,
+      FeatureGenerator<Assignment, String> featureGen) {
+    Iterator<Outcome> iter = factor.outcomeIterator();
+    Set<String> featureNames = Sets.newHashSet();
+    while (iter.hasNext()) {
+      Outcome o = iter.next();
+      for (Map.Entry<String, Double> f : featureGen.generateFeatures(o.getAssignment()).entrySet()) {
+        featureNames.add(f.getKey());
+      }
+    }
+    
+    List<String> featureNamesSorted = Lists.newArrayList(featureNames);
+    Collections.sort(featureNamesSorted);
+    
+    DiscreteVariable featureType = new DiscreteVariable(FEATURE_VAR_NAME, featureNamesSorted);
+    VariableNumMap featureVar = VariableNumMap.singleton(
+        Ints.max(factor.getVars().getVariableNumsArray()) + 1, FEATURE_VAR_NAME, featureType);
+    TableFactorBuilder builder = new TableFactorBuilder(
+        factor.getVars().union(featureVar), SparseTensorBuilder.getFactory());
+    
+    iter = factor.outcomeIterator();
+    while (iter.hasNext()) {
+      Outcome o = iter.next();
+      for (Map.Entry<String, Double> f : featureGen.generateFeatures(o.getAssignment()).entrySet()) {
+        Assignment featureAssignment = featureVar.outcomeArrayToAssignment(f.getKey());
+        builder.setWeight(o.getAssignment().union(featureAssignment), f.getValue());
+      }
+    }
+
+    DiscreteFactor featureFactor = builder.build();
+    return new DiscreteLogLinearFactor(factor.getVars(), featureVar, featureFactor, factor);
   }
 }

@@ -23,16 +23,13 @@ import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
-import com.jayantkrish.jklol.ccg.lexinduct.AlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModelInterface;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTokenFeatureGenerator;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree;
-import com.jayantkrish.jklol.ccg.lexinduct.ParametricAlignmentModel;
 import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
 import com.jayantkrish.jklol.cli.AbstractCli;
-import com.jayantkrish.jklol.inference.JunctionTree;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
@@ -51,10 +48,8 @@ public class AlignmentLexiconInduction extends AbstractCli {
   
   private OptionSpec<Double> smoothingParam;
   private OptionSpec<Integer> nGramLength;
-  private OptionSpec<Void> noTreeConstraint;
   private OptionSpec<Void> printSearchSpace;
   private OptionSpec<Void> printParameters;
-  private OptionSpec<Void> useCfg;
   
   // TODO: this shouldn't be hard coded. Replace with 
   // an input unification lattice for types.
@@ -85,10 +80,8 @@ public class AlignmentLexiconInduction extends AbstractCli {
     emIterations = parser.accepts("emIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(1.0);
     nGramLength = parser.accepts("nGramLength").withRequiredArg().ofType(Integer.class).defaultsTo(1);
-    noTreeConstraint = parser.accepts("noTreeConstraint");
     printSearchSpace = parser.accepts("printSearchSpace");
     printParameters = parser.accepts("printParameters");
-    useCfg = parser.accepts("useCfg");
   }
 
   @Override
@@ -108,48 +101,27 @@ public class AlignmentLexiconInduction extends AbstractCli {
 
     
     AlignmentModelInterface model = null;
-    if (options.has(useCfg)) {
-      ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
-          examples, vectorGenerator, options.valueOf(nGramLength), false);
-      SufficientStatistics smoothing = pam.getNewSufficientStatistics();
-      smoothing.increment(options.valueOf(smoothingParam));
+    ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
+        examples, vectorGenerator, options.valueOf(nGramLength), false, false);
+    SufficientStatistics smoothing = pam.getNewSufficientStatistics();
+    smoothing.increment(options.valueOf(smoothingParam));
 
-      SufficientStatistics initial = pam.getNewSufficientStatistics();
-      initial.increment(1);
+    SufficientStatistics initial = pam.getNewSufficientStatistics();
+    initial.increment(1);
 
-      ExpectationMaximization em = new ExpectationMaximization(options.valueOf(emIterations), new DefaultLogFunction());
-      SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing),
-          initial, examples);
+    ExpectationMaximization em = new ExpectationMaximization(options.valueOf(emIterations), new DefaultLogFunction());
+    SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, null, false),
+        initial, examples);
 
-      if (options.has(printParameters)) {
-        System.out.println(pam.getParameterDescription(trainedParameters));
-      }
-
-      model = pam.getModelFromParameters(trainedParameters);
-      pam.getModelFromParameters(trainedParameters).printStuffOut();
-
-    } else {
-      ParametricAlignmentModel pam = ParametricAlignmentModel.buildAlignmentModel(
-          examples, !options.has(noTreeConstraint), false, vectorGenerator);
-      SufficientStatistics smoothing = pam.getNewSufficientStatistics();
-      smoothing.increment(options.valueOf(smoothingParam));
-      
-      SufficientStatistics initial = pam.getNewSufficientStatistics();
-      initial.increment(1);
-      
-      ExpectationMaximization em = new ExpectationMaximization(options.valueOf(emIterations), new DefaultLogFunction());
-      SufficientStatistics trainedParameters = em.train(new AlignmentEmOracle(pam, new JunctionTree(true), smoothing, true),
-          initial, examples);
-      
-      if (options.has(printParameters)) {
-        System.out.println(pam.getParameterDescription(trainedParameters));
-      }
-      
-      model = pam.getModelFromParameters(trainedParameters);
+    if (options.has(printParameters)) {
+      System.out.println(pam.getParameterDescription(trainedParameters));
     }
 
+    model = pam.getModelFromParameters(trainedParameters);
+    pam.getModelFromParameters(trainedParameters).printStuffOut();
+
     PairCountAccumulator<List<String>, LexiconEntry> alignments = generateLexiconFromAlignmentModel(
-        model, examples, typeReplacements);
+        model, examples, 1, typeReplacements);
     for (List<String> words : alignments.keySet()) {
       System.out.println(words);
       for (LexiconEntry entry : alignments.getValues(words)) {
@@ -169,17 +141,27 @@ public class AlignmentLexiconInduction extends AbstractCli {
   }
   
   public static PairCountAccumulator<List<String>, LexiconEntry> generateLexiconFromAlignmentModel(
-      AlignmentModelInterface model, Collection<AlignmentExample> examples,
+      AlignmentModelInterface model, Collection<AlignmentExample> examples, int lexiconNumParses,
       Map<String, String> typeReplacements) {
     PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
     for (AlignmentExample example : examples) {
-      System.out.println(example.getWords());
-      AlignedExpressionTree tree = model.getBestAlignment(example);
-      System.out.println(tree);
+      List<AlignedExpressionTree> trees = Lists.newArrayList();
+      
+      if (lexiconNumParses <= 0) {
+        trees.add(model.getBestAlignment(example));
+      } else {
+        trees.addAll(model.getBestAlignments(example, lexiconNumParses));
+      }
 
-      for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
-        System.out.println("   " + entry.toCsvString());
-        alignments.incrementOutcome(entry.getWords(), entry, 1);
+      System.out.println(example.getWords());
+      for (AlignedExpressionTree tree : trees) {
+        System.out.println(tree);
+
+        for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
+          alignments.incrementOutcome(entry.getWords(), entry, 1);
+          System.out.println("   " + entry);
+        }
+        System.out.println("");
       }
     }
     return alignments;
@@ -206,9 +188,10 @@ public class AlignmentLexiconInduction extends AbstractCli {
   }
 
   public static List<AlignmentExample> readTrainingData(String trainingDataFile) {
-    List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile, null);
+    List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile);
     List<AlignmentExample> examples = Lists.newArrayList();
 
+    System.out.println(trainingDataFile);
     int totalTreeSize = 0; 
     for (CcgExample ccgExample : ccgExamples) {
       ExpressionTree tree = expressionToExpressionTree(ccgExample.getLogicalForm());
@@ -228,7 +211,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
     Set<String> constantsToIgnore = Sets.newHashSet("and:<t*,t>");
 
     return ExpressionTree.fromExpression(expression, simplifier, typeReplacements,
-        constantsToIgnore, 0, 2, 2);
+        constantsToIgnore, 0, 2, 3);
   }
 
   public static void main(String[] args) {

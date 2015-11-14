@@ -13,10 +13,8 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
-import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.FactorLoglikelihoodOracle;
 import com.jayantkrish.jklol.training.GradientOptimizer;
-import com.jayantkrish.jklol.training.GradientOracle;
-import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
 /**
@@ -37,25 +35,29 @@ public class LogLinearCptFactor extends AbstractParametricFactor {
   private static final long serialVersionUID = 1L;
 
   private final ParametricFactor factor;
+  private final VariableNumMap conditionalVars;
+
   private final GradientOptimizer optimizer;
   
-  public LogLinearCptFactor(ParametricFactor factor, GradientOptimizer optimizer) {
+  public LogLinearCptFactor(ParametricFactor factor, VariableNumMap conditionalVars,
+      GradientOptimizer optimizer) {
     super(factor.getVars());
     this.factor = Preconditions.checkNotNull(factor);
+    this.conditionalVars = Preconditions.checkNotNull(conditionalVars);
     this.optimizer = Preconditions.checkNotNull(optimizer);
   }
 
   @Override
   public Factor getModelFromParameters(SufficientStatistics parameters) {
-    GradientOracle<Factor, Factor> oracle = new FactorGradientOracle(factor);
+    Factor target = ((TensorSufficientStatistics) parameters).getFactor();
+    FactorLoglikelihoodOracle oracle = new FactorLoglikelihoodOracle(factor, target, conditionalVars);
     SufficientStatistics loglinearParameters = factor.getNewSufficientStatistics();
 
-    List<Factor> trainingData = Arrays.<Factor>asList(
-        ((TensorSufficientStatistics) parameters).getFactor());
+    List<Void> trainingData = Arrays.asList((Void) null);
     loglinearParameters = optimizer.train(oracle, loglinearParameters, trainingData);
     
     Factor predicted = factor.getModelFromParameters(loglinearParameters);
-    return predicted.product(1 / predicted.getTotalUnnormalizedProbability());
+    return predicted.product(predicted.marginalize(predicted.getVars().removeAll(conditionalVars)).inverse());
   }
 
   @Override
@@ -90,56 +92,5 @@ public class LogLinearCptFactor extends AbstractParametricFactor {
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
     DiscreteFactor factor = getModelFromParameters(parameters).coerceToDiscrete();
     return factor.describeAssignments(factor.getMostLikelyAssignments(numFeatures));
-  }
-
-  /**
-   * Gradient oracle for optimizing a factor to agree with a
-   * given probability distribution.
-   * 
-   * @author jayant
-   *
-   */
-  private static class FactorGradientOracle implements GradientOracle<Factor, Factor> {
-
-    private final ParametricFactor factor;
-    
-    public FactorGradientOracle(ParametricFactor factor) {
-      this.factor = Preconditions.checkNotNull(factor);
-    }
-
-    @Override
-    public SufficientStatistics initializeGradient() {
-      return factor.getNewSufficientStatistics();
-    }
-
-    @Override
-    public Factor instantiateModel(SufficientStatistics parameters) {
-      return factor.getModelFromParameters(parameters);
-    }
-
-    @Override
-    public double accumulateGradient(SufficientStatistics gradient,
-        SufficientStatistics currentParameters, Factor instantiatedModel, Factor example,
-        LogFunction log) {
-      // The example is the true marginal distribution
-      double examplePartitionFunction = example.getTotalUnnormalizedProbability();
-      factor.incrementSufficientStatisticsFromMarginal(gradient, currentParameters,
-          example, Assignment.EMPTY, 1, examplePartitionFunction);
-
-      // And the instantiated model is the predicted marginal distribution.
-      double partitionFunction = instantiatedModel.getTotalUnnormalizedProbability();
-      factor.incrementSufficientStatisticsFromMarginal(gradient, currentParameters,
-          instantiatedModel, Assignment.EMPTY, -1, partitionFunction);
-      
-      // Calculate and return the KL divergence between the distributions
-      // (ignoring the term that is constant given example)
-      Tensor exampleWeights = example.coerceToDiscrete().getWeights();
-      exampleWeights = exampleWeights.elementwiseProduct(1.0 / examplePartitionFunction);
-      
-      Tensor modelWeights = instantiatedModel.coerceToDiscrete().getWeights();
-      modelWeights = modelWeights.elementwiseProduct(1.0 / partitionFunction);
-      
-      return exampleWeights.innerProduct(modelWeights.elementwiseLog()).getByDimKey();
-    }
   }
 }

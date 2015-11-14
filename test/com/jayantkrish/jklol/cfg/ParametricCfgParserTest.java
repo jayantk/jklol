@@ -70,7 +70,7 @@ public class ParametricCfgParserTest extends TestCase {
     ParametricFactor terminalFactor = DiscreteLogLinearFactor.createIndicatorFactor(terminalVars);
     
     cfgFactor = new ParametricCfgParser(parent, left, right, terminal, ruleType, 
-        nonterminalFactor, terminalFactor, 10, false);
+        nonterminalFactor, terminalFactor, false);
     
     // Create some training data.
     trainingData = Lists.newArrayList();
@@ -121,7 +121,7 @@ public class ParametricCfgParserTest extends TestCase {
     
     for (int i = 0; i < TEST_DATA.length; i++) {
       CfgParseTree expected = parseTreeFromString(TEST_DATA[i].replaceAll("milk", "<OOV>"), 0);
-      CfgParseTree predicted = parser.beamSearch(expected.getTerminalProductions()).get(0);
+      CfgParseTree predicted = parser.beamSearch(expected.getTerminalProductions(), 10).get(0);
       assertEquals(expected, predicted);
     }
   }

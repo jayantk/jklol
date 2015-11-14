@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
 import java.io.Serializable;
+import java.util.List;
 
 public class Type implements Serializable {
   private static final long serialVersionUID = 1L;
@@ -57,6 +58,24 @@ public class Type implements Serializable {
   
   public Type addArgument(Type arg) {
     return Type.createFunctional(arg, this, false);
+  }
+  
+  /**
+   * Adds a list of argument types to this type. The
+   * last argument in the list is the first argument
+   * accepted by the returned type. For example, if
+   * the list is [a, b, c], the resulting type is
+   * (c, (b, (a, this)))
+   * 
+   * @param argTypes
+   * @return
+   */
+  public Type addArguments(List<Type> argTypes) {
+    Type t = this;
+    for (Type a : argTypes) {
+      t = t.addArgument(a);
+    }
+    return t;
   }
 
   public boolean acceptsRepeatedArguments() {

@@ -690,8 +690,7 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       newValues[i] = Math.sqrt(values[i]);
     }
     // We don't have to copy outcomes because this class is immutable,
-    // and it
-    // treats both outcomes and values as immutable.
+    // and it treats both outcomes and values as immutable.
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
   }
 
@@ -819,6 +818,14 @@ public class SparseTensor extends AbstractTensor implements Serializable {
     double[] newValues = new double[values.length];
     for (int i = 0; i < values.length; i++) {
       newValues[i] = Math.exp(values[i]);
+    }
+    return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
+  }
+  
+  public SparseTensor elementwiseLogSparse() {
+    double[] newValues = new double[values.length];
+    for (int i = 0; i < values.length; i++) {
+      newValues[i] = Math.log(values[i]);
     }
     return new SparseTensor(getDimensionNumbers(), getDimensionSizes(), keyNums, newValues);
   }

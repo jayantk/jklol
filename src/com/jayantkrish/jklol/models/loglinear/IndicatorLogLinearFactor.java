@@ -125,9 +125,13 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
       VariableNumMap conditionedVars = initialWeights.getVars().intersection(
           conditionalAssignment.getVariableNumsArray());
 
-      TableFactor productFactor = (TableFactor) initialWeights.product(
-          TableFactor.pointDistribution(conditionedVars, conditionalAssignment.intersection(conditionedVars)))
-          .product(marginal);
+      DiscreteFactor productFactor = null;
+      if (conditionedVars.size() > 0) {
+        productFactor = TableFactor.pointDistribution(conditionedVars,
+            conditionalAssignment.intersection(conditionedVars)).product(marginal).coerceToDiscrete();
+      } else {
+        productFactor = marginal.coerceToDiscrete();
+      }
 
       Tensor weightTensor = initialWeights.getWeights();
       Tensor productFactorWeights = productFactor.getWeights();
@@ -137,7 +141,9 @@ public class IndicatorLogLinearFactor extends AbstractParametricFactor {
       TensorSufficientStatistics tensorGradient = (TensorSufficientStatistics) gradient;
       for (int i = 0; i < tensorSize; i++) {
         int builderIndex = weightTensor.keyNumToIndex(productFactorWeights.indexToKeyNum(i));
-        tensorGradient.incrementFeatureByIndex(productFactorValues[i] * multiplier, builderIndex);
+        if (builderIndex != -1) {
+          tensorGradient.incrementFeatureByIndex(productFactorValues[i] * multiplier, builderIndex);
+        }
       }
     }
   }

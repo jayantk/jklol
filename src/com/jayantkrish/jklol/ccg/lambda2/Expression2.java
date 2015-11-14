@@ -173,10 +173,26 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
     }
   }
 
+  /**
+   * Replaces the expression at {@code index} in this expression
+   * with {@code newConstantExpression} (as a constant expression).
+   *   
+   * @param index
+   * @param newConstantExpression
+   * @return
+   */
   public Expression2 substitute(int index, String newConstantExpression) {
     return substitute(index, Expression2.constant(newConstantExpression));
   }
 
+  /**
+   * Replaces the expression at {@code index} in this expression 
+   * with {@code newExpression}.
+   * 
+   * @param index
+   * @param newExpression
+   * @return
+   */
   public Expression2 substitute(int index, Expression2 newExpression) {
     Preconditions.checkArgument(index < size);
     if (index == 0) {
@@ -191,14 +207,38 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
     }
   }
 
+  /**
+   * Replaces all occurrences of {@code value} in this
+   * expression with {@code replacement}. 
+   * 
+   * @param value
+   * @param replacement
+   * @return
+   */
   public Expression2 substitute(String value, String replacement) {
     return substitute(Expression2.constant(value), Expression2.constant(replacement));
   }
 
+  /**
+   * Replaces all occurrences of {@code value} in this
+   * expression with {@code replacement}. 
+   * 
+   * @param value
+   * @param replacement
+   * @return
+   */
   public Expression2 substitute(String value, Expression2 replacement) {
     return substitute(Expression2.constant(value), replacement);
   }
 
+  /**
+   * Replaces all occurrences of {@code value} in this
+   * expression with {@code replacement}. 
+   * 
+   * @param value
+   * @param replacement
+   * @return
+   */
   public Expression2 substitute(Expression2 value, Expression2 replacement) {
     if (this.equals(value)) {
       return replacement;
@@ -236,17 +276,35 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
    * @return
    */
   public boolean hasSubexpression(Expression2 subexpression) {
-    if (this.equals(subexpression)) {
-      return true;
+    return find(subexpression) >= 0;
+  }
+  
+  /**
+   * Returns the index of the first occurrence of {@code expression}
+   * within {@code this} expression. Returns -1 if {@code expression}
+   * is not found.
+   * 
+   * @param expression
+   * @return
+   */
+  public int find(Expression2 expression) {
+    return findHelper(expression, 0);
+  }
+  
+  private int findHelper(Expression2 expression, int index) {
+    if (this.equals(expression)) {
+      return index;
     } else if (this.isConstant()) {
-      return false;
+      return -1;
     } else {
-      for (Expression2 sub : subexpressions) {
-        if (sub.hasSubexpression(subexpression)) {
-          return true;
+      int[] childIndexes = getChildIndexes(0);
+      for (int i = 0; i < subexpressions.size(); i++) {
+        int subexpressionIndex = subexpressions.get(i).findHelper(expression, childIndexes[i]);
+        if (subexpressionIndex >= 0) {
+          return subexpressionIndex;
         }
       }
-      return false;
+      return -1;
     }
   }
 

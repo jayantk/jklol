@@ -2,27 +2,44 @@ package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
+import com.jayantkrish.jklol.cfg.CfgExpectation;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
+import com.jayantkrish.jklol.experiments.geoquery.LexiconInductionCrossValidation;
 import com.jayantkrish.jklol.models.DiscreteFactor;
+import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
+import com.jayantkrish.jklol.models.VariableNumMap.VariableRelabeling;
+import com.jayantkrish.jklol.models.bayesnet.SparseCptTableFactor;
+import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
+import com.jayantkrish.jklol.models.loglinear.IndicatorLogLinearFactor;
+import com.jayantkrish.jklol.models.parametric.CombiningParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
@@ -40,17 +57,19 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   private final VariableNumMap ruleVar;
   
   private final int nGramLength;
-  private final boolean terminalsGenerateManyWords;
+  private final boolean loglinear;
 
   public static final String TERMINAL = "terminal";
-  public static final String FORWARD_APPLICATION = "fa";
-  public static final String BACKWARD_APPLICATION = "ba";
-  public static final String SKIP_RULE = "skip";
-  public static final ExpressionNode SKIP_EXPRESSION = new ExpressionNode(Expression2.constant("**skip**"), 0);
+  public static final String APPLICATION = "app";
+  public static final String SKIP_LEFT = "skip_left";
+  public static final String SKIP_RIGHT = "skip_right";
+  public static final String SKIP_CONSTANT = "**skip**";
+  public static final ExpressionNode SKIP_EXPRESSION = new ExpressionNode(Expression2.constant(SKIP_CONSTANT),
+      Type.createAtomic(SKIP_CONSTANT), 0);
 
   public ParametricCfgAlignmentModel(ParametricFactor ruleFactor, ParametricFactor nonterminalFactor,
       ParametricFactor terminalFactor, VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar,
-      VariableNumMap parentVar, VariableNumMap ruleVar, int nGramLength, boolean terminalsGenerateManyWords) {
+      VariableNumMap parentVar, VariableNumMap ruleVar, int nGramLength, boolean loglinear) {
     this.ruleFactor = Preconditions.checkNotNull(ruleFactor);
     this.nonterminalFactor = Preconditions.checkNotNull(nonterminalFactor);
     this.terminalFactor = Preconditions.checkNotNull(terminalFactor);
@@ -62,21 +81,23 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     this.ruleVar = Preconditions.checkNotNull(ruleVar);
     
     this.nGramLength = nGramLength;
-    this.terminalsGenerateManyWords = terminalsGenerateManyWords;
+    this.loglinear = loglinear;
   }
 
-  public static ParametricCfgAlignmentModel buildAlignmentModelWithNGrams(Collection<AlignmentExample> examples,
-      FeatureVectorGenerator<Expression2> featureVectorGenerator, int nGramLength, boolean terminalsGenerateManyWords) {
+  public static ParametricCfgAlignmentModel buildAlignmentModelWithNGrams(
+      Collection<AlignmentExample> examples, FeatureVectorGenerator<Expression2> featureVectorGenerator,
+      int nGramLength, boolean discriminative, boolean loglinear) {
     Set<List<String>> terminalVarValues = Sets.newHashSet();
     for (AlignmentExample example : examples) {
       terminalVarValues.addAll(example.getNGrams(nGramLength));
     }
-    return buildAlignmentModel(examples, featureVectorGenerator, terminalVarValues, terminalsGenerateManyWords);
+    return buildAlignmentModel(examples, featureVectorGenerator, terminalVarValues,
+        discriminative, loglinear);
   }
-  
+
   public static ParametricCfgAlignmentModel buildAlignmentModel(Collection<AlignmentExample> examples,
       FeatureVectorGenerator<Expression2> featureVectorGenerator, Set<List<String>> terminalVarValues,
-      boolean terminalsGenerateManyWords) {
+      boolean discriminative, boolean loglinear) {
     Set<ExpressionNode> expressions = Sets.newHashSet();
     expressions.add(SKIP_EXPRESSION);
 
@@ -92,22 +113,39 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
       example.getTree().getAllExpressionNodes(expressions);
     }
 
+    Set<Type> types = Sets.newHashSet();
+    for (ExpressionNode expression : expressions) {
+      types.add(expression.getType());
+    }
+    
+    Multimap<Expression2, ExpressionNode> templateExpressionMap = HashMultimap.create();
+    for (ExpressionNode expression : expressions) {
+      // TODO: this is terrible.
+      for (int i = 0; i < 2; i++) {
+        Expression2 template = expression.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i);
+        templateExpressionMap.put(template, expression);
+      }
+    }
+
+    for (Expression2 template : templateExpressionMap.keySet()) {
+      System.out.println(template);
+      for (ExpressionNode node : templateExpressionMap.get(template)) {
+        System.out.println("  " + node);
+      }
+    }
+
     DiscreteVariable expressionVarType = new DiscreteVariable("expressions", expressions);
+    DiscreteVariable typeVarType = new DiscreteVariable("types", types); 
     DiscreteVariable terminalVarType = new DiscreteVariable("words", terminalVarValues);
     DiscreteVariable ruleVarType = new DiscreteVariable("rule", Arrays.asList(TERMINAL,
-        FORWARD_APPLICATION, BACKWARD_APPLICATION, SKIP_RULE));
+        APPLICATION, SKIP_LEFT, SKIP_RIGHT));
 
     VariableNumMap terminalVar = VariableNumMap.singleton(0, "terminal", terminalVarType);
-    VariableNumMap leftVar = VariableNumMap.singleton(1, "left", expressionVarType);
-    VariableNumMap rightVar = VariableNumMap.singleton(2, "right", expressionVarType);
-    VariableNumMap parentVar = VariableNumMap.singleton(3, "parent", expressionVarType);
-    VariableNumMap ruleVar = VariableNumMap.singleton(4, "rule", ruleVarType);
+    VariableNumMap leftVar = VariableNumMap.singleton(3, "left", expressionVarType);
+    VariableNumMap rightVar = VariableNumMap.singleton(6, "right", expressionVarType);
+    VariableNumMap parentVar = VariableNumMap.singleton(9, "parent", expressionVarType);
+    VariableNumMap ruleVar = VariableNumMap.singleton(12, "rule", ruleVarType);
     
-    // Probability distribution over the different CFG rule types
-    // CptTableFactor ruleFactor = new CptTableFactor(parentVar, ruleVar);
-    ParametricFactor ruleFactor = new ConstantParametricFactor(parentVar.union(ruleVar),
-        TableFactor.unity(parentVar.union(ruleVar)));
-
     VariableNumMap nonterminalVars = VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar);
     TableFactor ones = TableFactor.logUnity(nonterminalVars);
     TableFactorBuilder nonterminalBuilder = new TableFactorBuilder(nonterminalVars,
@@ -115,37 +153,118 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     for (AlignmentExample example : examples) {
       example.getTree().populateBinaryRuleDistribution(nonterminalBuilder, ones);
     }
+    
+    VariableNumMap terminalVars = VariableNumMap.unionAll(parentVar, terminalVar, ruleVar);
+    TableFactorBuilder terminalBuilder = new TableFactorBuilder(terminalVars,
+        SparseTensorBuilder.getFactory());
+    Set<ExpressionNode> exampleNodes = Sets.newHashSet();
+    for (AlignmentExample example : examples) {
+      exampleNodes.clear();
+      exampleNodes.add(SKIP_EXPRESSION);
+      example.getTree().getAllExpressionNodes(exampleNodes);
+
+      List<String> words = example.getWords();
+      for (int i = 0; i < words.size(); i++) {
+        for (int j = i; j < Math.min(i + nGramLength, words.size()); j++) {
+          List<String> terminals = words.subList(i, j + 1);
+          if (terminalVar.isValidOutcomeArray(terminals)) {
+            for (ExpressionNode node : exampleNodes) {
+              terminalBuilder.setWeight(1.0, terminals, node, TERMINAL);
+            }
+          }
+        }
+      }
+    }
 
     DiscreteFactor nonterminalSparsityFactor = nonterminalBuilder.build();
     DiscreteFactor nonterminalConstantFactor = TableFactor.zero(nonterminalVars);
-
-    // Learn the nonterminal probabilities
-    // SparseCptTableFactor nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
-    // leftVar.union(rightVar), nonterminalSparsityFactor, nonterminalConstantFactor);
-
-    // Assign all binary rules probability 1
-    ParametricFactor nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
-
+    /*
     DiscreteFactor sparsityFactor = TableFactor.unity(parentVar.union(terminalVar))
         .outerProduct(TableFactor.pointDistribution(ruleVar, ruleVar.outcomeArrayToAssignment(TERMINAL)));
+        */
+    DiscreteFactor sparsityFactor = terminalBuilder.build();
     DiscreteFactor constantFactor = TableFactor.zero(VariableNumMap.unionAll(terminalVar, parentVar, ruleVar));
-
-    // TODO: There should probably be special handling for the SKIP symbol
-    // Maximize P(logical form | word)
-    /*
-    SparseCptTableFactor terminalFactor = new SparseCptTableFactor(terminalVar.union(ruleVar),
-        parentVar, sparsityFactor, constantFactor);
-    */
     
-    // Maximize P(word | logical form). This works better.
-    /*
-    SparseCptTableFactor terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
-        terminalVar, sparsityFactor, constantFactor);
-     */
-    
-    // Set all terminals to have probability 1
-    ParametricFactor terminalFactor = new ConstantParametricFactor(sparsityFactor.getVars(), sparsityFactor);
+    System.out.println("nonterminal sparsity: " + nonterminalSparsityFactor.size());
+    System.out.println("terminal sparsity: " + sparsityFactor.size());
 
+    // Learn the nonterminal probabilities
+    ParametricFactor ruleFactor = null;
+    ParametricFactor nonterminalFactor = null;
+    ParametricFactor terminalFactor = null;
+    if (!discriminative) {      
+      // Maximize P(word | logical form). This works better.
+      if (loglinear) {
+        ParametricFactor ruleIndicatorFactor = IndicatorLogLinearFactor.createDenseFactor(parentVar.union(ruleVar));
+        ParametricFactor nonterminalIndicatorFactor = new IndicatorLogLinearFactor(nonterminalVars, nonterminalSparsityFactor);
+        ParametricFactor terminalIndicatorFactor = new IndicatorLogLinearFactor(sparsityFactor.getVars(), sparsityFactor);
+
+        // Assign all binary rules probability 1
+        // nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
+        // Constant probability of invoking a rule or not.
+        // ruleFactor = new ConstantParametricFactor(parentVar.union(ruleVar),
+        // TableFactor.unity(parentVar.union(ruleVar)));
+        
+        ParametricFactor ruleFeatureFactor = DiscreteLogLinearFactor.fromFeatureGeneratorSparse(
+            TableFactor.unity(parentVar.union(ruleVar)), new RuleFeatureGen());
+        DiscreteLogLinearFactor nonterminalFeatureFactor = DiscreteLogLinearFactor.fromFeatureGeneratorSparse(
+            nonterminalSparsityFactor, new NonterminalFeatureGen());
+        ParametricFactor terminalFeatureFactor = DiscreteLogLinearFactor.fromFeatureGeneratorSparse(
+            sparsityFactor, new TerminalFeatureGen());
+        
+        // Print features:
+        Factor f = nonterminalFeatureFactor.getFeatureValues();
+        VariableNumMap allVars = f.getVars();
+        VariableNumMap featureVar = allVars.intersection(allVars.getVariableByName(DiscreteLogLinearFactor.FEATURE_VAR_NAME));
+        VariableNumMap otherVars = allVars.removeAll(featureVar);
+        
+        VariableRelabeling relabeling = VariableRelabeling.identity(otherVars).union(
+            VariableRelabeling.createFromVariables(featureVar, featureVar.relabelVariableNums(new int[] {0})));
+        f = f.relabelVariables(relabeling);
+        // System.out.println(f.getParameterDescription());
+        // System.out.println(nonterminalFeatureFactor.getModelFromParameters(nonterminalFeatureFactor.getNewSufficientStatistics()).getParameterDescription());
+        // System.out.println(nonterminalSparsityFactor.getParameterDescription());
+
+        List<String> factorNames = Arrays.asList("indicators", "features");
+        // ruleFactor = new CombiningParametricFactor(ruleFeatureFactor.getVars(), factorNames,
+        // Arrays.asList(ruleIndicatorFactor, ruleFeatureFactor), false);
+        // nonterminalFactor = new CombiningParametricFactor(nonterminalFeatureFactor.getVars(), factorNames,
+        // Arrays.asList(nonterminalIndicatorFactor, nonterminalFeatureFactor), false);
+        terminalFactor = new CombiningParametricFactor(terminalFeatureFactor.getVars(), factorNames,
+            Arrays.asList(terminalIndicatorFactor, terminalFeatureFactor), false);
+        
+        ruleFactor = ruleFeatureFactor;
+        nonterminalFactor = nonterminalFeatureFactor;
+        // terminalFactor = terminalFeatureFactor;
+      } else {
+        // Assign all binary rules probability 1
+        nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
+        // Constant probability of invoking a rule or not.
+        ruleFactor = new ConstantParametricFactor(parentVar.union(ruleVar),
+            TableFactor.unity(parentVar.union(ruleVar)));
+
+        /*
+        ruleFactor = new CptTableFactor(parentVar, ruleVar);
+        nonterminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
+            leftVar.union(rightVar), nonterminalSparsityFactor, nonterminalConstantFactor);
+        */
+        terminalFactor = new SparseCptTableFactor(parentVar.union(ruleVar),
+            terminalVar, sparsityFactor, constantFactor);
+      }
+    } else {
+      // Probability distribution over the different CFG rule types
+      // Assign all binary rules probability 1
+      nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
+      // Constant probability of invoking a rule or not.
+      ruleFactor = new ConstantParametricFactor(parentVar.union(ruleVar),
+          TableFactor.unity(parentVar.union(ruleVar)));
+
+      // Maximize P(logical form | word) for the terminals.
+      terminalFactor = new SparseCptTableFactor(terminalVar.union(ruleVar),
+          parentVar, sparsityFactor, constantFactor);
+    }
+
+    // This is some stuff for using features in the nonterminals.
     /*
     VariableNumMap vars = VariableNumMap.unionAll(parentVar, ruleVar, terminalVar);
     int featureVarNum = Ints.max(vars.getVariableNumsArray()) + 1;
@@ -157,15 +276,35 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
         */
 
     return new ParametricCfgAlignmentModel(ruleFactor, nonterminalFactor, terminalFactor,
-        terminalVar, leftVar, rightVar, parentVar, ruleVar, nGramLength, terminalsGenerateManyWords);
+        terminalVar, leftVar, rightVar, parentVar, ruleVar, nGramLength, loglinear);
+  }
+  
+  public boolean isLoglinear() {
+    return loglinear;
   }
 
   public VariableNumMap getNonterminalVar() {
     return parentVar;
   }
+  
+  public VariableNumMap getRuleVar() {
+    return ruleVar;
+  }
 
   public VariableNumMap getTerminalVar() {
     return terminalVar;
+  }
+  
+  public ParametricFactor getRuleFactor() {
+    return ruleFactor;
+  }
+  
+  public ParametricFactor getNonterminalFactor() {
+    return nonterminalFactor;
+  }
+
+  public ParametricFactor getTerminalFactor() {
+    return terminalFactor;
   }
 
   @Override
@@ -179,66 +318,64 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   public CfgAlignmentModel getModelFromParameters(SufficientStatistics parameters) {
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
 
-    DiscreteFactor rules = ruleFactor.getModelFromParameters(parameterList.get(0)).coerceToDiscrete();
+    DiscreteFactor rules = ruleFactor.getModelFromParameters(parameterList.get(0))
+        .coerceToDiscrete();
     DiscreteFactor ntf = nonterminalFactor.getModelFromParameters(parameterList.get(1))
-        .coerceToDiscrete().product(rules);
+        .coerceToDiscrete();
     DiscreteFactor tf = terminalFactor.getModelFromParameters(parameterList.get(2))
-        .coerceToDiscrete().product(rules);
+        .coerceToDiscrete();
 
-    return new CfgAlignmentModel(ntf, tf, terminalVar, leftVar, rightVar, parentVar, ruleVar,
-        nGramLength, terminalsGenerateManyWords);
-  }
-
-  public void incrementSufficientStatistics(SufficientStatistics statistics,
-      SufficientStatistics currentParameters, CfgParseChart chart, double count) {
-    List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
-    List<SufficientStatistics> parameterList = currentParameters.coerceToList().getStatistics();
+    if (loglinear) {
+      // Normalize each distribution.
+      rules = rules.product(rules.marginalize(ruleVar).inverse());
+      ntf = ntf.product(ntf.marginalize(ntf.getVars().removeAll(ruleVar.union(parentVar))).inverse());
+      tf = tf.product(tf.marginalize(tf.getVars().removeAll(ruleVar.union(parentVar))).inverse());
+    }
     
-    DiscreteFactor terminalExpectations = chart.getTerminalRuleExpectations().coerceToDiscrete();
+    // Incorporate the conditional probabilities of choosing terminals vs. nonterminals.
+    ntf = ntf.product(rules);
+    tf = tf.product(rules);
+    
+    return new CfgAlignmentModel(ntf, tf, terminalVar, leftVar, rightVar, parentVar, ruleVar,
+        nGramLength);
+  }
+  
+  public void incrementExpectations(CfgExpectation expectations, DiscreteFactor nonterminalExpectations,
+      DiscreteFactor terminalExpectations, double count, double partitionFunction) {
+    TableFactorBuilder ruleBuilder = expectations.getRuleBuilder();
+    TableFactorBuilder terminalBuilder = expectations.getTerminalBuilder();
+    TableFactorBuilder nonterminalBuilder = expectations.getNonterminalBuilder();
+    
     Iterator<Outcome> iter = terminalExpectations.outcomeIterator();
-    double partitionFunction = chart.getPartitionFunction();
     while (iter.hasNext()) {
       Outcome o = iter.next();
       Assignment a = o.getAssignment();
       double amount = count * o.getProbability() / partitionFunction;
 
-      ruleFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(0),
-          parameterList.get(0), a.intersection(ruleFactor.getVars().getVariableNumsArray()), amount);
-
-      if (terminalsGenerateManyWords) {
-        List<?> words = (List<?>) a.getValue(terminalVar.getOnlyVariableNum());
-        Assignment remainder = a.removeAll(terminalVar.getOnlyVariableNum());
-        for (Object word : words) {
-          Assignment toIncrement = remainder.union(terminalVar.outcomeArrayToAssignment(Arrays.asList(word)));
-          terminalFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(2),
-              parameterList.get(2), toIncrement, amount);
-        }
-      } else {
-        Preconditions.checkState(terminalVar.isValidAssignment(
-            a.intersection(terminalVar.getOnlyVariableNum())),
-            "Invalid parse of sentence %s, %s", chart.getTerminals(), a);
-        terminalFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(2),
-            parameterList.get(2), a, amount);
-      }
+      ruleBuilder.incrementWeight(a.intersection(ruleFactor.getVars().getVariableNumsArray()), amount);
+      terminalBuilder.incrementWeight(a, amount);
     }
 
-    DiscreteFactor nonterminalExpectations = chart.getBinaryRuleExpectations().coerceToDiscrete();
     iter = nonterminalExpectations.outcomeIterator();
     while (iter.hasNext()) {
       Outcome o = iter.next();
       Assignment a = o.getAssignment();
       double amount = count * o.getProbability() / partitionFunction;
-      nonterminalFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(1),
-          parameterList.get(1), a, amount);
-      ruleFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(0),
-          parameterList.get(0), a.intersection(ruleFactor.getVars().getVariableNumsArray()), amount);
+      
+      ruleBuilder.incrementWeight(a.intersection(ruleFactor.getVars().getVariableNumsArray()), amount);
+      nonterminalBuilder.incrementWeight(a, amount);
     }
   }
-
-  public void incrementSufficientStatistics(SufficientStatistics statistics,
-      SufficientStatistics currentParameters, CfgParseTree tree, double count) {
-    List<SufficientStatistics> statisticsList = statistics.coerceToList().getStatistics();
-    List<SufficientStatistics> parameterList = currentParameters.coerceToList().getStatistics();
+  
+  public void incrementExpectations(CfgExpectation expectations, CfgParseChart chart, double count) {
+    incrementExpectations(expectations, chart.getBinaryRuleExpectations().coerceToDiscrete(),
+        chart.getTerminalRuleExpectations().coerceToDiscrete(), count, chart.getPartitionFunction());
+  }
+  
+  public void incrementExpectations(CfgExpectation expectations, CfgParseTree tree, double count) {
+    TableFactorBuilder ruleBuilder = expectations.getRuleBuilder();
+    TableFactorBuilder terminalBuilder = expectations.getTerminalBuilder();
+    TableFactorBuilder nonterminalBuilder = expectations.getNonterminalBuilder();
     
     if (tree.isTerminal()) {
       Object root = tree.getRoot();
@@ -246,16 +383,10 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
       Assignment rootAndRule = parentVar.outcomeArrayToAssignment(root).union(
           ruleVar.outcomeArrayToAssignment(rule));
       
-      ruleFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(0),
-          parameterList.get(0), rootAndRule.intersection(ruleFactor.getVars().getVariableNumsArray()),
-          count);
+      ruleBuilder.incrementWeight(rootAndRule.intersection(ruleFactor.getVars().getVariableNumsArray()), count);
       
-      List<Object> terminals = tree.getTerminalProductions();
-      for (Object terminal : terminals) {
-        Assignment a = terminalVar.outcomeArrayToAssignment(Arrays.asList(terminal)).union(rootAndRule);
-        terminalFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(2),
-            parameterList.get(2), a, count);
-      }
+      Assignment a = terminalVar.outcomeArrayToAssignment(tree.getTerminalProductions()).union(rootAndRule);
+      terminalBuilder.incrementWeight(a, count);
     } else {
       Object root = tree.getRoot();
       Object left = tree.getLeft().getRoot();
@@ -265,17 +396,26 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
       Assignment a = Assignment.unionAll(parentVar.outcomeArrayToAssignment(root),
           leftVar.outcomeArrayToAssignment(left), rightVar.outcomeArrayToAssignment(right),
           ruleVar.outcomeArrayToAssignment(rule));
-              
-      ruleFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(0),
-          parameterList.get(0), a.intersection(ruleFactor.getVars().getVariableNumsArray()),
-          count);
       
-      nonterminalFactor.incrementSufficientStatisticsFromAssignment(statisticsList.get(1),
-          parameterList.get(1), a, count);
+      ruleBuilder.incrementWeight(a.intersection(ruleFactor.getVars().getVariableNumsArray()), count);
+      nonterminalBuilder.incrementWeight(a, count);
       
-      incrementSufficientStatistics(statistics, currentParameters, tree.getLeft(), count);
-      incrementSufficientStatistics(statistics, currentParameters, tree.getRight(), count);
+      incrementExpectations(expectations, tree.getLeft(), count);
+      incrementExpectations(expectations, tree.getRight(), count);
     }
+  }
+  
+  public void incrementSufficientStatistics(CfgExpectation expectations,
+      SufficientStatistics statistics, SufficientStatistics parameters, double count) {
+    List<SufficientStatistics> statisticList = statistics.coerceToList().getStatistics();
+    List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
+    
+    ruleFactor.incrementSufficientStatisticsFromMarginal(statisticList.get(0),
+        parameterList.get(0), expectations.getRuleBuilder().build(), Assignment.EMPTY, 1, 1.0);
+    nonterminalFactor.incrementSufficientStatisticsFromMarginal(statisticList.get(1),
+        parameterList.get(1), expectations.getNonterminalBuilder().build(), Assignment.EMPTY, 1, 1.0);
+    terminalFactor.incrementSufficientStatisticsFromMarginal(statisticList.get(2),
+        parameterList.get(2), expectations.getTerminalBuilder().build(), Assignment.EMPTY, 1, 1.0);
   }
 
   @Override
@@ -288,12 +428,104 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
 
     StringBuilder sb = new StringBuilder();
-    sb.append("rules:");
+    sb.append("rules:\n");
     sb.append(ruleFactor.getParameterDescription(parameterList.get(0), numFeatures));
-    sb.append("nonterminals:");
+    sb.append("nonterminals:\n");
     sb.append(nonterminalFactor.getParameterDescription(parameterList.get(1), numFeatures));
-    sb.append("terminals:");
+    sb.append("terminals:\n");
     sb.append(terminalFactor.getParameterDescription(parameterList.get(2), numFeatures));
     return sb.toString();
+  }
+  
+  private static class NonterminalFeatureGen implements FeatureGenerator<Assignment, String> {
+    private static final long serialVersionUID = 1L;
+
+    @Override
+    public Map<String, Double> generateFeatures(Assignment item) {
+      List<Object> values = item.getValues();
+      ExpressionNode left = (ExpressionNode) values.get(0);
+      ExpressionNode right = (ExpressionNode) values.get(1);
+      ExpressionNode root = (ExpressionNode) values.get(2);
+      Object rule = values.get(3);
+      String leftSyntax = left.getNumAppliedArguments() + ":" + left.getType();
+      String rightSyntax = right.getNumAppliedArguments() + ":" + right.getType();
+      String rootSyntax = root.getNumAppliedArguments() + ":" + root.getType();
+      
+      ExpressionNode func = null;
+      if (values.get(3).equals(APPLICATION)) {
+        if (right.getNumAppliedArguments() == 0) {
+          func = (ExpressionNode) values.get(0);
+        } else if (left.getNumAppliedArguments() == 0) {
+          func = (ExpressionNode) values.get(1);
+        }
+      }
+
+      Map<String, Double> featureVals = Maps.newHashMap();
+      String baseFeatureName = rootSyntax + " -" + rule + "-> " + leftSyntax + " " + rightSyntax;
+      featureVals.put(baseFeatureName, 1.0);
+      
+      if (func != null) {
+        for (int i = 0; i < 2; i++) {
+          Expression2 rootTemplate = root.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i);
+          Expression2 funcTemplate = func.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i);
+          String featureName = baseFeatureName + " + " + rootTemplate + " -> " + funcTemplate;
+          featureVals.put(featureName, 1.0);
+        }
+        
+        // Backoff features for the generated syntactic types.
+        featureVals.put("generated=" + leftSyntax, 1.0);
+        featureVals.put("generated=" + rightSyntax, 1.0);
+      }
+      return featureVals;
+    }
+  }
+  
+  private static class RuleFeatureGen implements FeatureGenerator<Assignment, String> {
+    private static final long serialVersionUID = 1L;
+
+    @Override
+    public Map<String, Double> generateFeatures(Assignment item) {
+      List<Object> values = item.getValues();
+      ExpressionNode expressionNode = (ExpressionNode) values.get(0);
+      Type type = expressionNode.getType();
+      String approximateSyntax = expressionNode.getNumAppliedArguments() + ":" + type;
+
+      Object ruleName = values.get(1);
+
+      Map<String, Double> featureVals = Maps.newHashMap();
+      featureVals.put(approximateSyntax + " " + ruleName, 1.0);
+      for (int i = 0; i < 2; i++) {
+        Expression2 template = expressionNode.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i);
+        featureVals.put(approximateSyntax + " " + template + " " + ruleName, 1.0);
+      }
+      return featureVals;
+    }
+  }
+
+  private static class TerminalFeatureGen implements FeatureGenerator<Assignment, String> {
+    private static final long serialVersionUID = 1L;
+
+    @Override
+    public Map<String, Double> generateFeatures(Assignment item) {
+      List<Object> values = item.getValues();
+      Expression2 e = ((ExpressionNode) values.get(1)).getExpression();
+      List<String> freeVars = Lists.newArrayList(StaticAnalysis.getFreeVariables(e));
+      Collections.sort(freeVars);
+      Object terminals = values.get(0);
+
+      Map<String, Double> featureVals = Maps.newHashMap();
+      // One feature for the combined set of predicates
+      // String featureName = Joiner.on(" ").join(freeVars) + " -> " + terminals.toString();
+      // featureVals.put(item.toString(), 1.0);
+      // One feature per predicate
+
+      for (String freeVar : freeVars) {
+        if (!(freeVar.equals("and:<t*,t>") || freeVar.equals("exists:<<e,t>,t>"))) {
+          String featureName = freeVar + " -> " + terminals.toString();
+          featureVals.put(featureName, 1.0);
+        }
+      }
+      return featureVals;
+    }
   }
 }

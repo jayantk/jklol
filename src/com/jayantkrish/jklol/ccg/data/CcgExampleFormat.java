@@ -75,10 +75,10 @@ public class CcgExampleFormat extends LineDataFormat<CcgExample> {
 
     if (!ignoreSemantics) {
       return new CcgExample(new AnnotatedSentence(words, posTags), dependencies, tree,
-          logicalForm, null);
+          logicalForm);
     } else {
       return new CcgExample(new AnnotatedSentence(words, posTags), null, tree,
-          logicalForm, null);
+          logicalForm);
     }
   }
 }

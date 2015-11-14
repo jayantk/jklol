@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.training;
 
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -93,12 +94,15 @@ public class Lbfgs implements GradientOptimizer {
   @Override
   public <M, E, T extends E> SufficientStatistics train(GradientOracle<M, E> oracle,
       SufficientStatistics initialParameters, Iterable<T> trainingData) {
+    int circularBufferSize = numVectorsInApproximation;
     SufficientStatistics currentParameters = initialParameters;
-    SufficientStatistics previousParameters = null;
-    SufficientStatistics previousGradient = null;
-    List<SufficientStatistics> pointDeltas = Lists.newArrayList();
-    List<SufficientStatistics> gradientDeltas = Lists.newArrayList();
-    List<Double> scalings = Lists.newArrayList();
+    SufficientStatistics nextParameters = currentParameters.duplicate();
+    SufficientStatistics previousParameters = currentParameters.duplicate();
+    SufficientStatistics previousGradient = currentParameters.duplicate();
+    SufficientStatistics direction = currentParameters.duplicate();
+    List<SufficientStatistics> pointDeltas = Lists.newArrayList(Collections.nCopies(circularBufferSize, null));
+    List<SufficientStatistics> gradientDeltas = Lists.newArrayList(Collections.nCopies(circularBufferSize, null));
+    List<Double> scalings = Lists.newArrayList(Collections.nCopies(circularBufferSize, null));
 
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
     List<T> dataList = Lists.newArrayList(trainingData);
@@ -119,41 +123,53 @@ public class Lbfgs implements GradientOptimizer {
       }
 
       // We haven't converged yet. Figure out which direction to move in.
-      log.startTimer("compute_search_direction");
+      log.startTimer("lbfgs/compute_search_direction");
       // Store the requisite data for approximating the inverse
       // Hessian.
-      if (previousParameters != null) {
-        SufficientStatistics pointDelta = currentParameters.duplicate();
+      if (i > 0) {
+        int index = (i - 1) % circularBufferSize;
+        SufficientStatistics pointDelta = pointDeltas.get(index);
+        
+        if (pointDelta == null) {
+          pointDelta = currentParameters.duplicate();
+        } else {
+          pointDelta.zeroOut();
+          pointDelta.increment(currentParameters, 1.0);
+        }
+
         pointDelta.increment(previousParameters, -1.0);
-        pointDeltas.add(pointDelta);
+        pointDeltas.set(index, pointDelta);
 
         // Note that gradient and previousGradient are actually the
         // *negative* gradient (i.e., a descent direction).
-        SufficientStatistics gradientDelta = previousGradient.duplicate();
-        gradientDelta.increment(gradient, -1.0);
-        gradientDeltas.add(gradientDelta);
-
-        scalings.add(1.0 / (pointDelta.innerProduct(gradientDelta)));
+        SufficientStatistics gradientDelta = gradientDeltas.get(index);
         
-        int firstUnusedIndex = i - (numVectorsInApproximation + 1);
-        if (firstUnusedIndex >= 0) {
-          // Free up memory used by portions of the inverse Hessian
-          // approximation which are no longer used.
-          pointDeltas.set(firstUnusedIndex, null);
-          gradientDeltas.set(firstUnusedIndex, null);
+        if (gradientDelta == null) {
+          gradientDelta = previousGradient.duplicate();
+        } else {
+          gradientDelta.zeroOut();
+          gradientDelta.increment(previousGradient, 1.0);
         }
+        gradientDelta.increment(gradient, -1.0);
+        gradientDeltas.set(index, gradientDelta);
+
+        scalings.set(index, 1.0 / (pointDelta.innerProduct(gradientDelta)));
       }
 
-      previousParameters = currentParameters.duplicate();
-      previousGradient = gradient.duplicate();
+      previousParameters.zeroOut();
+      previousParameters.increment(currentParameters, 1.0);
+      previousGradient.zeroOut();
+      previousGradient.increment(gradient, 1.0);
 
       // Compute this iteration's search direction.
+      // TODO: deal with the memory here. 
       int hessianVectorCount = (int) Math.min(numVectorsInApproximation, i);
-      SufficientStatistics direction = gradient.duplicate();
+      direction.zeroOut();
+      direction.increment(gradient, 1.0);
       direction.multiply(-1.0);
       double[] weights = new double[hessianVectorCount];
       for (int j = 0; j < hessianVectorCount; j++) {
-        int index = i - (j + 1);
+        int index = (i - (j + 1)) % circularBufferSize;
         double weight = scalings.get(index) * (pointDeltas.get(index).innerProduct(direction));
         direction.increment(gradientDeltas.get(index), -1.0 * weight);
         weights[hessianVectorCount - (j + 1)] = weight;
@@ -163,11 +179,11 @@ public class Lbfgs implements GradientOptimizer {
       // the identity. Multiply direction by the Hessian estimate here
       // to pick another value.
       for (int j = 0; j < hessianVectorCount; j++) {
-        int index = i + j - hessianVectorCount;
+        int index = (i + j - hessianVectorCount) % circularBufferSize;
         double weight = scalings.get(index) * (gradientDeltas.get(index).innerProduct(direction));
         direction.increment(pointDeltas.get(index), weights[j] - weight);
       }
-      log.stopTimer("compute_search_direction");
+      log.stopTimer("lbfgs/compute_search_direction");
 
       log.logStatistic(i, "parameter l2 norm", previousParameters.getL2Norm());
       log.logStatistic(i, "gradient l2 norm", gradientL2Norm);
@@ -175,16 +191,20 @@ public class Lbfgs implements GradientOptimizer {
       log.logStatistic(i, "search errors", gradientEvaluation.getSearchErrors());
       log.logStatistic(i, "objective value", gradientEvaluation.getObjectiveValue());
 
-      log.startTimer("compute_step_size");
+      log.startTimer("lbfgs/compute_step_size");
       // Perform a backtracking line search to find a step size.
       double stepSize = 1.0 / LINE_SEARCH_CONSTANT;
       double currentObjectiveValue = gradientEvaluation.getObjectiveValue();
       double nextObjectiveValue, curInnerProd, cond1Rhs, nextInnerProd, cond2Rhs;
-      SufficientStatistics nextParameters;
 
       do {
         stepSize = stepSize * LINE_SEARCH_CONSTANT;
+        // if (nextParameters == null) {
         nextParameters = currentParameters.duplicate();
+        // } else {
+          // nextParameters.zeroOut();
+          // nextParameters.increment(currentParameters, 1.0);
+        // }
         nextParameters.increment(direction, -1.0 * stepSize);
         gradientEvaluation = evaluateGradient(nextParameters, dataList, oracle, executor, log);
 
@@ -200,7 +220,7 @@ public class Lbfgs implements GradientOptimizer {
           && stepSize > minStepSize);
 
       log.logStatistic(i, "step size", stepSize);
-      log.stopTimer("compute_step_size");
+      log.stopTimer("lbfgs/compute_step_size");
 
       if (stepSize <= minStepSize) {
         throw new LbfgsConvergenceError("L-BFGS could not find a suitable step size.",

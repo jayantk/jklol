@@ -110,13 +110,13 @@ public class CcgTrainingTest extends TestCase {
     trainingExamplesLfOnly = Lists.newArrayList();
     for (CcgExample example : trainingExamples) {
       trainingExamplesLfOnly.add(new CcgExample(example.getSentence(), null,
-          null, example.getLogicalForm(), null));
+          null, example.getLogicalForm()));
     }
     
     trainingExamplesDepsOnly = Lists.newArrayList();
     for (CcgExample example : trainingExamples) {
       trainingExamplesDepsOnly.add(new CcgExample(example.getSentence(),
-          example.getDependencies(), null, null, null));
+          example.getDependencies(), null, null));
     }
 
     trainingExamplesWithSyntax = Lists.newArrayList();
@@ -129,7 +129,7 @@ public class CcgTrainingTest extends TestCase {
     trainingExamplesSyntaxOnly = Lists.newArrayList();
     for (CcgExample syntaxExample : trainingExamplesWithSyntax) {
       trainingExamplesSyntaxOnly.add(new CcgExample(syntaxExample.getSentence(), 
-          null, syntaxExample.getSyntacticParse(), null, null));
+          null, syntaxExample.getSyntacticParse(), null));
     }
 
     family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),

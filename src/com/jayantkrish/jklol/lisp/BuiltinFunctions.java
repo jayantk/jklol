@@ -80,6 +80,10 @@ public class BuiltinFunctions {
     public Object apply(List<Object> argumentValues, Environment env) {
       Boolean value = true;
       for (int i = 0; i < argumentValues.size(); i++) {
+        if (!(argumentValues.get(i) instanceof ConstantValue)) {
+          throw new EvalError("and got argument: " + argumentValues.get(i));
+        }
+
         value = value && ((ConstantValue) argumentValues.get(i)).toBoolean();
       }
       return ConstantValue.fromBoolean(value);

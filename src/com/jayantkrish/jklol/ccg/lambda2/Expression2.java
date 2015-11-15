@@ -26,11 +26,23 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
   public static Expression2 constant(String constantName) {
     return new Expression2(constantName, null, 1);
   }
+  
+  public static Expression2 stringValue(String value) {
+    return new Expression2("\"" + value.replaceAll("\"", "\\\\\"") + "\"", null, 1);
+  }
 
   public static List<Expression2> constants(List<String> constantNames) {
     List<Expression2> constants = Lists.newArrayList();
     for (String constantName : constantNames) {
       constants.add(Expression2.constant(constantName));
+    }
+    return constants;
+  }
+  
+  public static List<Expression2> stringValues(List<String> values) {
+    List<Expression2> constants = Lists.newArrayList();
+    for (String value : values) {
+      constants.add(Expression2.stringValue(value));
     }
     return constants;
   }

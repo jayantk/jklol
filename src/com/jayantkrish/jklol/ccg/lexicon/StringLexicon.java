@@ -22,7 +22,6 @@ import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 public class StringLexicon extends AbstractCcgLexicon {
   private static final long serialVersionUID = 1L;
 
-  
   public static enum CategorySpanConfig {
     ALL_SPANS, WHOLE_SENTENCE,
   };

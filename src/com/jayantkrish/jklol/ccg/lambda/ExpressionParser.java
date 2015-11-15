@@ -26,6 +26,7 @@ public class ExpressionParser<T> {
   private final char closeParen;
   private final char openQuote;
   private final char closeQuote;
+  private final char escape;
 
   // Whether terms in the expression are separated by whitespace or 
   // any character in alternateSeparators.
@@ -43,15 +44,17 @@ public class ExpressionParser<T> {
   public static final char DEFAULT_OPEN_PAREN = '(';
   public static final char DEFAULT_CLOSE_PAREN = ')';
   public static final char DEFAULT_QUOTE = '"';
+  public static final char DEFAULT_ESCAPE = '\\';
   public static final char[] DEFAULT_SEPARATOR = null;
 
   public ExpressionParser(char openParen, char closeParen, char openQuote, char closeQuote,
-      boolean whitespaceSeparated, char[] alternateSeparators, String[] preprocessingPatterns,
+      char escape, boolean whitespaceSeparated, char[] alternateSeparators, String[] preprocessingPatterns,
       String[] preprocessingReplacements, ExpressionFactory<T> factory) {
     this.openParen = openParen;
     this.closeParen = closeParen;
     this.openQuote = openQuote;
     this.closeQuote = closeQuote;
+    this.escape = escape;
 
     this.whitespaceSeparated = whitespaceSeparated;
     this.alternateSeparators = alternateSeparators;
@@ -68,18 +71,18 @@ public class ExpressionParser<T> {
 
   public static ExpressionParser<Expression2> expression2() {
     return new ExpressionParser<Expression2>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
-        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, new String[0], new String[0],
+        DEFAULT_QUOTE, DEFAULT_QUOTE, DEFAULT_ESCAPE, true, DEFAULT_SEPARATOR, new String[0], new String[0],
         ExpressionFactories.getExpression2Factory());
   }
 
   public static ExpressionParser<SExpression> sExpression(IndexedList<String> symbolTable) {
     return new ExpressionParser<SExpression>(DEFAULT_OPEN_PAREN, DEFAULT_CLOSE_PAREN,
-        DEFAULT_QUOTE, DEFAULT_QUOTE, true, DEFAULT_SEPARATOR, new String[0], new String[0],
+        DEFAULT_QUOTE, DEFAULT_QUOTE, DEFAULT_ESCAPE, true, DEFAULT_SEPARATOR, new String[0], new String[0],
         ExpressionFactories.getSExpressionFactory(symbolTable));
   }
 
   public static ExpressionParser<Type> typeParser() {
-    return new ExpressionParser<Type>('<', '>', DEFAULT_QUOTE, DEFAULT_QUOTE,
+    return new ExpressionParser<Type>('<', '>', DEFAULT_QUOTE, DEFAULT_QUOTE, DEFAULT_ESCAPE,
         false, new char[] {','}, new String[] {"\\*"}, new String[] {",\\*"},
         ExpressionFactories.getTypeFactory());
   }
@@ -90,6 +93,7 @@ public class ExpressionParser<T> {
           .replaceAll(preprocessingReplacements[i]);
     }
 
+    boolean inEscape = false; 
     boolean inQuotes = false;
     int exprStart = -1;
     List<String> tokens = Lists.newArrayList();
@@ -98,22 +102,31 @@ public class ExpressionParser<T> {
       char character = expression.charAt(i);
 
       boolean quoteOk = false;
-      if (character == openQuote) {
+      if (character == openQuote && !inEscape) {
         if (exprStart == -1 && !inQuotes) {
           inQuotes = true;
           exprStart = i;
           quoteOk = true;
+          inEscape = false;
         }
       } 
-      if (!quoteOk && character == closeQuote) {
+      if (!quoteOk && character == closeQuote && !inEscape) {
         if (exprStart != -1 && inQuotes) {
           inQuotes = false;
           quoteOk = true;
+          inEscape = false;
         } 
       }
-      Preconditions.checkState((character != openQuote && character != closeQuote) || quoteOk,
+
+      Preconditions.checkState((character != openQuote && character != closeQuote) || quoteOk || inEscape,
           "Quoting error. Tokenizing: %s", expression.substring(Math.max(i - 20, 0),
-              Math.min(i + 20, expression.length())));
+              Math.min(i, expression.length())));
+      
+      if (inQuotes && character == escape && !inEscape) {
+        inEscape = true;
+      } else {
+        inEscape = false;
+      }
 
       if (!inQuotes) {
         if ((whitespaceSeparated && Character.isWhitespace(character)) ||

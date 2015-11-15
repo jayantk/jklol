@@ -36,6 +36,10 @@ public class CsvParser {
     return new CsvParser(',', '\"', NULL_ESCAPE);
   }
 
+  public static CsvParser tsvParser() {
+    return new CsvParser('\t', NULL_ESCAPE, NULL_ESCAPE);
+  }
+
   public String[] parseLine(String line) {
     List<String> parts = Lists.newArrayList();
     

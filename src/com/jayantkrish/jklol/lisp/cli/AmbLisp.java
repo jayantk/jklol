@@ -17,10 +17,10 @@ import com.jayantkrish.jklol.lisp.BuiltinFunctions;
 import com.jayantkrish.jklol.lisp.ConsValue;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
+import com.jayantkrish.jklol.lisp.LispUtil;
 import com.jayantkrish.jklol.lisp.ParametricBfgBuilder;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.util.IndexedList;
-import com.jayantkrish.jklol.util.IoUtils;
 
 public class AmbLisp extends AbstractCli {
 
@@ -53,26 +53,13 @@ public class AmbLisp extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
-    StringBuilder programBuilder = new StringBuilder();
-    programBuilder.append("(begin ");
     // Non-option arguments are filenames containing the code to execute.
     List<String> filenames = options.nonOptionArguments();
-
-    for (String filename : filenames) {
-      for (String line : IoUtils.readLines(filename)) {
-        line = line.replaceAll("^ *;.*", "");
-        programBuilder.append(line);
-        programBuilder.append(" ");
-      }
-    }
-
-    programBuilder.append(" )");
-    String program = programBuilder.toString();
 
     IndexedList<String> symbolTable = AmbEval.getInitialSymbolTable();
     AmbEval eval = new AmbEval(symbolTable);
     ExpressionParser<SExpression> parser = ExpressionParser.sExpression(symbolTable);
-    SExpression programExpression = parser.parseSingleExpression(program);
+    SExpression programExpression = LispUtil.readProgram(filenames, symbolTable);
     ParametricBfgBuilder fgBuilder = new ParametricBfgBuilder(true);
     Environment environment = createEnvironmentFromOptions(options, symbolTable);
     EvalResult result = eval.eval(programExpression, environment, fgBuilder);

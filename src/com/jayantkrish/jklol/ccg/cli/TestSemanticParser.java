@@ -56,7 +56,7 @@ public class TestSemanticParser extends AbstractCli {
     
     List<SemanticParserExampleLoss> exampleLosses = Lists.newArrayList();
     SemanticParserUtils.testSemanticParser(testExamples, parser, inferenceAlg, simplifier,
-        comparator, exampleLosses);
+        comparator, exampleLosses, true);
 
     if (options.has(errorJson)) {
       SemanticParserExampleLoss.writeJsonToFile(options.valueOf(errorJson), exampleLosses);

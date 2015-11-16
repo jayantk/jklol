@@ -16,6 +16,8 @@ import com.jayantkrish.jklol.lisp.FunctionValue;
 
 public class WikiTableFunctions {
   
+  private static int ROW_MULTIPLE=1000;
+  
   public static class GetTable implements FunctionValue {
     private Map<String, Integer> tableIdMap;
     private List<WikiTable> tables;
@@ -44,17 +46,46 @@ public class WikiTableFunctions {
   }
   
   public static class GetTableCells implements FunctionValue {
-
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       WikiTable table = cast(argumentValues.get(0), WikiTable.class);
       
-      Set<Cell> cells = Sets.newHashSet();
+      Set<Integer> cells = Sets.newHashSet();
       for (int i = 0; i < table.getRows().length; i++) {
         for (int j = 0; j < table.getHeadings().length; j++) {
-          cells.add(new Cell(i, j));
+          cells.add(i * ROW_MULTIPLE + j);
         }
+      }
+      return cells;
+    }
+  }
+  
+  public static class GetRowCells implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      WikiTable table = cast(argumentValues.get(0), WikiTable.class);
+      int rowId = cast(argumentValues.get(1), Integer.class);
+      
+      Set<Integer> cells = Sets.newHashSet();
+      for (int j = 0; j < table.getHeadings().length; j++) {
+        cells.add(rowId * ROW_MULTIPLE + j);
+      }
+      return cells;
+    }
+  }
+
+  public static class GetColCells implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      WikiTable table = cast(argumentValues.get(0), WikiTable.class);
+      int colId = cast(argumentValues.get(1), Integer.class);
+      
+      Set<Integer> cells = Sets.newHashSet();
+      for (int i = 0; i < table.getNumRows(); i++) {
+        cells.add(i * ROW_MULTIPLE + colId);
       }
       return cells;
     }
@@ -64,7 +95,7 @@ public class WikiTableFunctions {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 1);
-      return ((Cell) argumentValues.get(0)).getColId();
+      return ((Integer) argumentValues.get(0)) % ROW_MULTIPLE;
     }
   }
   
@@ -72,7 +103,7 @@ public class WikiTableFunctions {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 1);
-      return ((Cell) argumentValues.get(0)).getRowId();
+      return ((Integer) argumentValues.get(0)) / ROW_MULTIPLE;
     }
   }
   
@@ -81,8 +112,10 @@ public class WikiTableFunctions {
     public Object apply(List<Object> argumentValues, Environment env) {
       Preconditions.checkArgument(argumentValues.size() == 2);
       WikiTable table = cast(argumentValues.get(0), WikiTable.class);
-      Cell cell = cast(argumentValues.get(1), Cell.class);
-      String value = table.getValue(cell.getRowId(), cell.getColId());
+      Integer cell = cast(argumentValues.get(1), Integer.class);
+      int rowId = cell / ROW_MULTIPLE;
+      int colId = cell % ROW_MULTIPLE;
+      String value = table.getValue(rowId, colId);
       return value;
     }
   }
@@ -147,6 +180,32 @@ public class WikiTableFunctions {
     }
   }
   
+  public static class SetMax implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      AmbFunctionValue f = cast(argumentValues.get(0), AmbFunctionValue.class);
+      List<?> objs = Lists.newArrayList(cast(argumentValues.get(1), Set.class));
+
+      int max = Integer.MIN_VALUE;
+      int maxIndex = -1;
+      for (int i = 0; i < objs.size(); i++) {
+        int value = cast(f.apply(Arrays.asList(objs.get(i)), env, null), Integer.class);
+        
+        if (value > max) {
+          max = value;
+          maxIndex = i;
+        }
+      }
+      
+      if (maxIndex == -1) {
+        throw new EvalError("set-max on empty set");
+      }
+
+      return objs.get(maxIndex);
+    }
+  }
+  
   public static class SetSize implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, Environment env) {
@@ -171,6 +230,19 @@ public class WikiTableFunctions {
       Set<Object> objs = Sets.newHashSet();
       objs.addAll(argumentValues);
       return objs;
+    }
+  }
+  
+  public static class SetUnion implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      Set<?> objs = cast(argumentValues.get(0), Set.class);
+      Set<Object> result = Sets.newHashSet();
+      for (Object obj : objs) {
+        result.addAll((Set<?>) obj);
+      }
+      return result;
     }
   }
   

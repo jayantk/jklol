@@ -1,6 +1,8 @@
 package com.jayantkrish.jklol.experiments.wikitables;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
@@ -20,6 +22,8 @@ public class EvaluationComparator implements ExpressionComparator {
   private ExpressionParser<SExpression> sexpParser;
   private AmbEval eval;
   private Environment env;
+  
+  private Map<Expression2, Object> lruCache;
     
   public EvaluationComparator(ExpressionSimplifier simplifier,
       ExpressionParser<SExpression> sexpParser, AmbEval eval, Environment env) {
@@ -27,6 +31,15 @@ public class EvaluationComparator implements ExpressionComparator {
     this.sexpParser = Preconditions.checkNotNull(sexpParser);
     this.eval = Preconditions.checkNotNull(eval);
     this.env = Preconditions.checkNotNull(env);
+    
+    int cacheSize = 100;
+    this.lruCache = new LinkedHashMap<Expression2, Object>(cacheSize*4/3, 0.75f, true) {
+      private static final long serialVersionUID = 1L;
+      @Override
+      protected boolean removeEldestEntry(Map.Entry<Expression2,Object> eldest) {
+        return size() > cacheSize;
+      }
+    };
   }
 
   @Override
@@ -38,9 +51,16 @@ public class EvaluationComparator implements ExpressionComparator {
     Object answer = evaluate(answerSexp, "ANS-ERROR");
     
     a = simplifier.apply(a);
-    SExpression sexpression = sexpParser.parseSingleExpression(
-        "(eval-table \"" + tableId + "\" (quote (get-values " + a.toString() + ")))");
-    Object value = evaluate(sexpression, "ERROR");
+    Object value = null;
+    if (lruCache.containsKey(a)) {
+      // XXX: The keys need to include the table id.
+      value = lruCache.get(a);
+    } else {
+      SExpression sexpression = sexpParser.parseSingleExpression(
+          "(eval-table \"" + tableId + "\" (quote (get-values " + a.toString() + ")))");
+      value = evaluate(sexpression, "ERROR");
+      lruCache.put(a, value);
+    }
 
     /*
     System.out.println(a);
@@ -52,7 +72,7 @@ public class EvaluationComparator implements ExpressionComparator {
     // numerics and yes/no questions.
     return answer.equals(value);
   }
-  
+
   private Object evaluate(SExpression sexp, String errorVal) {
     Object value = errorVal;
     try {

@@ -140,6 +140,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     double exponentiallyWeightedUpdateNorm = stepSize;
     double exponentiallyWeightedObjectiveValue = 0.0;
     double exponentiallyWeightedDenom = 0.0;
+    int totalSearchErrors = 0;
     for (long i = 0; i < numIterations; i++) {
       log.notifyIterationStart(i);
       log.startTimer("serialize_parameters");
@@ -156,13 +157,12 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       log.stopTimer("instantiate_model");
 
       log.startTimer("compute_gradient_(serial)");
-      int iterSearchErrors = 0;
       Mapper<T, T> mapper = Mappers.<T>identity();
       GradientReducer<M, T> reducer = new GradientReducer<M, T>(currentModel, initialParameters,
           oracle, log);
       gradientAccumulator = executor.mapReduce(batchData, mapper, reducer, gradientAccumulator);
 
-      iterSearchErrors = gradientAccumulator.getSearchErrors();
+      totalSearchErrors += gradientAccumulator.getSearchErrors();
       SufficientStatistics gradient = gradientAccumulator.getGradient();
       if (batchSize > 1) {
         gradient.multiply(1.0 / batchSize);
@@ -194,7 +194,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
         log.stopTimer("average_parameters");
       }
 
-      log.logStatistic(i, "search errors", iterSearchErrors);
+      log.logStatistic(i, "search errors", totalSearchErrors);
       log.logStatistic(i, "gradient l2 norm", gradientL2);
       log.logStatistic(i, "step size", currentStepSize);
       log.logStatistic(i, "objective value", objectiveValue);

@@ -63,26 +63,6 @@ public class WikiTablesUtil {
     return examples;
   }
 
-  public static Environment getEnvironment(IndexedList<String> symbolTable,
-      Map<String, Integer> tableIdMap, List<WikiTable> tables) {
-    Environment env = AmbEval.getDefaultEnvironment(symbolTable);
-    
-    // Bind the table functions
-    env.bindName("get-table", new RaisedBuiltinFunction(new WikiTableFunctions.GetTable(tableIdMap, tables)), symbolTable);
-    env.bindName("get-table-col", new RaisedBuiltinFunction(new WikiTableFunctions.GetTableCol()), symbolTable);
-    env.bindName("get-table-cells", new RaisedBuiltinFunction(new WikiTableFunctions.GetTableCells()), symbolTable);
-    env.bindName("get-col", new RaisedBuiltinFunction(new WikiTableFunctions.GetCol()), symbolTable);
-    env.bindName("get-row", new RaisedBuiltinFunction(new WikiTableFunctions.GetRow()), symbolTable);
-    env.bindName("get-value", new RaisedBuiltinFunction(new WikiTableFunctions.GetValue()), symbolTable);
-    env.bindName("set-filter", new RaisedBuiltinFunction(new WikiTableFunctions.SetFilter()), symbolTable);
-    env.bindName("set-map", new RaisedBuiltinFunction(new WikiTableFunctions.SetMap()), symbolTable);
-    env.bindName("set-size", new RaisedBuiltinFunction(new WikiTableFunctions.SetSize()), symbolTable);
-    env.bindName("set-min", new RaisedBuiltinFunction(new WikiTableFunctions.SetMin()), symbolTable);
-    env.bindName("set-contains?", new RaisedBuiltinFunction(new WikiTableFunctions.SetContains()), symbolTable);
-    env.bindName("make-set", new RaisedBuiltinFunction(new WikiTableFunctions.MakeSet()), symbolTable);
-    return env;
-  }
-  
   public static WikiTableMentionAnnotation findMentions(WikiTableExample example,
       WikiTable table) {
     String question = example.getQuestion();
@@ -208,6 +188,30 @@ public class WikiTablesUtil {
     Expression2 label = Expression2.nested(labels);
 
     return new CcgExample(sentence, null, null, label);
+  }
+  
+  public static Environment getEnvironment(IndexedList<String> symbolTable,
+      Map<String, Integer> tableIdMap, List<WikiTable> tables) {
+    Environment env = AmbEval.getDefaultEnvironment(symbolTable);
+    
+    // Bind the table functions
+    env.bindName("get-table", new RaisedBuiltinFunction(new WikiTableFunctions.GetTable(tableIdMap, tables)), symbolTable);
+    env.bindName("get-table-col", new RaisedBuiltinFunction(new WikiTableFunctions.GetTableCol()), symbolTable);
+    env.bindName("get-table-cells", new RaisedBuiltinFunction(new WikiTableFunctions.GetTableCells()), symbolTable);
+    env.bindName("get-row-cells", new RaisedBuiltinFunction(new WikiTableFunctions.GetRowCells()), symbolTable);
+    env.bindName("get-col-cells", new RaisedBuiltinFunction(new WikiTableFunctions.GetColCells()), symbolTable);
+    env.bindName("get-col", new RaisedBuiltinFunction(new WikiTableFunctions.GetCol()), symbolTable);
+    env.bindName("get-row", new RaisedBuiltinFunction(new WikiTableFunctions.GetRow()), symbolTable);
+    env.bindName("get-value", new RaisedBuiltinFunction(new WikiTableFunctions.GetValue()), symbolTable);
+    env.bindName("set-filter", new RaisedBuiltinFunction(new WikiTableFunctions.SetFilter()), symbolTable);
+    env.bindName("set-map", new RaisedBuiltinFunction(new WikiTableFunctions.SetMap()), symbolTable);
+    env.bindName("set-size", new RaisedBuiltinFunction(new WikiTableFunctions.SetSize()), symbolTable);
+    env.bindName("set-min", new RaisedBuiltinFunction(new WikiTableFunctions.SetMin()), symbolTable);
+    env.bindName("set-max", new RaisedBuiltinFunction(new WikiTableFunctions.SetMax()), symbolTable);
+    env.bindName("set-union", new RaisedBuiltinFunction(new WikiTableFunctions.SetUnion()), symbolTable);
+    env.bindName("set-contains?", new RaisedBuiltinFunction(new WikiTableFunctions.SetContains()), symbolTable);
+    env.bindName("make-set", new RaisedBuiltinFunction(new WikiTableFunctions.MakeSet()), symbolTable);
+    return env;
   }
   
   private WikiTablesUtil() {

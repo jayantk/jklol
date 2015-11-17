@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
@@ -67,6 +68,10 @@ public class EvaluationComparator implements ExpressionComparator {
     System.out.println(value);
     System.out.println(answer);
     */
+    
+    if (value instanceof Integer) {
+      value = Sets.newHashSet(Integer.toString((Integer) value));
+    }
 
     // TODO: may need more sophisticated comparison logic for
     // numerics and yes/no questions.

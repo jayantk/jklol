@@ -15,9 +15,7 @@
     (define column-set (colname) (get-col-cells table (get-table-col table colname)))
     (define cellvalue-set (value) (predicate-to-set (cellvalue value)))
 
-    
     (define samerow-set (arg-set) (set-union (set-map (lambda x (get-row-cells table (get-row x))) arg-set)))
-;    (define samerow-set (arg-set) (predicate-to-set (lambda x (exists2 (lambda y (samerow x y)) arg-set))))
     (define intersect (s1 s2) (set-filter (lambda x (set-contains? s1 x)) s2))
     (define first-row (values) (make-set (set-min get-row values)))
     (define last-row (values) (make-set (set-max get-row values)))

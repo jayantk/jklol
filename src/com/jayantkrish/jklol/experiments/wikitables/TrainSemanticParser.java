@@ -80,8 +80,10 @@ public class TrainSemanticParser extends AbstractCli {
     System.out.println("# of examples: " + examples.size());
 
     List<String> lexiconLines = Arrays.asList(new String[] {
-        "first,(N{0}/N{0}){1},(lambda f (first-row f)),0 first",
-        "last,(N{0}/N{0}){1},(lambda f (last-row f)),0 last"});
+        "first,(N{0}|N{0}){1},(lambda f (first-row f)),0 first",
+        "last,(N{0}|N{0}){1},(lambda f (last-row f)),0 last",
+     // "how many,(N{0}/N{0}){1},(lambda f (set-size f)),0 how_many"        
+        });
     List<String> unknownLexiconLines = Arrays.asList(new String[] {});
     List<String> rules = Arrays.asList(
         new String[] {"DUMMY{0} DUMMY{0}","DUMMY{0} DUMMY{0} DUMMY{0}",
@@ -103,7 +105,7 @@ public class TrainSemanticParser extends AbstractCli {
     examineData(examples, tables, tableIndexMap,
         family.getModelFromParameters(family.getNewSufficientStatistics()),
         comparator);
-        */
+     */
     
     int beamSize = 100;
     CcgBeamSearchInference inference = new CcgBeamSearchInference(null, comparator, beamSize, -1,

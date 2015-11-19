@@ -104,18 +104,13 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     if (example.hasLogicalForm()) {
       correctParses = filterParsesByLogicalForm(example.getLogicalForm(), comparator, correctParses);
     }
+    log.stopTimer("update_gradient/condition_parses_on_dependencies");
 
     if (correctParses.size() == 0) {
       // Search error: couldn't find any correct parses.
-      System.out.println("Search error (Correct): " + sentence + " " + example.getLogicalForm());
-      /*
-      for (CcgParse parse : possibleParses) {
-        System.out.println(parse.getLogicalForm());
-      }
-      */
+      // System.out.println("Search error (Correct): " + sentence + " " + example.getLogicalForm());
       throw new ZeroProbabilityError();
     }
-    log.stopTimer("update_gradient/condition_parses_on_dependencies");
 
     log.startTimer("update_gradient/increment_gradient");
     // Subtract the unconditional expected feature counts.
@@ -156,7 +151,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     for (CcgParse parse : parses) {
       Expression2 predictedLogicalForm = parse.getLogicalForm();
 
-      if (predictedLogicalForm != null && comparator.equals(predictedLogicalForm, observedLogicalForm)) {
+      if (predictedLogicalForm != null && comparator.equals(predictedLogicalForm, observedLogicalForm)){
         correctParses.add(parse);
       }
     }

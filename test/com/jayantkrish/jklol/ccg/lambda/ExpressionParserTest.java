@@ -17,7 +17,7 @@ public class ExpressionParserTest extends TestCase {
   
   public void setUp() {
     parser = ExpressionParser.expression2();
-    unequalQuoteParser = new ExpressionParser<Expression2>('(', ')', '<', '>', true,
+    unequalQuoteParser = new ExpressionParser<Expression2>('(', ')', '<', '>', '\\', true,
         ExpressionParser.DEFAULT_SEPARATOR, new String[0], new String[0],
         ExpressionFactories.getExpression2Factory());
     lispParser = ExpressionParser.sExpression(IndexedList.<String>create());
@@ -48,6 +48,17 @@ public class ExpressionParserTest extends TestCase {
     assertEquals("and", subexpressions.get(0).getConstant());
     assertEquals(3, subexpressions.size());
   }
+  
+  public void testParseQuotesEscape() {
+    Expression2 result = parser.parseSingleExpression("(and \"(/m/abc x) \\\" (/m/bcd y)\" /m/cde)");
+    
+    assertFalse(result.isConstant());
+    List<Expression2> subexpressions = result.getSubexpressions();
+    assertEquals("and", subexpressions.get(0).getConstant());
+    assertEquals("\"(/m/abc x) \\\" (/m/bcd y)\"", subexpressions.get(1).getConstant());
+    assertEquals(3, subexpressions.size());
+  }
+
 
   public void testParseIgnoreQuotes() {
     // Check that single quotes are ignored by this parser.

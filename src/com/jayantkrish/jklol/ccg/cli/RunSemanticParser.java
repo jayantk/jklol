@@ -23,6 +23,7 @@ import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
+import com.jayantkrish.jklol.lisp.LispUtil;
 import com.jayantkrish.jklol.lisp.ParametricBfgBuilder;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
@@ -49,7 +50,7 @@ public class RunSemanticParser extends AbstractCli {
     Environment env = AmbEval.getDefaultEnvironment(symbolTable);
     AmbEval eval = new AmbEval(symbolTable);
     ParametricBfgBuilder fgBuilder = new ParametricBfgBuilder(true);
-    SExpression program = readProgram(Arrays.asList(options.valueOf(environment)), symbolTable);
+    SExpression program = LispUtil.readProgram(Arrays.asList(options.valueOf(environment)), symbolTable);
     EvalResult result = eval.eval(program, env, fgBuilder);
 
     CcgParser parser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);
@@ -72,25 +73,6 @@ public class RunSemanticParser extends AbstractCli {
     
     result = eval.eval(expression, env, fgBuilder);
     System.out.println("value: " + result.getValue());
-  }
-  
-  private static SExpression readProgram(List<String> filenames, IndexedList<String> symbolTable) {
-    StringBuilder programBuilder = new StringBuilder();
-    programBuilder.append("(begin ");
-
-    for (String filename : filenames) {
-      for (String line : IoUtils.readLines(filename)) {
-        line = line.replaceAll("^ *;.*", "");
-        programBuilder.append(line);
-        programBuilder.append(" ");
-      }
-    }
-
-    programBuilder.append(" )");
-    String program = programBuilder.toString();
-    ExpressionParser<SExpression> parser = ExpressionParser.sExpression(symbolTable);
-    SExpression programExpression = parser.parseSingleExpression(program);
-    return programExpression;
   }
 
   public static void main(String[] args) {

@@ -30,11 +30,12 @@ public class SemanticParserUtils {
    * @param comparator
    * @param exampleLossAccumulator if non-null, the predictions for each example are
    * added to this list.
+   * @param print if true, print out loss information.
    * @return
    */
   public static SemanticParserLoss testSemanticParser(List<CcgExample> testExamples, CcgParser parser,
       CcgInference inferenceAlg, ExpressionSimplifier simplifier, ExpressionComparator comparator,
-      List<SemanticParserExampleLoss> exampleLossAccumulator) {
+      List<SemanticParserExampleLoss> exampleLossAccumulator, boolean print) {
     int numCorrect = 0;
     int numCorrectLfPossible = 0;
     int numParsed = 0;
@@ -44,8 +45,10 @@ public class SemanticParserUtils {
       Expression2 correctLf = simplifier.apply(example.getLogicalForm());
 
       CcgParse parse = inferenceAlg.getBestParse(parser, example.getSentence(), null, log);
-      System.out.println("====");
-      System.out.println("SENT: " + example.getSentence().getWords());
+      if (print) {
+        System.out.println("====");
+        System.out.println("SENT: " + example.getSentence().getWords());
+      }
       if (parse != null) {
         int correct = 0;
         int correctLfPossible = 0;
@@ -66,17 +69,19 @@ public class SemanticParserUtils {
         }
         
         List<DependencyStructure> deps = parse.getAllDependencies();
-
-        System.out.println("PREDICTED: " + lf);
-        System.out.println("TRUE:      " + correctLf);
-        System.out.println("DEPS: " + deps);
-        System.out.println("CORRECT: " + correct);
-        System.out.println("LICENSED: " + correctLfPossible);
-        System.out.println("LEX: ");
-        
         List<LexiconEntryInfo> entries = parse.getSpannedLexiconEntries();
-        for (int i = 0; i < entries.size(); i++) {
-          System.out.println("   " + entries.get(i));
+
+        if (print) {
+          System.out.println("PREDICTED: " + lf);
+          System.out.println("TRUE:      " + correctLf);
+          System.out.println("DEPS: " + deps);
+          System.out.println("CORRECT: " + correct);
+          System.out.println("LICENSED: " + correctLfPossible);
+          System.out.println("LEX: ");
+
+          for (int i = 0; i < entries.size(); i++) {
+            System.out.println("   " + entries.get(i));
+          }
         }
 
         numCorrect += correct;
@@ -88,7 +93,9 @@ public class SemanticParserUtils {
               entries, correctLf, true, correct > 0, correctLfPossible > 0));
         }
       } else {
-        System.out.println("NO PARSE");
+        if (print) {
+          System.out.println("NO PARSE");
+        }
 
         if (exampleLossAccumulator != null) {
           exampleLossAccumulator.add(new SemanticParserExampleLoss(example, null,
@@ -102,9 +109,11 @@ public class SemanticParserUtils {
     double recall = ((double) numCorrect) / testExamples.size();
     double licensedRecall = ((double) numCorrectLfPossible) / testExamples.size();
 
-    System.out.println("\nPrecision: " + precision);
-    System.out.println("Recall: " + recall);
-    System.out.println("Licensed Recall: " + licensedRecall);
+    if (print) {
+      System.out.println("\nPrecision: " + precision);
+      System.out.println("Recall: " + recall);
+      System.out.println("Licensed Recall: " + licensedRecall);
+    }
 
     return new SemanticParserLoss(testExamples.size(), numParsed,
         numCorrect, numCorrectLfPossible);

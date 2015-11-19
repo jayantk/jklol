@@ -274,14 +274,14 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     
     List<SemanticParserExampleLoss> trainingExampleLosses = Lists.newArrayList();    
     SemanticParserUtils.testSemanticParser(ccgTrainingExamples, ccgParser,
-        inferenceAlgorithm, simplifier, comparator, trainingExampleLosses);
+        inferenceAlgorithm, simplifier, comparator, trainingExampleLosses, false);
     SemanticParserExampleLoss.writeJsonToFile(trainingErrorOutputFilename, trainingExampleLosses);
 
     List<CcgExample> ccgTestExamples = alignmentExamplesToCcgExamples(testData);
     ccgTestExamples = featurizeExamples(ccgTestExamples, featureGen);
     List<SemanticParserExampleLoss> testExampleLosses = Lists.newArrayList();    
     SemanticParserLoss testLoss = SemanticParserUtils.testSemanticParser(ccgTestExamples, ccgParser,
-        inferenceAlgorithm, simplifier, comparator, testExampleLosses);
+        inferenceAlgorithm, simplifier, comparator, testExampleLosses, false);
     SemanticParserExampleLoss.writeJsonToFile(testErrorOutputFilename, testExampleLosses);
 
     return testLoss;

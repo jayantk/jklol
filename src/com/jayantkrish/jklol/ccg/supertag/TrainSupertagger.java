@@ -256,7 +256,7 @@ public class TrainSupertagger extends AbstractCli {
     // Count feature occurrences and discard infrequent features.
     CountAccumulator<String> prefixFeatureCounts = FeatureGenerators.getFeatureCounts(prefixGen, contexts);
     IndexedList<String> featureDictionary = IndexedList.create();
-    List<FeatureGenerator<LocalContext<WordAndPos>, ? extends String>> featureGenerators = Lists.newArrayList();
+    List<FeatureGenerator<LocalContext<WordAndPos>, String>> featureGenerators = Lists.newArrayList();
     featureGenerators.add(wordGen);
     featureGenerators.add(posContextGen);
     featureGenerators.add(prefixGen);

@@ -197,6 +197,11 @@ public class ParametricLinearClassifierFactor extends AbstractParametricFactor {
     }
   }
 
+  public void incrementSufficientStatisticsFromFeatureCounts(SufficientStatistics statistics,
+      SufficientStatistics currentParameters, Tensor featureCounts, double count, double partitionFunction) {
+    ((TensorSufficientStatistics) statistics).increment(featureCounts, count / partitionFunction);
+  }
+
   private Tensor getWeightTensorFromStatistics(SufficientStatistics stats) {
     Tensor weightTensor = null;
     if (naiveBayes) {

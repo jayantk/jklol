@@ -28,8 +28,6 @@ import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis.ScopeSet;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
-import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
-import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.SubsetIterator;
 
 public class ExpressionTree {
@@ -39,20 +37,16 @@ public class ExpressionTree {
   // applied in this tree.
   private final int numAppliedArguments;
 
-  private final Tensor expressionFeatures;
-
   private final List<ExpressionTree> substitutions;
   
   private final List<ExpressionTree> lefts;
   private final List<ExpressionTree> rights;
 
   public ExpressionTree(Expression2 rootExpression, Type rootType, int numAppliedArguments,
-      Tensor expressionFeatures, List<ExpressionTree> substitutions, List<ExpressionTree> lefts,
-      List<ExpressionTree> rights) {
+      List<ExpressionTree> substitutions, List<ExpressionTree> lefts, List<ExpressionTree> rights) {
     this.rootExpression = Preconditions.checkNotNull(rootExpression);
     this.rootType = Preconditions.checkNotNull(rootType);
     this.numAppliedArguments = numAppliedArguments;
-    this.expressionFeatures = expressionFeatures;
 
     Preconditions.checkArgument(lefts.size() == rights.size());
     this.substitutions = ImmutableList.copyOf(substitutions);
@@ -142,7 +136,7 @@ public class ExpressionTree {
         }
       }
     }
-    return new ExpressionTree(expression, type, numAppliedArguments, null, substitutions, lefts, rights);
+    return new ExpressionTree(expression, type, numAppliedArguments, substitutions, lefts, rights);
   }
   
   private static void doBasicGeneration(Expression2 expression, Map<Integer, Type> typeMap, int i, Scope scope,
@@ -306,10 +300,6 @@ public class ExpressionTree {
   public int getNumAppliedArguments() {
     return numAppliedArguments;
   }
-  
-  public Tensor getExpressionFeatures() {
-    return expressionFeatures;
-  }
 
   public boolean hasChildren() {
     return lefts.size() > 0;
@@ -367,31 +357,6 @@ public class ExpressionTree {
       lefts.get(i).getAllExpressionNodes(accumulator);
       rights.get(i).getAllExpressionNodes(accumulator);
     }
-  }
-
-  /**
-   * Returns a new expression tree with the same structure as this one,
-   * where {@code generator} has been applied to generate feature vectors
-   * for each expression in the tree.
-   *
-   * @param generator
-   * @return
-   */
-  public ExpressionTree applyFeatureVectorGenerator(FeatureVectorGenerator<Expression2> generator) {
-    List<ExpressionTree> newSubstitutions = Lists.newArrayList();
-    for (int i = 0; i < substitutions.size(); i++) {
-      newSubstitutions.add(substitutions.get(i).applyFeatureVectorGenerator(generator));
-    }
-    
-    List<ExpressionTree> newLefts = Lists.newArrayList();
-    List<ExpressionTree> newRights = Lists.newArrayList();
-    for (int i = 0; i < lefts.size(); i++) {
-      newLefts.add(lefts.get(i).applyFeatureVectorGenerator(generator));
-      newRights.add(rights.get(i).applyFeatureVectorGenerator(generator));
-    }
-
-    return new ExpressionTree(rootExpression, rootType, numAppliedArguments,
-        generator.apply(rootExpression), newSubstitutions, newLefts, newRights);
   }
 
   public int size() {

@@ -20,7 +20,6 @@ public class FactorLoglikelihoodOracle implements GradientOracle<Factor, Void> {
   
   private final ParametricFactor family;
   private final Factor target;
-  private final VariableNumMap conditionalVars;
   
   private final int[] dimsToSum;
   private final Tensor targetConditional;
@@ -31,7 +30,6 @@ public class FactorLoglikelihoodOracle implements GradientOracle<Factor, Void> {
       VariableNumMap conditionalVars) {
     this.family = Preconditions.checkNotNull(family);
     this.target = Preconditions.checkNotNull(target);
-    this.conditionalVars = Preconditions.checkNotNull(conditionalVars);
 
     this.dimsToSum = target.getVars().removeAll(conditionalVars).getVariableNumsArray();
     this.targetConditional = target.coerceToDiscrete().getWeights();

@@ -2,15 +2,15 @@ package com.jayantkrish.jklol.ccg.lexinduct.vote;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
+import com.jayantkrish.jklol.ccg.lambda.ExplicitTypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
@@ -39,10 +39,11 @@ public class TemplateGenlex implements Genlex {
       predicateSet.addAll(StaticAnalysis.getFreeVariables(example.getLogicalForm()));
     }
 
-    Map<String, String> typeReplacementMap = Maps.newHashMap();
+    TypeDeclaration typeDeclaration = ExplicitTypeDeclaration.getDefault();
     for (String predicate : predicateSet) {
       predicates.add(predicate);
-      predicateTypes.add(StaticAnalysis.inferType(Expression2.constant(predicate), StaticAnalysis.TOP, typeReplacementMap));
+      predicateTypes.add(StaticAnalysis.inferType(Expression2.constant(predicate),
+          TypeDeclaration.TOP, typeDeclaration));
     }
   }
 

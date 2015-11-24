@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
@@ -14,6 +13,7 @@ import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.SyntacticCategory.Direction;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 
@@ -141,14 +141,14 @@ public class AlignedExpressionTree {
     }
   }
 
-  public List<LexiconEntry> generateLexiconEntries(Map<String, String> typeReplacements) {
+  public List<LexiconEntry> generateLexiconEntries(TypeDeclaration typeDeclaration) {
     List<LexiconEntry> lexiconEntries = Lists.newArrayList();
-    generateLexiconEntriesHelper(typeReplacements, Collections.<AlignedExpressionTree>emptyList(),
+    generateLexiconEntriesHelper(typeDeclaration, Collections.<AlignedExpressionTree>emptyList(),
         Collections.<Type>emptyList(), null, lexiconEntries);
     return lexiconEntries;
   }
 
-  private Type generateLexiconEntriesHelper(Map<String, String> typeReplacements,
+  private Type generateLexiconEntriesHelper(TypeDeclaration typeDeclaration,
       List<AlignedExpressionTree> argumentStack, List<Type> argumentTypeStack,
       AlignedExpressionTree func, List<LexiconEntry> lexiconEntries) {
     if (isLeaf()) {
@@ -169,12 +169,12 @@ public class AlignedExpressionTree {
       }
 
       if (func != null) {
-        Type funcType = StaticAnalysis.inferType(func.getExpression(), typeReplacements);
-        type = StaticAnalysis.unify(type, funcType.getArgumentType());
+        Type funcType = StaticAnalysis.inferType(func.getExpression(), typeDeclaration);
+        type = typeDeclaration.unify(type, funcType.getArgumentType());
       }
 
-      Type initialType = StaticAnalysis.inferType(getExpression(), typeReplacements);
-      Type returnType = StaticAnalysis.inferType(getExpression(), StaticAnalysis.unify(initialType, type), typeReplacements);
+      Type initialType = StaticAnalysis.inferType(getExpression(), typeDeclaration);
+      Type returnType = StaticAnalysis.inferType(getExpression(), typeDeclaration.unify(initialType, type), typeDeclaration);
       Type completeType = returnType;
       List<Type> argumentTypes = Lists.newArrayList();
       for (int i = 0; i < getNumAppliedArguments(); i++) {
@@ -215,7 +215,7 @@ public class AlignedExpressionTree {
 
       return completeType;
     } else {      
-      Type leftType = left.generateLexiconEntriesHelper(typeReplacements,
+      Type leftType = left.generateLexiconEntriesHelper(typeDeclaration,
           Collections.<AlignedExpressionTree>emptyList(), Collections.<Type>emptyList(),
           right, lexiconEntries);
 
@@ -224,7 +224,7 @@ public class AlignedExpressionTree {
       List<Type> newArgTypes = Lists.newArrayList(argumentTypeStack);
       newArgTypes.add(leftType);
 
-      Type rightType = right.generateLexiconEntriesHelper(typeReplacements, newArgs,
+      Type rightType = right.generateLexiconEntriesHelper(typeDeclaration, newArgs,
           newArgTypes, null, lexiconEntries);
       return rightType.getReturnType();
     }

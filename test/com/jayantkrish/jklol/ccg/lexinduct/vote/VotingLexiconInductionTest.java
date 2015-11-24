@@ -3,13 +3,11 @@ package com.jayantkrish.jklol.ccg.lexinduct.vote;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
 import com.jayantkrish.jklol.ccg.CcgBinaryRule;
@@ -20,8 +18,10 @@ import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
+import com.jayantkrish.jklol.ccg.lambda.ExplicitTypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
@@ -99,14 +99,15 @@ public class VotingLexiconInductionTest extends TestCase {
       predicateSet.addAll(StaticAnalysis.getFreeVariables(example.getLogicalForm()));
     }
 
-    Map<String, String> typeReplacementMap = Maps.newHashMap();
+    TypeDeclaration typeDeclaration = ExplicitTypeDeclaration.getDefault();
     List<String> predicates = Lists.newArrayList();
     List<Type> predicateTypes = Lists.newArrayList();
     for (String predicate : predicateSet) {
       predicates.add(predicate);
-      predicateTypes.add(StaticAnalysis.inferType(Expression2.constant(predicate), StaticAnalysis.TOP, typeReplacementMap));
+      predicateTypes.add(StaticAnalysis.inferType(Expression2.constant(predicate),
+          TypeDeclaration.TOP, typeDeclaration));
     }
-    
+
     String[] ruleLines = {"DUMMY{0} BLAH{0}",
         "SKIP{0} NP{1} NP{1},(lambda $L $R $R)",
         "SKIP{0} N{1} N{1},(lambda $L $R $R)",

@@ -16,23 +16,21 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
+import com.jayantkrish.jklol.ccg.lambda.ExplicitTypeDeclaration;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
-import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
-import com.jayantkrish.jklol.ccg.lexinduct.AlignmentModelInterface;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentEmOracle;
-import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTokenFeatureGenerator;
+import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
-import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.ExpectationMaximization;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -51,20 +49,6 @@ public class AlignmentLexiconInduction extends AbstractCli {
   private OptionSpec<Void> printSearchSpace;
   private OptionSpec<Void> printParameters;
   
-  // TODO: this shouldn't be hard coded. Replace with 
-  // an input unification lattice for types.
-  private static final Map<String, String> typeReplacements = Maps.newHashMap();
-  static {
-    typeReplacements.put("lo", "e");
-    typeReplacements.put("c", "e");
-    typeReplacements.put("co", "e");
-    typeReplacements.put("s", "e");
-    typeReplacements.put("r", "e");
-    typeReplacements.put("l", "e");
-    typeReplacements.put("m", "e");
-    typeReplacements.put("p", "e");
-  }
-
   public AlignmentLexiconInduction() {
     super(CommonOptions.MAP_REDUCE);
   }
@@ -85,8 +69,21 @@ public class AlignmentLexiconInduction extends AbstractCli {
   }
 
   @Override
-  public void run(OptionSet options) {
-    List<AlignmentExample> examples = readTrainingData(options.valueOf(trainingData));
+  public void run(OptionSet options) {    
+    // TODO: this shouldn't be hard coded. Replace with 
+    // an input unification lattice for types.
+    Map<String, String> typeReplacements = Maps.newHashMap();
+    typeReplacements.put("lo", "e");
+    typeReplacements.put("c", "e");
+    typeReplacements.put("co", "e");
+    typeReplacements.put("s", "e");
+    typeReplacements.put("r", "e");
+    typeReplacements.put("l", "e");
+    typeReplacements.put("m", "e");
+    typeReplacements.put("p", "e");
+    TypeDeclaration typeDeclaration = new ExplicitTypeDeclaration(typeReplacements);
+
+    List<AlignmentExample> examples = readTrainingData(options.valueOf(trainingData), typeDeclaration);
     
     if (options.has(printSearchSpace)) { 
       for (AlignmentExample example : examples) {
@@ -94,34 +91,29 @@ public class AlignmentLexiconInduction extends AbstractCli {
         System.out.println(example.getTree());
       }
     }
-    FeatureVectorGenerator<Expression2> vectorGenerator = buildFeatureVectorGenerator(examples,
-        Collections.<String>emptyList());
-    System.out.println("features: " + vectorGenerator.getFeatureDictionary().getValues());
-    examples = applyFeatureVectorGenerator(vectorGenerator, examples);
-
     
-    AlignmentModelInterface model = null;
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModelWithNGrams(
-        examples, vectorGenerator, options.valueOf(nGramLength), false, false);
+        examples, options.valueOf(nGramLength), typeDeclaration, false);
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(options.valueOf(smoothingParam));
 
     SufficientStatistics initial = pam.getNewSufficientStatistics();
     initial.increment(1);
 
-    ExpectationMaximization em = new ExpectationMaximization(options.valueOf(emIterations), new DefaultLogFunction());
-    SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, null, false),
-        initial, examples);
+    ExpectationMaximization em = new ExpectationMaximization(options.valueOf(emIterations),
+        new DefaultLogFunction());
+    SufficientStatistics trainedParameters = em.train(
+        new CfgAlignmentEmOracle(pam, smoothing, null, false), initial, examples);
 
     if (options.has(printParameters)) {
       System.out.println(pam.getParameterDescription(trainedParameters));
     }
 
-    model = pam.getModelFromParameters(trainedParameters);
+    CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
     pam.getModelFromParameters(trainedParameters).printStuffOut();
 
     PairCountAccumulator<List<String>, LexiconEntry> alignments = generateLexiconFromAlignmentModel(
-        model, examples, 1, typeReplacements);
+        model, examples, 1, typeDeclaration);
     for (List<String> words : alignments.keySet()) {
       System.out.println(words);
       for (LexiconEntry entry : alignments.getValues(words)) {
@@ -141,8 +133,8 @@ public class AlignmentLexiconInduction extends AbstractCli {
   }
   
   public static PairCountAccumulator<List<String>, LexiconEntry> generateLexiconFromAlignmentModel(
-      AlignmentModelInterface model, Collection<AlignmentExample> examples, int lexiconNumParses,
-      Map<String, String> typeReplacements) {
+      CfgAlignmentModel model, Collection<AlignmentExample> examples, int lexiconNumParses,
+      TypeDeclaration typeDeclaration) {
     PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
     for (AlignmentExample example : examples) {
       List<AlignedExpressionTree> trees = Lists.newArrayList();
@@ -157,7 +149,7 @@ public class AlignmentLexiconInduction extends AbstractCli {
       for (AlignedExpressionTree tree : trees) {
         System.out.println(tree);
 
-        for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
+        for (LexiconEntry entry : tree.generateLexiconEntries(typeDeclaration)) {
           alignments.incrementOutcome(entry.getWords(), entry, 1);
           System.out.println("   " + entry);
         }
@@ -167,51 +159,26 @@ public class AlignmentLexiconInduction extends AbstractCli {
     return alignments;
   }
 
-  public static FeatureVectorGenerator<Expression2> buildFeatureVectorGenerator(
-      List<AlignmentExample> examples, Collection<String> tokensToIgnore) {
-    Set<Expression2> allExpressions = Sets.newHashSet();
-    for (AlignmentExample example : examples) {
-      example.getTree().getAllExpressions(allExpressions);
-    }
-    return DictionaryFeatureVectorGenerator.createFromData(allExpressions,
-        new ExpressionTokenFeatureGenerator(tokensToIgnore), false);
-  }
-
-  public static List<AlignmentExample> applyFeatureVectorGenerator(
-      FeatureVectorGenerator<Expression2> generator, List<AlignmentExample> examples) {
-    List<AlignmentExample> newExamples = Lists.newArrayList();
-    for (AlignmentExample example : examples) {
-      ExpressionTree newTree = example.getTree().applyFeatureVectorGenerator(generator);
-      newExamples.add(new AlignmentExample(example.getWords(), newTree));
-    }
-    return newExamples;
-  }
-
-  public static List<AlignmentExample> readTrainingData(String trainingDataFile) {
+  public static List<AlignmentExample> readTrainingData(String trainingDataFile, TypeDeclaration typeDeclaration) {
     List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile);
     List<AlignmentExample> examples = Lists.newArrayList();
 
-    System.out.println(trainingDataFile);
-    int totalTreeSize = 0; 
-    for (CcgExample ccgExample : ccgExamples) {
-      ExpressionTree tree = expressionToExpressionTree(ccgExample.getLogicalForm());
-      examples.add(new AlignmentExample(ccgExample.getSentence().getWords(), tree));
-
-      totalTreeSize += tree.size();
-    }
-    System.out.println("Average tree size: " + (totalTreeSize / examples.size()));
-    return examples;
-  }
-
-  public static ExpressionTree expressionToExpressionTree(Expression2 expression) {
     ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
         <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
             new VariableCanonicalizationReplacementRule(),
             new CommutativeReplacementRule("and:<t*,t>")));
     Set<String> constantsToIgnore = Sets.newHashSet("and:<t*,t>");
-
-    return ExpressionTree.fromExpression(expression, simplifier, typeReplacements,
-        constantsToIgnore, 0, 2, 3);
+    
+    System.out.println(trainingDataFile);
+    int totalTreeSize = 0; 
+    for (CcgExample ccgExample : ccgExamples) {
+      ExpressionTree tree = ExpressionTree.fromExpression(ccgExample.getLogicalForm(),
+          simplifier, typeDeclaration, constantsToIgnore, 0, 2, 3);
+      examples.add(new AlignmentExample(ccgExample.getSentence().getWords(), tree));
+      totalTreeSize += tree.size();
+    }
+    System.out.println("Average tree size: " + (totalTreeSize / examples.size()));
+    return examples;
   }
 
   public static void main(String[] args) {

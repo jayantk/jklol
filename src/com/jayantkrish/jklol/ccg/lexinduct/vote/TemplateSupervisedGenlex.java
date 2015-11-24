@@ -2,15 +2,15 @@ package com.jayantkrish.jklol.ccg.lexinduct.vote;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
+import com.jayantkrish.jklol.ccg.lambda.ExplicitTypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
@@ -34,11 +34,11 @@ public class TemplateSupervisedGenlex implements Genlex {
     Set<String> freeVars = StaticAnalysis.getFreeVariables(lf);
     List<String> predicates = Lists.newArrayList();
     List<Type> predicateTypes = Lists.newArrayList();
-    Map<String, String> typeReplacementMap = Maps.newHashMap();
+    TypeDeclaration typeDeclaration = ExplicitTypeDeclaration.getDefault();
     for (String freeVar : freeVars) {
       predicates.add(freeVar);
-      predicateTypes.add(StaticAnalysis.inferType(Expression2.constant(freeVar), StaticAnalysis.TOP,
-          typeReplacementMap));
+      predicateTypes.add(StaticAnalysis.inferType(Expression2.constant(freeVar), TypeDeclaration.TOP,
+          typeDeclaration));
     }
 
     List<String> tokens = sentence.getWords();

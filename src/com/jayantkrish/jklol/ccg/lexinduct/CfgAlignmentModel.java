@@ -22,7 +22,7 @@ import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 
-public class CfgAlignmentModel implements AlignmentModelInterface, Serializable {
+public class CfgAlignmentModel implements Serializable {
   private static final long serialVersionUID = 1L;
 
   private final DiscreteFactor nonterminalFactor;

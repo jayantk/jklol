@@ -8,8 +8,10 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.lambda.ExplicitTypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis.Scope;
 
 public class StaticAnalysisTest extends TestCase {
@@ -22,17 +24,17 @@ public class StaticAnalysisTest extends TestCase {
   };
   
   Expression2[] expressions = new Expression2[expressionStrings.length];
-  
-  Map<String, String> typeReplacementMap;
+
+  TypeDeclaration typeDeclaration;
 
   public void setUp() {
     ExpressionParser<Expression2> parser = ExpressionParser.expression2();
     for (int i = 0; i < expressionStrings.length; i++) {
       expressions[i] = parser.parseSingleExpression(expressionStrings[i]);
     }
-    
-    typeReplacementMap = Maps.newHashMap();
+    Map<String, String> typeReplacementMap = Maps.newHashMap();
     typeReplacementMap.put("lo", "e");
+    typeDeclaration = new ExplicitTypeDeclaration(typeReplacementMap);
   }
 
   public void testFreeVariables() {
@@ -119,7 +121,7 @@ public class StaticAnalysisTest extends TestCase {
   }
 
   public void testUnknownPropagation() {
-    runTypeInferenceTest("(lambda $0 $1 ($0 $1))", "<<unknown,unknown>,<unknown,unknown>>");
+    runTypeInferenceTest("(lambda $0 $1 ($0 $1))", "<<⊤,⊤>,<⊤,⊤>>");
   }
 
   public void testMultipleArguments() {
@@ -145,7 +147,7 @@ public class StaticAnalysisTest extends TestCase {
     Type expected = Type.parseFrom("<<e,t>,<e,<e,t>>>");
     Expression2 exp = ExpressionParser.expression2().parseSingleExpression(
         "(lambda $0 (lambda $1 (lambda $2 (and:<t*,t> ($0 $2) (loc:<lo,<lo,t>> $2 $1)))))");
-    Type predicted = StaticAnalysis.inferType(exp, expected, typeReplacementMap);
+    Type predicted = StaticAnalysis.inferType(exp, expected, typeDeclaration);
     assertEquals(expected, predicted);
   }
 
@@ -157,7 +159,7 @@ public class StaticAnalysisTest extends TestCase {
   private void runTypeInferenceTest(String expression, String expectedType) {
     Type expected = Type.parseFrom(expectedType);
     Expression2 exp = ExpressionParser.expression2().parseSingleExpression(expression);
-    Type predicted = StaticAnalysis.inferType(exp, typeReplacementMap);
+    Type predicted = StaticAnalysis.inferType(exp, typeDeclaration);
     assertEquals(expected, predicted);
   }
 }

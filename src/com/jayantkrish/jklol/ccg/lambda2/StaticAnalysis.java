@@ -11,6 +11,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 
 /**
  * Static analysis of lambda calculus expressions. Computes
@@ -23,8 +24,6 @@ import com.jayantkrish.jklol.ccg.lambda.Type;
 public class StaticAnalysis {
   
   public static final String LAMBDA = "lambda";
-  
-  public static final Type TOP = Type.createAtomic("unknown");
 
   private StaticAnalysis() {
     // Prevent instantiation
@@ -180,8 +179,8 @@ public class StaticAnalysis {
     }
   }
   
-  public static Type inferType(Expression2 expression, Map<String, String> typeReplacements) {
-    return inferType(expression, Type.createAtomic("unknown"), typeReplacements);
+  public static Type inferType(Expression2 expression, TypeDeclaration typeDeclaration) {
+    return inferType(expression, TypeDeclaration.TOP, typeDeclaration);
   }
 
   /**
@@ -189,24 +188,21 @@ public class StaticAnalysis {
    * as an argument an expression where constants have the form
    * constant_name:type_spec.
    * 
-   * TODO: return TypedExpression
-   * TODO: implement unification lattice for atomic types. Fix
-   * hardcoded constants in the process. Get rid of typeReplacements.
-   * 
    * @param expression
    * @param type
    * @param typeReplacements
    * @return
    */
-  public static Type inferType(Expression2 expression, Type type, Map<String, String> typeReplacements) {
-    Map<Integer, Type> subexpressionTypeMap = inferTypeMap(expression, type, typeReplacements);
+  public static Type inferType(Expression2 expression, Type type, TypeDeclaration typeDeclaration) {
+    Map<Integer, Type> subexpressionTypeMap = inferTypeMap(expression, type, typeDeclaration);
     return subexpressionTypeMap.get(0);
   }
 
-  public static Map<Integer, Type> inferTypeMap(Expression2 expression, Type type, Map<String, String> typeReplacements) {
+  public static Map<Integer, Type> inferTypeMap(Expression2 expression, Type type,
+      TypeDeclaration typeDeclaration) {
     Map<Integer, Type> subexpressionTypeMap = Maps.newHashMap();
     initializeSubexpressionTypeMap(expression, subexpressionTypeMap);
-    updateType(0, type, subexpressionTypeMap, expression);
+    updateType(0, type, subexpressionTypeMap, typeDeclaration, expression);
     ScopeSet scopes = getScopes(expression);
 
     boolean updated = true;
@@ -215,14 +211,10 @@ public class StaticAnalysis {
       for (int index : subexpressionTypeMap.keySet()) {
         Expression2 subexpression = expression.getSubexpression(index);
         if (subexpression.isConstant()) {
-          String[] parts = subexpression.getConstant().split(":");
-          if (parts.length > 1) {
-            // The expression has a type declaration
-            String typeString = parts[1];
-            Type newType = doTypeReplacements(Type.parseFrom(typeString), typeReplacements);
-            updated = updated || updateType(index, newType, subexpressionTypeMap, expression);
-          }
-          
+          // Get the type of this constant if it is declared. 
+          Type newType = typeDeclaration.getType(subexpression.getConstant());
+          updated = updated || updateType(index, newType, subexpressionTypeMap, typeDeclaration, expression);
+
           Scope scope = scopes.getScope(index);
           int bindingIndex = scope.getBindingIndex(subexpression.getConstant());
           if (bindingIndex != -1) {
@@ -230,8 +222,8 @@ public class StaticAnalysis {
             Type myType = subexpressionTypeMap.get(index);
             Type bindingType = subexpressionTypeMap.get(bindingIndex);
             
-            updated = updated || updateType(index, bindingType, subexpressionTypeMap, expression);
-            updated = updated || updateType(bindingIndex, myType, subexpressionTypeMap, expression);
+            updated = updated || updateType(index, bindingType, subexpressionTypeMap, typeDeclaration, expression);
+            updated = updated || updateType(bindingIndex, myType, subexpressionTypeMap, typeDeclaration, expression);
           }
 
         } else if (subexpression.getSubexpressions().size() > 1 && 
@@ -247,18 +239,18 @@ public class StaticAnalysis {
             newType = newType.addArgument(subexpressionTypeMap.get(childIndexes[i]));
           }
 
-          updated = updated || updateType(index, newType, subexpressionTypeMap, expression);
+          updated = updated || updateType(index, newType, subexpressionTypeMap, typeDeclaration, expression);
           
           // Propagate the expression's type back to the arguments / body
           Type lambdaType = subexpressionTypeMap.get(index);
           for (int i = 1; i < childIndexes.length - 1; i++) {
             Type argType = lambdaType.getArgumentType();
-            updated = updated || updateType(childIndexes[i], argType, subexpressionTypeMap, expression);
+            updated = updated || updateType(childIndexes[i], argType, subexpressionTypeMap, typeDeclaration, expression);
             lambdaType = lambdaType.getReturnType();
           }
           
           updated = updated || updateType(childIndexes[childIndexes.length - 1], lambdaType,
-              subexpressionTypeMap, expression);
+              subexpressionTypeMap, typeDeclaration, expression);
 
         } else {
           // Application
@@ -268,7 +260,7 @@ public class StaticAnalysis {
           Type applicationType = subexpressionTypeMap.get(index);
           Type functionType = subexpressionTypeMap.get(functionIndex);
 
-          if (!functionType.toString().equals("unknown")) {
+          if (!functionType.equals(TypeDeclaration.TOP)) {
             Type rest = functionType;
             
             for (int i = 1; i < childIndexes.length; i++) {
@@ -277,14 +269,14 @@ public class StaticAnalysis {
                 rest = rest.getReturnType();
               }
               updated = updated || updateType(childIndexes[i], argType,
-                  subexpressionTypeMap, expression);
+                  subexpressionTypeMap, typeDeclaration, expression);
             }
 
             if (rest.acceptsRepeatedArguments()) {
               rest = rest.getReturnType();
             }
 
-            updated = updated || updateType(index, rest, subexpressionTypeMap,
+            updated = updated || updateType(index, rest, subexpressionTypeMap, typeDeclaration,
                 expression);
           }
 
@@ -296,27 +288,11 @@ public class StaticAnalysis {
             functionType = functionType.addArgument(argType);
           }
           updated = updated || updateType(functionIndex, functionType, subexpressionTypeMap,
-              expression);
+              typeDeclaration, expression);
         }
       }
     }
     return subexpressionTypeMap;
-  }
-
-  private static Type doTypeReplacements(Type type, Map<String, String> typeReplacements) {
-    if (type.isFunctional()) {
-      Type newArg = doTypeReplacements(type.getArgumentType(), typeReplacements);
-      Type newReturn = doTypeReplacements(type.getReturnType(), typeReplacements);
-      type = Type.createFunctional(newArg, newReturn, type.acceptsRepeatedArguments());
-    }
-
-    String typeString = type.toString();
-
-    if (typeReplacements.containsKey(typeString)) {
-      return Type.parseFrom(typeReplacements.get(typeString));
-    } else {
-      return type; 
-    }
   }
 
   private static void initializeSubexpressionTypeMap(Expression2 expression,
@@ -324,15 +300,15 @@ public class StaticAnalysis {
     for (int i = 0; i < expression.size(); i++) {
       if (!(expression.isConstant() && expression.getConstant().equals(LAMBDA))) {
         // Don't include the lambda part of lambda expressions.
-        subexpressionTypeMap.put(i, Type.createAtomic("unknown"));
+        subexpressionTypeMap.put(i, TypeDeclaration.TOP);
       }
     }
   }
 
-  private static boolean updateType(int index, Type type,
-      Map<Integer, Type> typeMap, Expression2 expression) {
+  private static boolean updateType(int index, Type type, Map<Integer, Type> typeMap,
+      TypeDeclaration typeDeclaration, Expression2 expression) {
     Type oldType = typeMap.get(index);
-    Type newType = unify(oldType, type);
+    Type newType = typeDeclaration.unify(oldType, type);
 
     if (!newType.equals(oldType)) {
       // System.out.println(index + " " + expression.getSubexpression(index) + " " + oldType + " " + type + " -> " + newType);
@@ -340,42 +316,6 @@ public class StaticAnalysis {
       return true;
     } else {
       return false;
-    }
-  }
-
-  public static Type unify(Type t1, Type t2) {
-    if (t1.toString().equals("unknown")) {
-      return t2;
-    } else if (t2.toString().equals("unknown")) {
-      return t1;
-    } else if (t1.equals(t2)) {
-      return t1;
-    } if (t1.isFunctional() && t2.isFunctional()) {
-      if (t1.acceptsRepeatedArguments() == t2.acceptsRepeatedArguments()) {
-        // If the argument repeats, its repeated for both, so unify that type.
-        // If it doesn't repeat, then 
-        Type argumentType = unify(t1.getArgumentType(), t2.getArgumentType()); 
-        Type returnType = unify(t1.getReturnType(), t2.getReturnType());
-        return Type.createFunctional(argumentType, returnType, t1.acceptsRepeatedArguments());
-      } else {
-        // Repeats for one and not the other.
-        Type repeated = t1.acceptsRepeatedArguments() ? t1 : t2;
-        Type unrepeated = t1.acceptsRepeatedArguments() ? t2 : t1;
-
-        // TODO: this doesn't work if the return type of the type with
-        // the repeated arguments is non-atomic.
-        if (!unrepeated.getReturnType().isAtomic()) {
-          Type argumentType = unify(repeated.getArgumentType(), unrepeated.getArgumentType()); 
-          Type returnType = unify(repeated, unrepeated.getReturnType());
-          return Type.createFunctional(argumentType, returnType, false);
-        } else {
-          Type argumentType = unify(repeated.getArgumentType(), unrepeated.getArgumentType()); 
-          Type returnType = unify(repeated.getReturnType(), unrepeated.getReturnType());
-          return Type.createFunctional(argumentType, returnType, false);
-        }
-      }
-    } else {
-      return Type.createAtomic("bottom");
     }
   }
 

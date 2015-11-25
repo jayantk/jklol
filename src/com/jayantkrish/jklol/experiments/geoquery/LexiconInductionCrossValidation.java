@@ -338,10 +338,6 @@ public class LexiconInductionCrossValidation extends AbstractCli {
         unknownLexiconEntryLines, ruleEntries, featureFactory, CcgExample.getPosTagVocabulary(trainingExamples),
         true, null, true);
 
-    /*
-    GradientOracle<CcgParser, CcgExample> oracle = new CcgPerceptronOracle(family,
-        inferenceAlgorithm, 0.0);
-        */
     GradientOracle<CcgParser, CcgExample> oracle = new CcgLoglikelihoodOracle(family, comparator, inferenceAlgorithm);
 
     int numIterations = trainingExamples.size() * iterations;
@@ -349,22 +345,6 @@ public class LexiconInductionCrossValidation extends AbstractCli {
         1.0, true, true, l2Penalty, new DefaultLogFunction(100, false));
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),
         trainingExamples);
-
-    /*
-    GradientOptimizer sgdTrainer = StochasticGradientTrainer.createWithL2Regularization(
-        trainingExamples.size(), 1, 1.0, true, true, l2Penalty, new DefaultLogFunction(100, false));
-    SufficientStatistics sgdParameters = sgdTrainer.train(oracle, oracle.initializeGradient(),
-        trainingExamples);
-
-    SufficientStatistics parameters = null;
-    try {
-      GradientOptimizer trainer = new Lbfgs(iterations, 50, l2Penalty, 1e-4,
-          0.005, new DefaultLogFunction(1, false));
-      parameters = trainer.train(oracle, sgdParameters, trainingExamples);
-    } catch (LbfgsConvergenceError e) {
-      parameters = e.getFinalParameters();
-    }
-    */
 
     return family.getModelFromParameters(parameters);
   }

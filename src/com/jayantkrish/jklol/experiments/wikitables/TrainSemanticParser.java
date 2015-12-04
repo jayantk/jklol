@@ -80,14 +80,22 @@ public class TrainSemanticParser extends AbstractCli {
     System.out.println("# of examples: " + examples.size());
 
     List<String> lexiconLines = Arrays.asList(new String[] {
-        "first,(N{0}|N{0}){1},(lambda f (first-row f)),0 first",
-        "last,(N{0}|N{0}){1},(lambda f (last-row f)),0 last",
-     // "how many,(N{0}/N{0}){1},(lambda f (set-size f)),0 how_many"        
+        "first,(NP{0}|N{0}){1},(lambda f (first-row f)),0 first",
+        "last,(NP{0}|N{0}){1},(lambda f (last-row f)),0 last",
+        "how many,(INT{0}/N{0}){1},(lambda f (set-size f)),0 how_many"        
         });
     List<String> unknownLexiconLines = Arrays.asList(new String[] {});
     List<String> rules = Arrays.asList(
         new String[] {"DUMMY{0} DUMMY{0}","DUMMY{0} DUMMY{0} DUMMY{0}",
-            "N{0} N{1} N{0},(lambda $L $R (intersect $L (samerow-set $R)))"});
+        "N{0} N{1} N{0},(lambda $L $R (intersect $L (samerow-set $R)))",
+        "N{0} NP{1} N{0},(lambda $L $R (intersect $L (samerow-set $R)))",
+        "NP{0} N{1} NP{0},(lambda $L $R (intersect $L (samerow-set $R)))",
+        "N{0} NP{0},(lambda $L (first-row $L))",
+        "N{0} NP{0},(lambda $L (last-row $L))",
+        "N{0} INT{0},(lambda $L (set-size $L))",
+        "N{0} NP{0},(lambda $L (next-row $L))",
+        "N{0} NP{0},(lambda $L (prev-row $L))",
+        "N{0} NP{0},(lambda $L (samevalue $L))"});
     
     CcgFeatureFactory factory = new WikiTablesCcgFeatureFactory(false, true);
     ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(
@@ -100,15 +108,13 @@ public class TrainSemanticParser extends AbstractCli {
     for (WikiTableExample example : examples) {
       ccgExamples.add(WikiTablesUtil.convertExample(example, tables, tableIndexMap));
     }
-    
-    /*
+
     examineData(examples, tables, tableIndexMap,
         family.getModelFromParameters(family.getNewSufficientStatistics()),
-        comparator);
-     */
+        simplifier, comparator);
     
-    int beamSize = 100;
-    CcgBeamSearchInference inference = new CcgBeamSearchInference(null, comparator, beamSize, -1,
+    int beamSize = 1000;
+    CcgBeamSearchInference inference = new CcgBeamSearchInference(null, comparator, beamSize, 1000,
         Integer.MAX_VALUE, 1, false);
     GradientOracle<CcgParser, CcgExample> oracle = new CcgLoglikelihoodOracle(family,
         comparator, inference);
@@ -133,19 +139,30 @@ public class TrainSemanticParser extends AbstractCli {
   
   private static void examineData(List<WikiTableExample> examples,
       List<WikiTable> tables, Map<String, Integer> tableIndexMap,
-      CcgParser parser, ExpressionComparator comparator) {
+      CcgParser parser, ExpressionSimplifier simplifier, ExpressionComparator comparator) {
     int numAnswerable = 0;
     for (WikiTableExample example : examples) {
       WikiTable table = tables.get(tableIndexMap.get(example.getTableId()));
       WikiTableMentionAnnotation annotation = WikiTablesUtil.findMentions(example, table);
       CcgExample ccgExample = WikiTablesUtil.convertExample(example, tables, tableIndexMap);
 
-      System.out.println(example.getQuestion());
-      System.out.println(table.toTsv());
+      List<CcgParse> parses = parser.beamSearch(ccgExample.getSentence(), 1000);
+      boolean anyCorrect = false;
+      for (int i = 0; i < parses.size(); i++) {
+        boolean equals = comparator.equals(parses.get(i).getLogicalForm(), ccgExample.getLogicalForm());
+        anyCorrect = equals || anyCorrect;
+      }
+      
+      if (!anyCorrect) {
+        System.out.println(example.getQuestion());
+        System.out.println(ccgExample.getSentence().getWords());
+        System.out.println(example.getAnswer());
+        System.out.println(table.toTsv());
 
-      List<CcgParse> parses = parser.beamSearch(ccgExample.getSentence(), 100);
-      for (int i = 0; i < Math.min(10, parses.size()); i++) {
-        comparator.equals(parses.get(i).getLogicalForm(), ccgExample.getLogicalForm());
+        for (int i = 0; i < parses.size(); i++) {
+          boolean equals = comparator.equals(parses.get(i).getLogicalForm(), ccgExample.getLogicalForm());
+          System.out.println(i + " " + equals + " " + simplifier.apply(parses.get(i).getLogicalForm()));
+        }
       }
     }  
   }

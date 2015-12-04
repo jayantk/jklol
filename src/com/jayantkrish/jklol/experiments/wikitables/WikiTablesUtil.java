@@ -136,9 +136,11 @@ public class WikiTablesUtil {
     tokenStartIndexes.add(0);
     for (int i = 0; i < question.length(); i++) {
       String substring = question.substring(i, i+1);
-      if (substring.matches("[ ,.?']") && inToken) {
-        tokenEndIndexes.add(i);
-        inToken = false;
+      if (substring.matches("[ ,.?'\"]")) {
+        if (inToken) {
+          tokenEndIndexes.add(i);
+          inToken = false;
+        }
       } else if (!inToken) {
         tokenStartIndexes.add(i);
         inToken = true;
@@ -211,6 +213,7 @@ public class WikiTablesUtil {
     env.bindName("set-union", new RaisedBuiltinFunction(new WikiTableFunctions.SetUnion()), symbolTable);
     env.bindName("set-contains?", new RaisedBuiltinFunction(new WikiTableFunctions.SetContains()), symbolTable);
     env.bindName("make-set", new RaisedBuiltinFunction(new WikiTableFunctions.MakeSet()), symbolTable);
+    env.bindName("set?", new RaisedBuiltinFunction(new WikiTableFunctions.IsSet()), symbolTable);
     return env;
   }
   

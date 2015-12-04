@@ -68,7 +68,7 @@ public class EvaluationComparator implements ExpressionComparator {
     System.out.println(value);
     System.out.println(answer);
     */
-    
+
     if (value instanceof Integer) {
       value = Sets.newHashSet(Integer.toString((Integer) value));
     }

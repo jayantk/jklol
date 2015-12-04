@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.experiments.wikitables;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -68,6 +69,10 @@ public class WikiTableFunctions {
       WikiTable table = cast(argumentValues.get(0), WikiTable.class);
       int rowId = cast(argumentValues.get(1), Integer.class);
       
+      if (rowId < 0 || rowId >= table.getNumRows()) {
+        return Collections.emptySet();
+      }
+      
       Set<Integer> cells = Sets.newHashSet();
       for (int j = 0; j < table.getHeadings().length; j++) {
         cells.add(rowId * ROW_MULTIPLE + j);
@@ -82,6 +87,10 @@ public class WikiTableFunctions {
       Preconditions.checkArgument(argumentValues.size() == 2);
       WikiTable table = cast(argumentValues.get(0), WikiTable.class);
       int colId = cast(argumentValues.get(1), Integer.class);
+      
+      if (colId < 0 || colId >= table.getNumColumns()) {
+        return Collections.emptySet();
+      }
       
       Set<Integer> cells = Sets.newHashSet();
       for (int i = 0; i < table.getNumRows(); i++) {
@@ -245,6 +254,15 @@ public class WikiTableFunctions {
       return result;
     }
   }
+  
+  public static class IsSet implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      return argumentValues.get(0) instanceof Set ? ConstantValue.TRUE : ConstantValue.FALSE;
+    }
+  }
+
   
   public static <T> T cast(Object o, Class<T> clazz) {
     if (clazz.isInstance(o)) {

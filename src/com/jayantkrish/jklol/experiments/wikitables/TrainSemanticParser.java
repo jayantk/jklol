@@ -18,7 +18,9 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.AmbEvalEvaluator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionEvaluator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.util.SemanticParserExampleLoss;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils;
@@ -86,8 +88,7 @@ public class TrainSemanticParser extends AbstractCli {
         });
     List<String> unknownLexiconLines = Arrays.asList(new String[] {});
     List<String> rules = Arrays.asList(
-        new String[] {"DUMMY{0} DUMMY{0}","DUMMY{0} DUMMY{0} DUMMY{0}",
-        "N{0} N{1} N{0},(lambda $L $R (intersect $L (samerow-set $R)))",
+        new String[] {"N{0} N{1} N{0},(lambda $L $R (intersect $L (samerow-set $R)))",
         "N{0} NP{1} N{0},(lambda $L $R (intersect $L (samerow-set $R)))",
         "NP{0} N{1} NP{0},(lambda $L $R (intersect $L (samerow-set $R)))",
         "N{0} NP{0},(lambda $L (first-row $L))",
@@ -102,7 +103,8 @@ public class TrainSemanticParser extends AbstractCli {
         lexiconLines, unknownLexiconLines, rules, factory, null, false, null, true);
     
     ExpressionSimplifier simplifier = WikiTablesUtil.getExpressionSimplifier();
-    ExpressionComparator comparator = new EvaluationComparator(simplifier, sexpParser, eval, env);
+    ExpressionEvaluator evaluator = new AmbEvalEvaluator(sexpParser, eval, env);
+    ExpressionComparator comparator = new WikiTableEvaluationComparator(simplifier, evaluator);
     
     List<CcgExample> ccgExamples = Lists.newArrayList();
     for (WikiTableExample example : examples) {

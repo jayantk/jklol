@@ -2,14 +2,14 @@ package com.jayantkrish.jklol.ccg.enumeratelf;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 
@@ -17,13 +17,13 @@ public class LogicalFormEnumerator {
 
   private final List<UnaryEnumerationRule> unaryRules;
   private final List<BinaryEnumerationRule> binaryRules;
-  private final Map<String, String> typeDeclaration;
+  private final TypeDeclaration typeDeclaration;
 
   public LogicalFormEnumerator(List<UnaryEnumerationRule> unaryRules,
-      List<BinaryEnumerationRule> binaryRules) {
+      List<BinaryEnumerationRule> binaryRules, TypeDeclaration typeDeclaration) {
     this.unaryRules = unaryRules;
     this.binaryRules = binaryRules;
-    this.typeDeclaration = Maps.newHashMap();
+    this.typeDeclaration = Preconditions.checkNotNull(typeDeclaration);
   }
 
   public List<Expression2> enumerate(List<Expression2> startNodes, int max) {

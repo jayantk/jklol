@@ -7,8 +7,10 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.lambda.ExplicitTypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 
@@ -25,17 +27,19 @@ public class LogicalFormEnumeratorTest extends TestCase {
 
   LogicalFormEnumerator enumerator;
   ExpressionParser<Expression2> lfParser;
+  TypeDeclaration typeDeclaration;
   
   public void setUp() {
     ExpressionParser<Type> typeParser = ExpressionParser.typeParser();
     lfParser = ExpressionParser.expression2();
     ExpressionSimplifier simplifier = ExpressionSimplifier.lambdaCalculus();
+    typeDeclaration = ExplicitTypeDeclaration.getDefault();
     
     List<UnaryEnumerationRule> unaryRuleList = Lists.newArrayList();
     for (int i = 0; i < unaryRules.length; i++) {
       Type type = typeParser.parseSingleExpression(unaryRules[i][0]);
       Expression2 lf = lfParser.parseSingleExpression(unaryRules[i][1]);
-      unaryRuleList.add(new UnaryEnumerationRule(type, lf, simplifier));
+      unaryRuleList.add(new UnaryEnumerationRule(type, lf, simplifier, typeDeclaration));
     }
     
     List<BinaryEnumerationRule> binaryRuleList = Lists.newArrayList();
@@ -44,10 +48,10 @@ public class LogicalFormEnumeratorTest extends TestCase {
       Type type2 = typeParser.parseSingleExpression(binaryRules[i][1]);
       Expression2 lf = lfParser.parseSingleExpression(binaryRules[i][2]);
 
-      binaryRuleList.add(new BinaryEnumerationRule(type1, type2, lf, simplifier));
+      binaryRuleList.add(new BinaryEnumerationRule(type1, type2, lf, simplifier, typeDeclaration));
     }
     
-    enumerator = new LogicalFormEnumerator(unaryRuleList, binaryRuleList);
+    enumerator = new LogicalFormEnumerator(unaryRuleList, binaryRuleList, typeDeclaration);
   }
   
   public void testUnary() {

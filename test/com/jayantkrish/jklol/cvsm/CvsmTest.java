@@ -41,7 +41,7 @@ public class CvsmTest extends TestCase {
   }
   
   public void testVector() {
-    CvsmTree tree = cvsm.getInterpretationTree(exp.parseSingleExpression("vec:block"));
+    CvsmTree tree = cvsm.getInterpretationTree(exp.parse("vec:block"));
     
     Tensor value = tree.getValue().getTensor();
     assertTrue(Arrays.equals(value.getValues(), vectorValues[0]));
@@ -49,7 +49,7 @@ public class CvsmTest extends TestCase {
   }
   
   public void testSquareLoss() {
-    CvsmTree tree = cvsm.getInterpretationTree(exp.parseSingleExpression("vec:block"));
+    CvsmTree tree = cvsm.getInterpretationTree(exp.parse("vec:block"));
     Tensor targets = new DenseTensor(new int[] {0}, new int[] {3}, new double[] {0, 2, -1});
     tree = new CvsmSquareLossTree(targets, tree);
     

@@ -20,13 +20,13 @@ public class AmbEvalEvaluator implements ExpressionEvaluator {
 
   @Override
   public Object evaluate(Expression2 lf) {
-    SExpression sexp = sexpParser.parseSingleExpression(lf.toString());
+    SExpression sexp = sexpParser.parse(lf.toString());
     return eval.eval(sexp, env, null).getValue();
   }
   
   @Override
   public Object evaluateSilentErrors(Expression2 lf, String errorValue) {
-    SExpression sexp = sexpParser.parseSingleExpression(lf.toString());
+    SExpression sexp = sexpParser.parse(lf.toString());
     Object value = null;
     try {
       value = eval.eval(sexp, env, null).getValue();

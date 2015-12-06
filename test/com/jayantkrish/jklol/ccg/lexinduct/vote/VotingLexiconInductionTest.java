@@ -127,7 +127,7 @@ public class VotingLexiconInductionTest extends TestCase {
   public static List<CcgExample> parseData(String[][] data) {
     List<CcgExample> examples = Lists.newArrayList();
     for (int i = 0; i < data.length; i++) {
-      Expression2 lf = ExpressionParser.expression2().parseSingleExpression(data[i][1]);
+      Expression2 lf = ExpressionParser.expression2().parse(data[i][1]);
       List<String> words = Arrays.asList(data[i][0].split(" "));
       List<String> pos = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
       AnnotatedSentence sentence = new AnnotatedSentence(words, pos);
@@ -140,13 +140,13 @@ public class VotingLexiconInductionTest extends TestCase {
     Set<LexicalTemplate> templates = Sets.newHashSet();
     for (int i = 0; i < templateStrings.length; i++) {
       HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(templateStrings[i][0]);
-      Expression2 lf = ExpressionParser.expression2().parseSingleExpression(templateStrings[i][1]);
+      Expression2 lf = ExpressionParser.expression2().parse(templateStrings[i][1]);
       
       List<String> vars = Lists.newArrayList();
       List<Type> varTypes = Lists.newArrayList();
       for (int j = 2; j < templateStrings[i].length; j += 2) {
         vars.add(templateStrings[i][j]);
-        varTypes.add(ExpressionParser.typeParser().parseSingleExpression(templateStrings[i][j + 1]));
+        varTypes.add(ExpressionParser.typeParser().parse(templateStrings[i][j + 1]));
       }
       templates.add(new LexicalTemplate(cat, lf, vars, varTypes));
     }

@@ -23,7 +23,7 @@ public class LispUtil {
     programBuilder.append(" )");
     String program = programBuilder.toString();
     ExpressionParser<SExpression> parser = ExpressionParser.sExpression(symbolTable);
-    SExpression programExpression = parser.parseSingleExpression(program);
+    SExpression programExpression = parser.parse(program);
     return programExpression;
   }
 

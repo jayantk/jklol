@@ -103,8 +103,8 @@ public class ExpressionSimplifierTest extends TestCase {
 
   private void runTest(ExpressionSimplifier simp, String input, String expected) {
     ExpressionParser<Expression2> parser = ExpressionParser.expression2();
-    Expression2 inputExpression = parser.parseSingleExpression(input);
-    Expression2 expectedExpression = parser.parseSingleExpression(expected);
+    Expression2 inputExpression = parser.parse(input);
+    Expression2 expectedExpression = parser.parse(expected);
     
     Expression2 simplified = simp.apply(inputExpression);
     System.out.println(simplified);

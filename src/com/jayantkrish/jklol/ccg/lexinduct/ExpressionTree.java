@@ -143,9 +143,9 @@ public class ExpressionTree {
       List<Expression2> argExpressions, List<Type> argTypes, List<Expression2> funcExpressions,
       List<Type> funcTypes) {
     Expression2 lambdaTemplate = ExpressionParser.expression2()
-        .parseSingleExpression("(lambda ARGS BODY)");
+        .parse("(lambda ARGS BODY)");
     Expression2 applicationTemplate = ExpressionParser.expression2()
-        .parseSingleExpression("(FUNC VALUES)");
+        .parse("(FUNC VALUES)");
 
     Expression2 subexpression = expression.getSubexpression(i);
     // Don't remove the first element of applications
@@ -204,11 +204,11 @@ public class ExpressionTree {
       Scope scope, List<Expression2> argExpressions, List<Type> argTypes, List<Expression2> funcExpressions,
       List<Type> funcTypes) {
     Expression2 lambdaTemplate = ExpressionParser.expression2()
-        .parseSingleExpression("(lambda ARGS BODY)");
+        .parse("(lambda ARGS BODY)");
     Expression2 andTemplate = ExpressionParser.expression2()
-        .parseSingleExpression("(and:<t*,t> BODY)");
+        .parse("(and:<t*,t> BODY)");
     Expression2 applicationTemplate = ExpressionParser.expression2()
-        .parseSingleExpression("(FUNC VALUES)");
+        .parse("(FUNC VALUES)");
 
     Expression2 subexpression = expression.getSubexpression(i);
     if (!subexpression.isConstant() && subexpression.getSubexpression(1).isConstant() &&

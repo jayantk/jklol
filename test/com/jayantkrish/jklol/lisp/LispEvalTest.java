@@ -66,7 +66,7 @@ public class LispEvalTest extends TestCase {
 
   private Object runTest(String expressionString) {
     String wrappedExpressionString = "(begin " + expressionString + ")";
-    return eval.eval(parser.parseSingleExpression(wrappedExpressionString),
+    return eval.eval(parser.parse(wrappedExpressionString),
         LispEval.getDefaultEnvironment(eval.getSymbolTable())).getValue();
   }
 

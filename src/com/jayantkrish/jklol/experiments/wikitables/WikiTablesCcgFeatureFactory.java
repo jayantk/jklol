@@ -62,10 +62,10 @@ public class WikiTablesCcgFeatureFactory implements CcgFeatureFactory {
     this.allowWordSkipping = allowWordSkipping;
     
     HeadedSyntacticCategory syntax = HeadedSyntacticCategory.parseFrom("N{0}");
-    Expression2 lf = ExpressionParser.expression2().parseSingleExpression("(lambda m (column-set m))");
+    Expression2 lf = ExpressionParser.expression2().parse("(lambda m (column-set m))");
     CcgCategory headingCat = CcgCategory.fromSyntaxLf(syntax, lf);
 
-    lf = ExpressionParser.expression2().parseSingleExpression("(lambda m (cellvalue-set m))");
+    lf = ExpressionParser.expression2().parse("(lambda m (cellvalue-set m))");
     CcgCategory valueCat = CcgCategory.fromSyntaxLf(syntax, lf);
 
     catMap = Maps.newHashMap();

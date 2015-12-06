@@ -27,7 +27,7 @@ public class CvsmUtils {
         continue;
       }
 
-      Expression2 logicalForm = exp.parseSingleExpression(parts[0]);
+      Expression2 logicalForm = exp.parse(parts[0]);
 
       Tensor target = null;
       if (parts.length > 1) {

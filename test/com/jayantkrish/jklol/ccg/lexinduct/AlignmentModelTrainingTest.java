@@ -53,7 +53,7 @@ public class AlignmentModelTrainingTest extends TestCase {
     List<AlignmentExample> examples = Lists.newArrayList();
     for (int i = 0; i < data.length; i++) {
       ExpressionTree tree = ExpressionTree.fromExpression(ExpressionParser
-        .expression2().parseSingleExpression(data[i][1]));
+        .expression2().parse(data[i][1]));
       List<String> words = Arrays.asList(data[i][0].split(" "));
       System.out.println(words);
       System.out.println(tree);

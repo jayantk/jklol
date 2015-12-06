@@ -483,7 +483,7 @@ public class AmbEvalTest extends TestCase {
 
   private Object runTest(String expressionString) {
     String wrappedExpressionString = "(begin " + expressionString + ")";
-    return eval.eval(parser.parseSingleExpression(wrappedExpressionString)).getValue();
+    return eval.eval(parser.parse(wrappedExpressionString)).getValue();
   }
 
   private String runTestString(String expressionString) {

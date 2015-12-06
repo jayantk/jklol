@@ -30,7 +30,7 @@ public class StaticAnalysisTest extends TestCase {
   public void setUp() {
     ExpressionParser<Expression2> parser = ExpressionParser.expression2();
     for (int i = 0; i < expressionStrings.length; i++) {
-      expressions[i] = parser.parseSingleExpression(expressionStrings[i]);
+      expressions[i] = parser.parse(expressionStrings[i]);
     }
     Map<String, String> typeReplacementMap = Maps.newHashMap();
     typeReplacementMap.put("lo", "e");
@@ -145,7 +145,7 @@ public class StaticAnalysisTest extends TestCase {
   
   public void testSomething4() {
     Type expected = Type.parseFrom("<<e,t>,<e,<e,t>>>");
-    Expression2 exp = ExpressionParser.expression2().parseSingleExpression(
+    Expression2 exp = ExpressionParser.expression2().parse(
         "(lambda $0 (lambda $1 (lambda $2 (and:<t*,t> ($0 $2) (loc:<lo,<lo,t>> $2 $1)))))");
     Type predicted = StaticAnalysis.inferType(exp, expected, typeDeclaration);
     assertEquals(expected, predicted);
@@ -158,7 +158,7 @@ public class StaticAnalysisTest extends TestCase {
 
   private void runTypeInferenceTest(String expression, String expectedType) {
     Type expected = Type.parseFrom(expectedType);
-    Expression2 exp = ExpressionParser.expression2().parseSingleExpression(expression);
+    Expression2 exp = ExpressionParser.expression2().parse(expression);
     Type predicted = StaticAnalysis.inferType(exp, typeDeclaration);
     assertEquals(expected, predicted);
   }

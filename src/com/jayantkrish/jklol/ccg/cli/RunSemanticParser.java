@@ -69,7 +69,7 @@ public class RunSemanticParser extends AbstractCli {
     System.out.println("expression: " + logicalForm);
 
     SExpression expression = ExpressionParser.sExpression(symbolTable)
-        .parseSingleExpression(logicalForm.toString());
+        .parse(logicalForm.toString());
     
     result = eval.eval(expression, env, fgBuilder);
     System.out.println("value: " + result.getValue());

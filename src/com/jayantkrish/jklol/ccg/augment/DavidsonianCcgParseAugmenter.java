@@ -142,7 +142,7 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
       String firstArg = StaticAnalysis.getLambdaArguments(parentExpression, 0).get(0);
       Expression2 body = StaticAnalysis.getLambdaBody(parentExpression, 0).substitute(firstArg, quantifiedVar);
 
-      return ExpressionParser.expression2().parseSingleExpression(
+      return ExpressionParser.expression2().parse(
           "(lambda $L $R (lambda $1 (forall (qvar (set $R $1)) " + body + ")))");
     }
   }
@@ -229,7 +229,7 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
       expr = "(lambda f" + args.get(i).getHeadVariable() + " " + expr + ")";
     }
     
-    return ExpressionParser.expression2().parseSingleExpression(expr);
+    return ExpressionParser.expression2().parse(expr);
   }
   
   /**

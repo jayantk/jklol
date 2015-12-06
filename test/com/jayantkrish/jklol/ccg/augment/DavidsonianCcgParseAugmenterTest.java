@@ -102,7 +102,7 @@ public class DavidsonianCcgParseAugmenterTest extends TestCase {
     Expression2 result = simplifier.apply(DavidsonianCcgParseAugmenter
         .logicalFormFromBinaryRule(left, right, parent, type));
     Expression2 expected = simplifier.apply(ExpressionParser.expression2()
-        .parseSingleExpression(expectedExpressionString));
+        .parse(expectedExpressionString));
     
     System.out.println(left + " " + right + " -> " + parent + " result: " + result
         + " exp: " + expected);
@@ -113,7 +113,7 @@ public class DavidsonianCcgParseAugmenterTest extends TestCase {
   private void runCategoryTest(String catString, String word, String expectedExpressionString) {
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(catString);
     Expression2 expected = simplifier.apply(ExpressionParser.expression2()
-        .parseSingleExpression(expectedExpressionString));
+        .parse(expectedExpressionString));
     Expression2 result = simplifier.apply(DavidsonianCcgParseAugmenter
         .logicalFormFromSyntacticCategory(cat, word));
     

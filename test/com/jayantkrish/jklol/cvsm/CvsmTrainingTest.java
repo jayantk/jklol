@@ -380,7 +380,7 @@ public class CvsmTrainingTest extends TestCase {
     for (int i = 0; i < examples.length; i++) {
       Tensor target = new DenseTensor(new int[] { 0 }, new int[] { targets[i].length }, targets[i]);
 
-      cvsmExamples.add(new CvsmExample(exp.parseSingleExpression(examples[i]), target, null));
+      cvsmExamples.add(new CvsmExample(exp.parse(examples[i]), target, null));
     }
 
     return cvsmExamples;

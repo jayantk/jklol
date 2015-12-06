@@ -25,7 +25,7 @@ public class UnaryRulePattern {
     Preconditions.checkArgument(parts.length == 3);
 
     return new UnaryRulePattern(SyntacticCategory.parseFrom(parts[0]), SyntacticCategory.parseFrom(parts[1]),
-        ExpressionParser.expression2().parseSingleExpression(parts[2]));
+        ExpressionParser.expression2().parse(parts[2]));
   }
 
   public boolean matches(CcgUnaryRule rule) {

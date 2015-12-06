@@ -28,7 +28,7 @@ public class BinaryRulePattern {
 
     return new BinaryRulePattern(SyntacticCategory.parseFrom(parts[0]),
         SyntacticCategory.parseFrom(parts[1]), SyntacticCategory.parseFrom(parts[2]),
-        ExpressionParser.expression2().parseSingleExpression(parts[3]));
+        ExpressionParser.expression2().parse(parts[3]));
   }
 
   public boolean matches(CcgBinaryRule rule) {

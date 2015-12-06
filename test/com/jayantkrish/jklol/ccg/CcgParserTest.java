@@ -387,7 +387,7 @@ public class CcgParserTest extends TestCase {
     List<CcgParse> parses = beamSearch(parserWithUnaryAndComposition,
         Arrays.asList("berries", "that", "i", "eat"), 10);
 
-    Expression2 expectedLf = exp.parseSingleExpression(
+    Expression2 expectedLf = exp.parse(
         "(lambda x (and (berries x) (exists a b (and (i a) (equals b x) (eat a b)))))");
     boolean foundN = false;
     for (CcgParse parse : parses) {
@@ -405,7 +405,7 @@ public class CcgParserTest extends TestCase {
     List<CcgParse> parses = beamSearch(parser, words, 10);
     // assertEquals(1, parses.size());
     assertTrue(parses.size() > 0);
-    Expression2 expectedLf = exp.parseSingleExpression(expectedExpression);
+    Expression2 expectedLf = exp.parse(expectedExpression);
     for (CcgParse parse : parses) {
       assertEquals(simplifier.apply(expectedLf), simplifier.apply(parse.getLogicalForm()));
     }
@@ -979,7 +979,7 @@ public class CcgParserTest extends TestCase {
   public void testStringLexicon() {
     List<CcgParse> parses = beamSearch(parserWithString, Arrays.asList("stringfunc", "bar"), 20);
     assertTrue(parses.size() > 0);
-    Expression2 expected = ExpressionParser.expression2().parseSingleExpression("(stringFunc \"bar\")");
+    Expression2 expected = ExpressionParser.expression2().parse("(stringFunc \"bar\")");
     CcgParse theSentence = null;
     for (CcgParse parse : parses) {
       if (parse.getHeadedSyntacticCategory().equals(HeadedSyntacticCategory.parseFrom("S{0}"))) {
@@ -995,7 +995,7 @@ public class CcgParserTest extends TestCase {
   public void testStringLexiconWholeSentence() {
     List<CcgParse> parses = beamSearch(parserWithString, Arrays.asList("stringfunc", "bar"), 20);
     assertTrue(parses.size() > 0);
-    Expression2 expected = ExpressionParser.expression2().parseSingleExpression("unknownCommand");
+    Expression2 expected = ExpressionParser.expression2().parse("unknownCommand");
     CcgParse theSentence = null;
     int numUnknown = 0;
     for (CcgParse parse : parses) {

@@ -145,7 +145,7 @@ public class TrainSemanticParser extends AbstractCli {
         String targetFormula = exampleNode.get("targetFormula").asText();
 
         List<String> words = Arrays.asList(utterance.split("\\s"));
-        Expression2 lf = lfParser.parseSingleExpression(targetFormula);
+        Expression2 lf = lfParser.parse(targetFormula);
 
         // Parts-of-speech are assumed to be unknown.
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
@@ -171,7 +171,7 @@ public class TrainSemanticParser extends AbstractCli {
         words = null;
         expression = null;
       } else if (line.startsWith("(")) {
-        expression = parser.parseSingleExpression(line);
+        expression = parser.parse(line);
 
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
         AnnotatedSentence supertaggedSentence = new AnnotatedSentence(words, posTags);

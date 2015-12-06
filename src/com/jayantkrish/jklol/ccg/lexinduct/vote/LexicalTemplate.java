@@ -38,13 +38,13 @@ public class LexicalTemplate {
     String[] parts = parser.parseLine(csvString);
     
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(parts[0]);
-    Expression2 lf = ExpressionParser.expression2().parseSingleExpression(parts[1]);
+    Expression2 lf = ExpressionParser.expression2().parse(parts[1]);
 
     List<String> vars = Lists.newArrayList();
     List<Type> varTypes = Lists.newArrayList();
     for (int j = 2; j < parts.length; j += 2) {
       vars.add(parts[j]);
-      varTypes.add(ExpressionParser.typeParser().parseSingleExpression(parts[j + 1]));
+      varTypes.add(ExpressionParser.typeParser().parse(parts[j + 1]));
     }
 
     return new LexicalTemplate(cat, lf, vars, varTypes);

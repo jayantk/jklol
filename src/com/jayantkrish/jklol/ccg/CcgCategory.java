@@ -129,7 +129,7 @@ public class CcgCategory implements Serializable {
 
     Expression2 logicalForm = null;
     if (categoryParts[1].trim().length() > 0) {
-      logicalForm = ExpressionParser.expression2().parseSingleExpression(categoryParts[1]);
+      logicalForm = ExpressionParser.expression2().parse(categoryParts[1]);
     }
 
     // Create an empty assignment to each variable in the syntactic
@@ -197,7 +197,7 @@ public class CcgCategory implements Serializable {
     Expression2 logicalForm = null;
     String expressionString = node.get("logicalForm").asText();
     if (expressionString.trim().length() > 0) {
-      logicalForm = ExpressionParser.expression2().parseSingleExpression(expressionString);
+      logicalForm = ExpressionParser.expression2().parse(expressionString);
     }
 
     // Create an empty assignment to each variable in the syntactic

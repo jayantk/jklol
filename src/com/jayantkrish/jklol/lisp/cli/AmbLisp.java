@@ -65,7 +65,7 @@ public class AmbLisp extends AbstractCli {
     EvalResult result = eval.eval(programExpression, environment, fgBuilder);
 
     if (options.has(evalOpt)) {
-      SExpression argExpression = parser.parseSingleExpression(options.valueOf(evalOpt));
+      SExpression argExpression = parser.parse(options.valueOf(evalOpt));
       result = eval.eval(argExpression, environment, fgBuilder);
     }
 
@@ -82,7 +82,7 @@ public class AmbLisp extends AbstractCli {
           line = line.replaceAll(";.*", "");
 
           try {
-            SExpression expression = parser.parseSingleExpression(line);
+            SExpression expression = parser.parse(line);
             result = eval.eval(expression, environment, fgBuilder);
             BuiltinFunctions.display(result.getValue());
           } catch (Exception e) {

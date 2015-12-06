@@ -37,16 +37,16 @@ public class LogicalFormEnumeratorTest extends TestCase {
     
     List<UnaryEnumerationRule> unaryRuleList = Lists.newArrayList();
     for (int i = 0; i < unaryRules.length; i++) {
-      Type type = typeParser.parseSingleExpression(unaryRules[i][0]);
-      Expression2 lf = lfParser.parseSingleExpression(unaryRules[i][1]);
+      Type type = typeParser.parse(unaryRules[i][0]);
+      Expression2 lf = lfParser.parse(unaryRules[i][1]);
       unaryRuleList.add(new UnaryEnumerationRule(type, lf, simplifier, typeDeclaration));
     }
     
     List<BinaryEnumerationRule> binaryRuleList = Lists.newArrayList();
     for (int i = 0; i < binaryRules.length; i++) {
-      Type type1 = typeParser.parseSingleExpression(binaryRules[i][0]);
-      Type type2 = typeParser.parseSingleExpression(binaryRules[i][1]);
-      Expression2 lf = lfParser.parseSingleExpression(binaryRules[i][2]);
+      Type type1 = typeParser.parse(binaryRules[i][0]);
+      Type type2 = typeParser.parse(binaryRules[i][1]);
+      Expression2 lf = lfParser.parse(binaryRules[i][2]);
 
       binaryRuleList.add(new BinaryEnumerationRule(type1, type2, lf, simplifier, typeDeclaration));
     }
@@ -57,11 +57,11 @@ public class LogicalFormEnumeratorTest extends TestCase {
   public void testUnary() {
     Set<Expression2> actual = Sets.newHashSet(enumerate(5, "foo:s"));
     Set<Expression2> expected = Sets.newHashSet();
-    expected.add(lfParser.parseSingleExpression("foo:s"));
-    expected.add(lfParser.parseSingleExpression("(column:<s,c> foo:s)"));
-    expected.add(lfParser.parseSingleExpression("(row:<s,c> foo:s)"));
-    expected.add(lfParser.parseSingleExpression("(first-row:<c,c> (column:<s,c> foo:s))"));
-    expected.add(lfParser.parseSingleExpression("(first-row:<c,c> (row:<s,c> foo:s))"));
+    expected.add(lfParser.parse("foo:s"));
+    expected.add(lfParser.parse("(column:<s,c> foo:s)"));
+    expected.add(lfParser.parse("(row:<s,c> foo:s)"));
+    expected.add(lfParser.parse("(first-row:<c,c> (column:<s,c> foo:s))"));
+    expected.add(lfParser.parse("(first-row:<c,c> (row:<s,c> foo:s))"));
     
     assertEquals(expected, actual);
   }
@@ -78,7 +78,7 @@ public class LogicalFormEnumeratorTest extends TestCase {
   private List<Expression2> enumerate(int max, String... expressions) {
     List<Expression2> lfs = Lists.newArrayList();
     for (int i = 0; i < expressions.length; i++) {
-      lfs.add(lfParser.parseSingleExpression(expressions[i]));
+      lfs.add(lfParser.parse(expressions[i]));
     }
     
     return enumerator.enumerate(lfs, max);

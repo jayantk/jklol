@@ -48,7 +48,7 @@ public class WikiTableEvaluationComparator implements ExpressionComparator {
       // XXX: The keys need to include the table id.
       value = lruCache.get(a);
     } else {
-      Expression2 sexpression = ExpressionParser.expression2().parseSingleExpression(
+      Expression2 sexpression = ExpressionParser.expression2().parse(
           "(eval-table \"" + tableId + "\" (quote (get-values " + a.toString() + ")))");
       value = evaluator.evaluateSilentErrors(sexpression, "ERROR");
       lruCache.put(a, value);

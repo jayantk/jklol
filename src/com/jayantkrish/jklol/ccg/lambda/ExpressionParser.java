@@ -153,22 +153,22 @@ public class ExpressionParser<T> {
     return tokens;
   }
 
-  public T parseSingleExpression(String expression) {
-    return parseSingleExpression(tokenize(expression));
+  public T parse(String expression) {
+    return parse(tokenize(expression));
   }
 
-  public List<T> parse(String expressions) {
-    return parse(tokenize(expressions));
+  public List<T> parseAll(String expressions) {
+    return parseAll(tokenize(expressions));
   }
 
-  public T parseSingleExpression(List<String> tokenizedExpressionString) {
-    List<T> expressions = parse(tokenizedExpressionString);
+  public T parse(List<String> tokenizedExpressionString) {
+    List<T> expressions = parseAll(tokenizedExpressionString);
     Preconditions.checkState(expressions.size() == 1, "Illegal input string: %s, %s",
         tokenizedExpressionString, expressions);
     return expressions.get(0);
   }
 
-  public List<T> parse(List<String> tokenizedExpressionString) {
+  public List<T> parseAll(List<String> tokenizedExpressionString) {
     Stack<T> stack = new Stack<T>();
     try {
       for (String token : tokenizedExpressionString) {

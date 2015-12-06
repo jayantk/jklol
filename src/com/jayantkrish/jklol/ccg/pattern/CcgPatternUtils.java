@@ -18,7 +18,7 @@ public class CcgPatternUtils {
   public static List<CcgPattern> parseFrom(String patternString) {
     IndexedList<String> symbolTable = LispEval.getInitialSymbolTable();
     ExpressionParser<SExpression> parser = ExpressionParser.sExpression(symbolTable);
-    List<SExpression> expressions = parser.parse(patternString);
+    List<SExpression> expressions = parser.parseAll(patternString);
 
     LispEval eval = new LispEval(symbolTable);
     Environment env = Environment.empty();

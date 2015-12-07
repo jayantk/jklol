@@ -172,17 +172,23 @@ public class WikiTableFunctions {
 
       int min = Integer.MAX_VALUE;
       int minIndex = -1;
+      boolean unique = true;
       for (int i = 0; i < objs.size(); i++) {
         int value = cast(f.apply(Arrays.asList(objs.get(i)), env, null), Integer.class);
         
         if (value < min) {
           min = value;
           minIndex = i;
+          unique = true;
+        } else if (value == min) {
+          unique = false;
         }
       }
       
       if (minIndex == -1) {
         throw new EvalError("set-min on empty set");
+      } else if (!unique) {
+        throw new EvalError("set-min on set not unique");
       }
 
       return objs.get(minIndex);
@@ -198,17 +204,23 @@ public class WikiTableFunctions {
 
       int max = Integer.MIN_VALUE;
       int maxIndex = -1;
+      boolean unique = true;
       for (int i = 0; i < objs.size(); i++) {
         int value = cast(f.apply(Arrays.asList(objs.get(i)), env, null), Integer.class);
         
         if (value > max) {
           max = value;
           maxIndex = i;
+          unique = true;
+        } else if (value == max) {
+          unique = false;
         }
       }
       
       if (maxIndex == -1) {
         throw new EvalError("set-max on empty set");
+      } else if (!unique) {
+        throw new EvalError("set-max on set not unique");
       }
 
       return objs.get(maxIndex);

@@ -19,7 +19,8 @@ public class LogicalFormEnumeratorTest extends TestCase {
   String[][] unaryRules = new String[][] {
       {"s", "(lambda $0 (column:<s,c> $0))"},
       {"s", "(lambda $0 (row:<s,c> $0))"},
-      {"c", "(lambda $0 (first-row:<c,c> $0))"}};
+//      {"c", "(lambda $0 (first-row:<c,c> $0))"}
+  };
     
   String[][] binaryRules = new String[][] {
       {"c", "c", "(lambda $L $R (intersect:<c,<c,c>> $L $R))"},

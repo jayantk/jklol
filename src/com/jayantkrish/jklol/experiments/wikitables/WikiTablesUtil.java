@@ -178,6 +178,11 @@ public class WikiTablesUtil {
     AnnotatedSentence sentence = new AnnotatedSentence(tokens, pos);
     sentence = sentence.addAnnotation(WikiTableMentionAnnotation.NAME, annotation);
 
+    Expression2 label = getAnswerExpression(example);
+    return new CcgExample(sentence, null, null, label);
+  }
+  
+  public static Expression2 getAnswerExpression(WikiTableExample example) {
     List<Expression2> set = Lists.newArrayList();
     set.add(Expression2.constant("make-set"));
     set.addAll(Expression2.stringValues(Lists.newArrayList(example.getAnswer())));
@@ -187,9 +192,7 @@ public class WikiTablesUtil {
     labels.add(Expression2.constant(example.getTableId()));
     labels.add(Expression2.nested(set));
 
-    Expression2 label = Expression2.nested(labels);
-
-    return new CcgExample(sentence, null, null, label);
+    return Expression2.nested(labels);
   }
   
   public static Environment getEnvironment(IndexedList<String> symbolTable,

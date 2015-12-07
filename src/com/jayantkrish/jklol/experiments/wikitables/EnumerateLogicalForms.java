@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.AmbEvalEvaluator;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionEvaluator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -75,7 +76,8 @@ public class EnumerateLogicalForms extends AbstractCli {
 
     ExpressionSimplifier simplifier = WikiTablesUtil.getExpressionSimplifier();
     ExpressionEvaluator evaluator = new AmbEvalEvaluator(sexpParser, eval, env);
-    
+    ExpressionComparator comparator = new WikiTableEvaluationComparator(simplifier, evaluator);
+
     // TODO: refactor me.
     LogicalFormEnumerator enumerator = getLogicalFormEnumerator(simplifier, types);
     ExpressionParser<Expression2> expParser = ExpressionParser.expression2();
@@ -89,17 +91,24 @@ public class EnumerateLogicalForms extends AbstractCli {
       List<Expression2> mentionExpressions = Lists.newArrayList();
       for (int i = 0; i < mentionStrings.size(); i++) {
         if (mentionTypes.get(i).equals(WikiTableMentionAnnotation.HEADING)) {
-          mentionExpressions.add(expParser.parse("(column-set \"" + mentionStrings.get(i) + "\")"));
+          mentionExpressions.add(expParser.parse("(column-set " + Expression2.stringValue(mentionStrings.get(i)) + ")"));
         } else if (mentionTypes.get(i).equals(WikiTableMentionAnnotation.VALUE)) {
-          mentionExpressions.add(expParser.parse("(cellvalue-set \"" + mentionStrings.get(i) + "\")"));
+          mentionExpressions.add(expParser.parse("(cellvalue-set " + Expression2.stringValue(mentionStrings.get(i)) + ")"));
         }
       }
       
-      System.out.println(example.getQuestion());
+      System.out.println(example.getQuestion() + " " + example.getAnswer());
       List<Expression2> enumerated = enumerator.enumerate(mentionExpressions, 100);
       for (Expression2 e : enumerated) {
-        System.out.println(e);
+        if (comparator.equals(e, WikiTablesUtil.getAnswerExpression(example))) {
+          Expression2 sexpression = ExpressionParser.expression2().parse(
+              "(eval-table \"" + table.getId() + "\" (quote (get-values " + e + ")))");
+          Object value = evaluator.evaluateSilentErrors(sexpression, "ERROR");
+
+          System.out.println(e + " " + e.hashCode() + " " + value);
+        }
       }
+      // System.out.println(table.toTsv());
     }
   }
   

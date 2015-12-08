@@ -662,7 +662,8 @@ public class AmbEval {
     env.bindName("and", new RaisedBuiltinFunction(new BuiltinFunctions.AndFunction()), symbolTable);
     env.bindName("or", new RaisedBuiltinFunction(new BuiltinFunctions.OrFunction()), symbolTable);
     env.bindName("display", new WrappedBuiltinFunction(new BuiltinFunctions.DisplayFunction()), symbolTable);
-    
+    env.bindName("lambda?", new RaisedBuiltinFunction(new BuiltinFunctions.IsLambda()), symbolTable);
+
     // Bind default environment parameters for opt and opt-mm.
     env.bindName(OPT_EPOCHS_VAR_NAME, 50L, symbolTable);
     env.bindName(OPT_L2_VAR_NAME, 0.0, symbolTable);

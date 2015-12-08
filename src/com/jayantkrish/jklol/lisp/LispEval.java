@@ -125,6 +125,7 @@ public class LispEval {
     env.bindName("not", new BuiltinFunctions.NotFunction(), symbolTable);
     env.bindName("and", new BuiltinFunctions.AndFunction(), symbolTable);
     env.bindName("or", new BuiltinFunctions.OrFunction(), symbolTable);
+    env.bindName("lambda?", new BuiltinFunctions.IsLambda(), symbolTable);
     return env;
   }
   

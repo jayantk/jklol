@@ -8,6 +8,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.lisp.AmbEval.AmbFunctionValue;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Histogram;
@@ -505,6 +506,16 @@ public class BuiltinFunctions {
       Tensor arg = (Tensor) argumentValues.get(0);
       double sum = arg.getTrace();
       return sum == 0.0 ? ConstantValue.TRUE : ConstantValue.FALSE;
+    }
+  }
+  
+  public static class IsLambda implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 1);
+      Object value = argumentValues.get(0);
+      return (value instanceof FunctionValue || value instanceof AmbFunctionValue)
+          ? ConstantValue.TRUE : ConstantValue.FALSE; 
     }
   }
 }

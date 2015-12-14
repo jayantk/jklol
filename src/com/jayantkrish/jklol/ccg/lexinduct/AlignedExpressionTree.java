@@ -152,7 +152,7 @@ public class AlignedExpressionTree {
       List<AlignedExpressionTree> argumentStack, List<Type> argumentTypeStack,
       AlignedExpressionTree func, List<LexiconEntry> lexiconEntries) {
     if (isLeaf()) {
-      Type type = Type.createAtomic("unknown");
+      Type type = TypeDeclaration.TOP;
       List<Direction> argDirs = Lists.newArrayList();
       for (int i = 0; i < argumentStack.size(); i++) {
         Type argType = argumentTypeStack.get(i);

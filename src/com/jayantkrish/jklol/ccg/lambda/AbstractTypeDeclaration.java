@@ -1,9 +1,14 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
+import com.google.common.base.Preconditions;
+
 public abstract class AbstractTypeDeclaration implements TypeDeclaration {
 
   @Override
   public Type unify(Type t1, Type t2) {
+    Preconditions.checkNotNull(t1, "Type t1 is null. t1: %s t2: %s", t1, t2);
+    Preconditions.checkNotNull(t2, "Type t2 is null. t1: %s t2: %s", t1, t2);
+    
     if (t1.equals(TypeDeclaration.TOP)) {
       return t2;
     } else if (t2.equals(TypeDeclaration.TOP)) {

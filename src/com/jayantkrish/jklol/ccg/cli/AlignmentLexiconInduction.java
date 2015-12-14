@@ -110,10 +110,9 @@ public class AlignmentLexiconInduction extends AbstractCli {
     }
 
     CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
-    pam.getModelFromParameters(trainedParameters).printStuffOut();
 
-    PairCountAccumulator<List<String>, LexiconEntry> alignments = generateLexiconFromAlignmentModel(
-        model, examples, 1, typeDeclaration);
+    PairCountAccumulator<List<String>, LexiconEntry> alignments = model.generateLexicon(
+        examples, 1, typeDeclaration);
     for (List<String> words : alignments.keySet()) {
       System.out.println(words);
       for (LexiconEntry entry : alignments.getValues(words)) {
@@ -132,33 +131,6 @@ public class AlignmentLexiconInduction extends AbstractCli {
     IoUtils.serializeObjectToFile(model, options.valueOf(modelOutput));
   }
   
-  public static PairCountAccumulator<List<String>, LexiconEntry> generateLexiconFromAlignmentModel(
-      CfgAlignmentModel model, Collection<AlignmentExample> examples, int lexiconNumParses,
-      TypeDeclaration typeDeclaration) {
-    PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
-    for (AlignmentExample example : examples) {
-      List<AlignedExpressionTree> trees = Lists.newArrayList();
-      
-      if (lexiconNumParses <= 0) {
-        trees.add(model.getBestAlignment(example));
-      } else {
-        trees.addAll(model.getBestAlignments(example, lexiconNumParses));
-      }
-
-      System.out.println(example.getWords());
-      for (AlignedExpressionTree tree : trees) {
-        System.out.println(tree);
-
-        for (LexiconEntry entry : tree.generateLexiconEntries(typeDeclaration)) {
-          alignments.incrementOutcome(entry.getWords(), entry, 1);
-          System.out.println("   " + entry);
-        }
-        System.out.println("");
-      }
-    }
-    return alignments;
-  }
-
   public static List<AlignmentExample> readTrainingData(String trainingDataFile, TypeDeclaration typeDeclaration) {
     List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile);
     List<AlignmentExample> examples = Lists.newArrayList();

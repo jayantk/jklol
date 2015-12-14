@@ -325,8 +325,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     }
     CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
 
-    return AlignmentLexiconInduction.generateLexiconFromAlignmentModel(
-        model, trainingData, lexiconNumParses, typeDeclaration);
+    return model.generateLexicon(trainingData, lexiconNumParses, typeDeclaration);
   }
 
   public static CcgParser trainSemanticParser(List<CcgExample> trainingExamples,

@@ -9,7 +9,6 @@ import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParser;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.Factor;
-import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
@@ -87,7 +86,7 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
       TableFactorBuilder builder = new TableFactorBuilder(terminalTreeExpectations.getVars(),
           DenseTensorBuilder.getFactory());
       model.populateTerminalDistribution(example.getWords(), parser.getParentVariable().getDiscreteVariables().get(0).getValues(),
-          model.getTerminalFactor(), TableFactor.logUnity(model.getTerminalFactor().getVars()), builder);
+          model.getTerminalFactor(), builder);
       DiscreteFactor terminalExpectations = terminalTreeExpectations.product(builder.build()).coerceToDiscrete();
       
       VariableNumMap varsExceptTerminal = terminalExpectations.getVars().removeAll(parser.getTerminalVariable());

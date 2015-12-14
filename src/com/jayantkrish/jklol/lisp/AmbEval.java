@@ -619,11 +619,13 @@ public class AmbEval {
     env.bindName("make-histogram", new RaisedBuiltinFunction(new BuiltinFunctions.MakeHistogramFunction()), symbolTable);
     env.bindName("sample-histogram", new RaisedBuiltinFunction(new BuiltinFunctions.SampleHistogramFunction()), symbolTable);
     env.bindName("sample-histogram-conditional", new RaisedBuiltinFunction(new BuiltinFunctions.SampleHistogramConditionalFunction()), symbolTable);
+    env.bindName("rejection-sample-histogram", new RaisedBuiltinFunction(new BuiltinFunctions.RejectionSampleHistogramFunction()), symbolTable);
     env.bindName("histogram-to-dictionary", new RaisedBuiltinFunction(new BuiltinFunctions.HistogramToDictionaryFunction()), symbolTable);
 
     env.bindName("make-dset", new RaisedBuiltinFunction(new BuiltinFunctions.MakeDset()), symbolTable);
     env.bindName("dset-empty?", new RaisedBuiltinFunction(new BuiltinFunctions.DsetEmpty()), symbolTable);
     env.bindName("dset-intersect", new RaisedBuiltinFunction(new BuiltinFunctions.DsetIntersect()), symbolTable);
+    env.bindName("dset-subtract", new RaisedBuiltinFunction(new BuiltinFunctions.DsetSubtract()), symbolTable);
     
     env.bindName("array", new RaisedBuiltinFunction(new BuiltinFunctions.MakeArrayFunction()), symbolTable);
     env.bindName("array-get-ith-element", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayGetIthElement()), symbolTable); 

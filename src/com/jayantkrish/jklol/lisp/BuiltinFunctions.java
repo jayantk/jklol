@@ -444,6 +444,17 @@ public class BuiltinFunctions {
       return histogram.sampleConditional((Tensor) argumentValues.get(1));
     }
   }
+  
+  public static class RejectionSampleHistogramFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      Histogram<?> histogram = (Histogram<?>) argumentValues.get(0);
+      Tensor reject = (Tensor) argumentValues.get(1);
+      
+      return histogram.sampleExcluding(reject);
+    }
+  }
 
   public static class HistogramToDictionaryFunction implements FunctionValue {
     @Override
@@ -496,6 +507,18 @@ public class BuiltinFunctions {
         result = result.elementwiseProduct((Tensor) tensorArgs.get(i));
       }
       return result;
+    }
+  }
+  
+  public static class DsetSubtract implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, Environment env) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      Tensor arg1 = (Tensor) argumentValues.get(0);
+      Tensor arg2 = (Tensor) argumentValues.get(1);
+      
+      // Return arg1 after removing any element also in arg2
+      return arg1.elementwiseAddition(arg1.elementwiseProduct(arg2).elementwiseProduct(-1));
     }
   }
 

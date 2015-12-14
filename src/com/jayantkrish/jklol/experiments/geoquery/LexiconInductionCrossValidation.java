@@ -22,7 +22,7 @@ import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
-import com.jayantkrish.jklol.ccg.cli.AlignmentLexiconInduction;
+import com.jayantkrish.jklol.ccg.cli.TrainSemanticParser;
 import com.jayantkrish.jklol.ccg.lambda.ExplicitTypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
@@ -38,6 +38,7 @@ import com.jayantkrish.jklol.ccg.lexicon.StringContext;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentModel;
+import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.util.SemanticParserExampleLoss;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils;
@@ -114,7 +115,6 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
-
     // TODO: this shouldn't be hard coded. Replace with 
     // an input unification lattice for types.
     Map<String, String> typeReplacements = Maps.newHashMap();
@@ -394,17 +394,37 @@ public class LexiconInductionCrossValidation extends AbstractCli {
       if (!test && name.startsWith("fold")) {
         foldNames.add(name);
         
-        List<AlignmentExample> foldData = AlignmentLexiconInduction
-            .readTrainingData(files[i].getAbsolutePath(), typeDeclaration);
+        List<AlignmentExample> foldData = readTrainingData(files[i].getAbsolutePath(), typeDeclaration);
         folds.add(foldData);
       } else if (test && (name.startsWith("all_folds") || name.startsWith("test"))) {
         foldNames.add(name);
         
-        List<AlignmentExample> foldData = AlignmentLexiconInduction
-            .readTrainingData(files[i].getAbsolutePath(), typeDeclaration);
+        List<AlignmentExample> foldData = readTrainingData(files[i].getAbsolutePath(), typeDeclaration);
         folds.add(foldData);
       }
     }
+  }
+
+  public static List<AlignmentExample> readTrainingData(String trainingDataFile, TypeDeclaration typeDeclaration) {
+    List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile);
+    List<AlignmentExample> examples = Lists.newArrayList();
+
+    ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
+        <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
+            new VariableCanonicalizationReplacementRule(),
+            new CommutativeReplacementRule("and:<t*,t>")));
+    Set<String> constantsToIgnore = Sets.newHashSet("and:<t*,t>");
+
+    System.out.println(trainingDataFile);
+    int totalTreeSize = 0; 
+    for (CcgExample ccgExample : ccgExamples) {
+      ExpressionTree tree = ExpressionTree.fromExpression(ccgExample.getLogicalForm(),
+          simplifier, typeDeclaration, constantsToIgnore, 0, 2, 3);
+      examples.add(new AlignmentExample(ccgExample.getSentence().getWords(), tree));
+      totalTreeSize += tree.size();
+    }
+    System.out.println("Average tree size: " + (totalTreeSize / examples.size()));
+    return examples;
   }
 
   public static void main(String[] args) {

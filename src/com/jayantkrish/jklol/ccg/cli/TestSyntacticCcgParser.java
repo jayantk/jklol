@@ -72,6 +72,8 @@ public class TestSyntacticCcgParser extends AbstractCli {
 
   private OptionSpec<String> supertagger;
   private OptionSpec<Double> multitagThresholds;
+
+  private OptionSpec<String> cliInput;
   
   public TestSyntacticCcgParser() {
     super(CommonOptions.MAP_REDUCE);
@@ -104,6 +106,8 @@ public class TestSyntacticCcgParser extends AbstractCli {
 
     supertagger = parser.accepts("supertagger").withRequiredArg().ofType(String.class);
     multitagThresholds = parser.accepts("multitagThreshold").withRequiredArg().ofType(Double.class).withValuesSeparatedBy(',');
+    
+    cliInput = parser.nonOptions().ofType(String.class);
   }
 
   @Override
@@ -144,7 +148,7 @@ public class TestSyntacticCcgParser extends AbstractCli {
       System.out.println(loss);
     } else {
       // Parse a string from the command line.
-      List<String> input = Lists.newArrayList(options.nonOptionArguments());
+      List<String> input = Lists.newArrayList(options.valuesOf(cliInput));
       List<String> sentenceToParse = Lists.newArrayList();
       List<String> posTags = Lists.newArrayList();
       if (options.has(pos)) {

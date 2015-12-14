@@ -33,6 +33,8 @@ public class AmbLisp extends AbstractCli {
   private OptionSpec<Double> optL2RegularizationFrequency;
   private OptionSpec<String> args;
   
+  private OptionSpec<String> filenameOpt;
+  
   @Override
   public void initializeOptions(OptionParser parser) {
     printFactorGraph = parser.accepts("printFactorGraph");
@@ -49,12 +51,14 @@ public class AmbLisp extends AbstractCli {
     // Command line arguments passed through to the program
     // being evaluated.
     args = parser.accepts("args").withRequiredArg().ofType(String.class);
+    
+    filenameOpt = parser.nonOptions().ofType(String.class);
   }
 
   @Override
   public void run(OptionSet options) {
     // Non-option arguments are filenames containing the code to execute.
-    List<String> filenames = options.nonOptionArguments();
+    List<String> filenames = options.valuesOf(filenameOpt);
 
     IndexedList<String> symbolTable = AmbEval.getInitialSymbolTable();
     AmbEval eval = new AmbEval(symbolTable);

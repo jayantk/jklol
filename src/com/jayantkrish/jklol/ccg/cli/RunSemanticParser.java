@@ -36,12 +36,14 @@ public class RunSemanticParser extends AbstractCli {
   private OptionSpec<String> model;
   
   private OptionSpec<String> environment;
+  private OptionSpec<String> wordOpt;
   
   @Override
   public void initializeOptions(OptionParser parser) {
     // Required arguments.
     model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
     environment = parser.accepts("environment").withRequiredArg().ofType(String.class).required();
+    wordOpt = parser.nonOptions().ofType(String.class);
   }
 
   @Override
@@ -59,7 +61,7 @@ public class RunSemanticParser extends AbstractCli {
         <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
             new VariableCanonicalizationReplacementRule()));
 
-    List<String> words = options.nonOptionArguments();
+    List<String> words = options.valuesOf(wordOpt);
     List<String> pos = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
     AnnotatedSentence sentence = new AnnotatedSentence(words, pos);
 

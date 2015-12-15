@@ -8,6 +8,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 
 public class Expression2 implements Serializable, Comparable<Expression2> {
   private static final long serialVersionUID = 1L;
@@ -301,6 +302,18 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
    */
   public int find(Expression2 expression) {
     return findHelper(expression, 0);
+  }
+  
+  public int[] findAll(Expression2 expression) {
+    List<Integer> indexes = Lists.newArrayList();
+    
+    for (int i = 0; i < size(); i++) {
+      Expression2 sub = getSubexpression(i);
+      if (sub.equals(expression)) {
+        indexes.add(i);
+      }
+    }
+    return Ints.toArray(indexes);
   }
   
   private int findHelper(Expression2 expression, int index) {

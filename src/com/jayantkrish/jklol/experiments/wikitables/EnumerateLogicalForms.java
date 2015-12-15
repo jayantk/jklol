@@ -9,12 +9,11 @@ import joptsimple.OptionSpec;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jayantkrish.jklol.ccg.enumeratelf.BinaryEnumerationRule;
+import com.jayantkrish.jklol.ccg.enumeratelf.DenotationRuleFilter;
+import com.jayantkrish.jklol.ccg.enumeratelf.EnumerationRuleFilter;
 import com.jayantkrish.jklol.ccg.enumeratelf.LogicalFormEnumerator;
-import com.jayantkrish.jklol.ccg.enumeratelf.UnaryEnumerationRule;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.RegexTypeDeclaration;
-import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.AmbEvalEvaluator;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -79,7 +78,7 @@ public class EnumerateLogicalForms extends AbstractCli {
     ExpressionComparator comparator = new WikiTableEvaluationComparator(simplifier, evaluator);
 
     // TODO: refactor me.
-    LogicalFormEnumerator enumerator = getLogicalFormEnumerator(simplifier, types);
+    LogicalFormEnumerator enumerator = getLogicalFormEnumerator(simplifier, evaluator, types);
     ExpressionParser<Expression2> expParser = ExpressionParser.expression2();
     for (WikiTableExample example : examples) {
       WikiTable table = tables.get(tableIndexMap.get(example.getTableId()));
@@ -113,7 +112,7 @@ public class EnumerateLogicalForms extends AbstractCli {
   }
   
   private static LogicalFormEnumerator getLogicalFormEnumerator(ExpressionSimplifier simplifier, 
-      TypeDeclaration types) {
+      ExpressionEvaluator eval, TypeDeclaration types) {
     String[][] unaryRules = new String[][] {
         {"c", "(lambda $0 (first-row $0))"},
         {"c", "(lambda $0 (last-row $0))"},
@@ -126,27 +125,10 @@ public class EnumerateLogicalForms extends AbstractCli {
     String[][] binaryRules = new String[][] {
         {"c", "c", "(lambda $L $R (intersect $L (samerow-set $R)))"},
     };
-
-    ExpressionParser<Type> typeParser = ExpressionParser.typeParser();
-    ExpressionParser<Expression2> lfParser = ExpressionParser.expression2();
-
-    List<UnaryEnumerationRule> unaryRuleList = Lists.newArrayList();
-    for (int i = 0; i < unaryRules.length; i++) {
-      Type type = typeParser.parse(unaryRules[i][0]);
-      Expression2 lf = lfParser.parse(unaryRules[i][1]);
-      unaryRuleList.add(new UnaryEnumerationRule(type, lf, simplifier, types));
-    }
     
-    List<BinaryEnumerationRule> binaryRuleList = Lists.newArrayList();
-    for (int i = 0; i < binaryRules.length; i++) {
-      Type type1 = typeParser.parse(binaryRules[i][0]);
-      Type type2 = typeParser.parse(binaryRules[i][1]);
-      Expression2 lf = lfParser.parse(binaryRules[i][2]);
-
-      binaryRuleList.add(new BinaryEnumerationRule(type1, type2, lf, simplifier, types));
-    }
-    
-    return new LogicalFormEnumerator(unaryRuleList, binaryRuleList, types);
+    List<EnumerationRuleFilter> filters = Lists.newArrayList();
+    filters.add(new DenotationRuleFilter(eval));
+    return LogicalFormEnumerator.fromRuleStrings(unaryRules, binaryRules, filters, simplifier, types);
   }
   
   public static void main(String[] args) {

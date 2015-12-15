@@ -23,6 +23,7 @@ public class UnaryEnumerationRule {
   }
 
   public boolean isApplicable(LfNode node) {
+    // TODO: should be isUnifiable
     return argType.equals(node.getType());
   }
   

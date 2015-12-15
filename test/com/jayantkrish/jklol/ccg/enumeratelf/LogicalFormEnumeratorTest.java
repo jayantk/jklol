@@ -52,7 +52,8 @@ public class LogicalFormEnumeratorTest extends TestCase {
       binaryRuleList.add(new BinaryEnumerationRule(type1, type2, lf, simplifier, typeDeclaration));
     }
     
-    enumerator = new LogicalFormEnumerator(unaryRuleList, binaryRuleList, typeDeclaration);
+    List<EnumerationRuleFilter> filters = Lists.newArrayList();
+    enumerator = new LogicalFormEnumerator(unaryRuleList, binaryRuleList, filters, typeDeclaration);
   }
   
   public void testUnary() {

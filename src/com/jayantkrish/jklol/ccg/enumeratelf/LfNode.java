@@ -6,7 +6,7 @@ import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 
-class LfNode {
+public class LfNode {
   private final Expression2 lf;
   private final Type type;
   private final boolean[] usedMentions;

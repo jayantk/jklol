@@ -3,9 +3,12 @@ package com.jayantkrish.jklol.models;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 
@@ -26,6 +29,8 @@ public class DiscreteVariable implements Variable, Serializable {
     this.name = name;
     this.values = IndexedList.create(values);
   }
+  
+  private static Map<Integer, List<Integer>> sequenceCache = Maps.newHashMap(); 
 
   /**
    * Creates a discrete variable whose values are {@code 0} to
@@ -35,10 +40,18 @@ public class DiscreteVariable implements Variable, Serializable {
    * @return
    */
   public static DiscreteVariable sequence(String name, int size) {
-    List<Integer> values = Lists.newArrayList();
-    for (int i = 0; i < size; i++) {
-      values.add(i);
+    List<Integer> values = null;
+    if (sequenceCache.containsKey(size)) {
+      values = sequenceCache.get(size);
+    } else {
+      values = Lists.newArrayList();
+      for (int i = 0; i < size; i++) {
+        values.add(i);
+      }
+      values = ImmutableList.copyOf(values);
+      sequenceCache.put(size, values);
     }
+    
     return new DiscreteVariable(name, values);
   }
   

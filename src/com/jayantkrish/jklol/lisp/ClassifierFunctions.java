@@ -328,8 +328,7 @@ public class ClassifierFunctions {
       int dimensionality = (Integer) argumentValues.get(0);
 
       String name = "vector-features-" + dimensionality;
-      VariableNumMap parameterVar = VariableNumMap.singleton(0, name,
-          DiscreteVariable.sequence(name, dimensionality));
+      VariableNumMap parameterVar = VariableNumMap.singleton(0, name, null);
 
       TensorParameterSpec spec = new TensorParameterSpec(AbstractParameterSpec.getUniqueId(),
           parameterVar);

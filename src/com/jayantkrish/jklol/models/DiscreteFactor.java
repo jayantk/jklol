@@ -115,13 +115,10 @@ public abstract class DiscreteFactor extends AbstractFactor {
 
   @Override
   public DiscreteFactor conditional(Assignment a) {
-    LogFunction log = LogFunctions.getLogFunction();
-    log.startTimer("discrete_factor_conditional");
     VariableNumMap varsToEliminate = getVars().intersection(a.getVariableNumsArray());
 
     // Efficiency improvement: only create a new factor if necessary.
     if (varsToEliminate.size() == 0) {
-      log.stopTimer("discrete_factor_conditional");
       return this;
     }
 
@@ -129,7 +126,6 @@ public abstract class DiscreteFactor extends AbstractFactor {
     int[] eliminatedDimensions = varsToEliminate.getVariableNumsArray();
     TableFactor result = new TableFactor(getVars().removeAll(varsToEliminate),
         getWeights().slice(eliminatedDimensions, key));
-    log.stopTimer("discrete_factor_conditional");
     return result; 
   }
 

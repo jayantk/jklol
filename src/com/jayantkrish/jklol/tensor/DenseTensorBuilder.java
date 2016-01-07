@@ -293,6 +293,54 @@ public class DenseTensorBuilder extends DenseTensorBase implements TensorBuilder
   }
 
   @Override
+  public void incrementInnerProductWithMultiplier(Tensor leftTensor, Tensor rightTensor,
+      double multiplier) {
+    int[] leftDimensionNums = leftTensor.getDimensionNumbers();
+    int[] rightDimensionNums = rightTensor.getDimensionNumbers();
+    if (leftDimensionNums.length == 0) {
+      incrementWithMultiplier(rightTensor, multiplier * leftTensor.getByDimKey());
+      return;
+    } else if (rightDimensionNums.length == 0) {
+      incrementWithMultiplier(leftTensor, multiplier * rightTensor.getByDimKey());
+      return;
+    }
+
+    // rightDimensionNums must be a left-aligned subset of leftDimensionNums.
+    int[] leftToRightAlignedDims = Arrays.copyOfRange(leftDimensionNums, 0, rightDimensionNums.length);
+    Preconditions.checkArgument(Arrays.equals(leftToRightAlignedDims, rightDimensionNums),
+        "Invalid dimension alignment.");
+    
+    // The remaining dimension nums must be equal to the dimension nums of this
+    // TensorBuilder
+    int[] leftToBuilderAlignedDims = Arrays.copyOfRange(leftDimensionNums,
+        leftToRightAlignedDims.length, leftDimensionNums.length);
+    Preconditions.checkArgument(Arrays.equals(leftToBuilderAlignedDims, getDimensionNumbers()),
+        "Invalid dimension alignment");
+    
+    long keyNumSplit = getMaxKeyNum(); 
+
+    int leftSize = leftTensor.size();
+    double[] leftValues = leftTensor.getValues();
+    long leftKeyNum = -1;
+    long myKeyNum = -1;
+    long rightKeyNum = -1;
+    double oldRightKeyNum = -1;
+    double rightValue = -1;
+    for (int i = 0; i < leftSize; i++) {
+      leftKeyNum = leftTensor.indexToKeyNum(i);
+      myKeyNum = leftKeyNum % keyNumSplit;
+      rightKeyNum = leftKeyNum / keyNumSplit;
+
+      if (rightKeyNum != oldRightKeyNum) {
+        rightValue = rightTensor.get(rightKeyNum) * multiplier;
+        oldRightKeyNum = rightKeyNum;
+      }
+
+      values[(int) myKeyNum] += leftValues[i] * rightValue;
+    }
+  }
+
+  @Override
   public void multiply(TensorBase other) {
     Preconditions.checkArgument(Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers()));
     if (other instanceof DenseTensorBase) {

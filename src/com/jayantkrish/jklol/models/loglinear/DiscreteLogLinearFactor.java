@@ -186,13 +186,16 @@ public class DiscreteLogLinearFactor extends AbstractParametricFactor {
   public void incrementSufficientStatisticsFromMarginal(SufficientStatistics gradient,
       SufficientStatistics currentParameters, Factor marginal, Assignment conditionalAssignment,
       double count, double partitionFunction) {
-    // Compute expected feature counts based on the input marginal distribution.
-    DiscreteFactor expectedFeatureCounts = featureValues.conditional(conditionalAssignment)
-        .innerProduct(marginal);
-    Preconditions.checkState(expectedFeatureCounts.getVars().equals(featureVariables));
+      // Compute expected feature counts based on the input marginal distribution.
+      DiscreteFactor assignmentConditional = featureValues.conditional(conditionalAssignment);
+      Preconditions.checkState(assignmentConditional.getVars()
+          .removeAll(marginal.getVars()).equals(featureVariables),
+          "Not all variables are covered in the incrementing assignment.");
+      
+      Tensor marginalWeights = marginal.coerceToDiscrete().getWeights();
 
-    ((TensorSufficientStatistics) gradient).increment(expectedFeatureCounts.getWeights(), 
-        count / partitionFunction);
+      ((TensorSufficientStatistics) gradient).incrementInnerProduct(assignmentConditional.getWeights(),
+          marginalWeights, count / partitionFunction);
   }
 
   private Tensor getFeatureWeights(SufficientStatistics parameters) {

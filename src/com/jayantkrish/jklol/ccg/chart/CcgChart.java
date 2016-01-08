@@ -95,15 +95,15 @@ public interface CcgChart {
 
   public void setSyntaxDistribution(DiscreteFactor syntaxDistribution);
   
-  public void setAssignmentVarIndexAccumulator(int[] assignmentVarIndexAccumulator);
+  public void setAssignmentVarIndexAccumulator(int[][] assignmentVarIndexAccumulator);
   
-  public void setAssignmentAccumulator(long[] assignmentAccumulator);
+  public void setAssignmentAccumulator(long[][] assignmentAccumulator);
   
-  public void setFilledDepAccumulator(long[] filledDepAccumulator);
+  public void setFilledDepAccumulator(long[][] filledDepAccumulator);
   
-  public void setUnfilledDepVarIndexAccumulator(int[] unfilledDepVarIndexAccumulator);
+  public void setUnfilledDepVarIndexAccumulator(int[][] unfilledDepVarIndexAccumulator);
   
-  public void setUnfilledDepAccumulator(long[] unfilledDepAccumulator);
+  public void setUnfilledDepAccumulator(long[][] unfilledDepAccumulator);
 
   /**
    * Gets the subset of all parser weights which may be used in this
@@ -121,15 +121,15 @@ public interface CcgChart {
 
   public DiscreteFactor getSyntaxDistribution();
   
-  public int[] getAssignmentVarIndexAccumulator();
+  public int[][] getAssignmentVarIndexAccumulator();
   
-  public long[] getAssignmentAccumulator();
+  public long[][] getAssignmentAccumulator();
   
-  public long[] getFilledDepAccumulator();
+  public long[][] getFilledDepAccumulator();
   
-  public int[] getUnfilledDepVarIndexAccumulator();
+  public int[][] getUnfilledDepVarIndexAccumulator();
   
-  public long[] getUnfilledDepAccumulator();
+  public long[][] getUnfilledDepAccumulator();
 
   /**
    * Gets the chart entries spanning the words {@code spanStart}-

@@ -50,11 +50,11 @@ public abstract class AbstractCcgChart implements CcgChart {
   // while parsing this sentence.
   private DiscreteFactor syntaxDistribution;
 
-  private int[] assignmentVarIndexAccumulator;
-  private long[] assignmentAccumulator;
-  private long[] filledDepAccumulator;
-  private int[] unfilledDepVarIndexAccumulator;
-  private long[] unfilledDepAccumulator;
+  private int[][] assignmentVarIndexAccumulator;
+  private long[][] assignmentAccumulator;
+  private long[][] filledDepAccumulator;
+  private int[][] unfilledDepVarIndexAccumulator;
+  private long[][] unfilledDepAccumulator;
 
   private boolean finishedParsing;
 
@@ -170,27 +170,27 @@ public abstract class AbstractCcgChart implements CcgChart {
   }
 
   @Override
-  public void setAssignmentVarIndexAccumulator(int[] assignmentVarIndexAccumulator) {
+  public void setAssignmentVarIndexAccumulator(int[][] assignmentVarIndexAccumulator) {
     this.assignmentVarIndexAccumulator = assignmentVarIndexAccumulator;
   }
 
   @Override
-  public void setAssignmentAccumulator(long[] assignmentAccumulator) {
+  public void setAssignmentAccumulator(long[][] assignmentAccumulator) {
     this.assignmentAccumulator = assignmentAccumulator;
   }
 
   @Override
-  public void setFilledDepAccumulator(long[] filledDepAccumulator) {
+  public void setFilledDepAccumulator(long[][] filledDepAccumulator) {
     this.filledDepAccumulator = filledDepAccumulator;
   }
 
   @Override
-  public void setUnfilledDepVarIndexAccumulator(int[] unfilledDepVarIndexAccumulator) {
+  public void setUnfilledDepVarIndexAccumulator(int[][] unfilledDepVarIndexAccumulator) {
     this.unfilledDepVarIndexAccumulator = unfilledDepVarIndexAccumulator;
   }
 
   @Override
-  public void setUnfilledDepAccumulator(long[] unfilledDepAccumulator) {
+  public void setUnfilledDepAccumulator(long[][] unfilledDepAccumulator) {
     this.unfilledDepAccumulator = unfilledDepAccumulator;
   }
 
@@ -220,27 +220,27 @@ public abstract class AbstractCcgChart implements CcgChart {
   }
 
   @Override
-  public int[] getAssignmentVarIndexAccumulator() {
+  public int[][] getAssignmentVarIndexAccumulator() {
     return assignmentVarIndexAccumulator;
   }
   
   @Override
-  public long[] getAssignmentAccumulator() {
+  public long[][] getAssignmentAccumulator() {
     return assignmentAccumulator;
   }
   
   @Override
-  public long[] getFilledDepAccumulator() {
+  public long[][] getFilledDepAccumulator() {
     return filledDepAccumulator;
   }
   
   @Override
-  public int[] getUnfilledDepVarIndexAccumulator() {
+  public int[][] getUnfilledDepVarIndexAccumulator() {
     return unfilledDepVarIndexAccumulator;
   }
   
   @Override
-  public long[] getUnfilledDepAccumulator() {
+  public long[][] getUnfilledDepAccumulator() {
     return unfilledDepAccumulator;
   }
 

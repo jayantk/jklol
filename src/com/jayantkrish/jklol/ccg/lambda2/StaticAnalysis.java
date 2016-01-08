@@ -142,11 +142,19 @@ public class StaticAnalysis {
 
     return new ScopeSet(allCreatedScopes);
   }
-  
+
+  public static boolean isLambda(Expression2 expression) {
+    return isLambda(expression, 0);
+  }
+
   public static boolean isLambda(Expression2 expression, int index) {
     Expression2 subexpression = expression.getSubexpression(index);
     return !subexpression.isConstant() && subexpression.getSubexpression(1).isConstant() && 
         subexpression.getSubexpression(1).getConstant().equals(LAMBDA);
+  }
+  
+  public static List<String> getLambdaArguments(Expression2 expression) {
+    return getLambdaArguments(expression, 0);
   }
   
   public static List<String> getLambdaArguments(Expression2 expression, int index) {
@@ -156,6 +164,10 @@ public class StaticAnalysis {
       args.add(expression.getSubexpression(children[i]).getConstant());
     }
     return args;
+  }
+  
+  public static Expression2 getLambdaBody(Expression2 expression) {
+    return getLambdaBody(expression, 0);
   }
 
   public static Expression2 getLambdaBody(Expression2 expression, int index) {

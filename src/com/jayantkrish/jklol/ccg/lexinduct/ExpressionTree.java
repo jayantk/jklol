@@ -126,6 +126,18 @@ public class ExpressionTree {
             // many arguments in the sentence.
             continue;
           }
+          
+          if (StaticAnalysis.isLambda(argExpression)) {
+            // Disallow expressions of the type (lambda f (f x y ...)) 
+            List<String> args = StaticAnalysis.getLambdaArguments(argExpression);
+            Expression2 body = StaticAnalysis.getLambdaBody(argExpression);
+            if (args.size() == 1) {
+              int[] indexes = StaticAnalysis.getIndexesOfFreeVariable(body, args.get(0));
+              if (indexes.length == 1 && indexes[0] == 1) {
+                continue;
+              }
+            }
+          }
 
           ExpressionTree left = ExpressionTree.fromExpression(argExpression, argType, simplifier,
               typeDeclaration, constantsToIgnore, 0, maxDepth, maxAppliedArguments);

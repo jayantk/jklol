@@ -290,16 +290,16 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
           maxNumArgs);
     }
     
-    syntacticCategories = CcgParser.getSyntacticCategoryClosure(syntacticCategories);
+    syntacticCategories = CcgGrammarUtils.getSyntacticCategoryClosure(syntacticCategories);
 
     // Create features over ways to combine syntactic categories.
     // System.out.println("Building syntactic distribution...");
     DiscreteVariable syntaxType = new DiscreteVariable("syntacticCategories", syntacticCategories);
     DiscreteFactor binaryRuleDistribution = null;
     if (allowedCombinationRules == null) {
-      binaryRuleDistribution = CcgParser.buildUnrestrictedBinaryDistribution(syntaxType, binaryRules, allowComposition);
+      binaryRuleDistribution = CcgGrammarUtils.buildUnrestrictedBinaryDistribution(syntaxType, binaryRules, allowComposition);
     } else {
-      binaryRuleDistribution = CcgParser.buildRestrictedBinaryDistribution(syntaxType, allowedCombinationRules, binaryRules,
+      binaryRuleDistribution = CcgGrammarUtils.buildRestrictedBinaryDistribution(syntaxType, allowedCombinationRules, binaryRules,
           allowComposition);
     }
     VariableNumMap leftSyntaxVar = binaryRuleDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
@@ -309,14 +309,14 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         leftSyntaxVar, rightSyntaxVar, parentSyntaxVar, binaryRuleDistribution);
 
     // Create features over unary rules.
-    DiscreteFactor unaryRuleDistribution = CcgParser.buildUnaryRuleDistribution(unaryRules, syntaxType);
+    DiscreteFactor unaryRuleDistribution = CcgGrammarUtils.buildUnaryRuleDistribution(unaryRules, syntaxType);
     VariableNumMap unaryRuleInputVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_INPUT_VAR_NAME);
     VariableNumMap unaryRuleVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_VAR_NAME);
     ParametricFactor parametricUnaryRuleDistribution = featureFactory.getUnaryRuleFeatures(
         unaryRuleInputVar, unaryRuleVar, unaryRuleDistribution);
 
     // Build an indicator distribution over CCG parsing operations.
-    DiscreteFactor compiledSyntaxDistribution = CcgParser.compileUnaryAndBinaryRules(unaryRuleDistribution,
+    DiscreteFactor compiledSyntaxDistribution = CcgGrammarUtils.compileUnaryAndBinaryRules(unaryRuleDistribution,
         binaryRuleDistribution, syntaxType);
     VariableNumMap searchMoveVar = compiledSyntaxDistribution.getVars().getVariablesByName(
         CcgParser.PARENT_MOVE_SYNTAX_VAR_NAME);

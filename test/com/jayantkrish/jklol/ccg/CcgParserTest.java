@@ -1139,8 +1139,8 @@ public class CcgParserTest extends TestCase {
     }
 
     // Distribution over CCG combinators, i.e., binary combination rules.
-    DiscreteVariable syntaxType = new DiscreteVariable("syntacticCategories", CcgParser.getSyntacticCategoryClosure(syntacticCategories));
-    DiscreteFactor syntaxDistribution = CcgParser.buildUnrestrictedBinaryDistribution(syntaxType, binaryRules, allowComposition);
+    DiscreteVariable syntaxType = new DiscreteVariable("syntacticCategories", CcgGrammarUtils.getSyntacticCategoryClosure(syntacticCategories));
+    DiscreteFactor syntaxDistribution = CcgGrammarUtils.buildUnrestrictedBinaryDistribution(syntaxType, binaryRules, allowComposition);
     VariableNumMap leftSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
     VariableNumMap rightSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.RIGHT_SYNTAX_VAR_NAME);
     VariableNumMap inputSyntaxVars = leftSyntaxVar.union(rightSyntaxVar);
@@ -1180,12 +1180,12 @@ public class CcgParserTest extends TestCase {
     TableFactor dependencyFactor = dependencyFactorBuilder.buildSparseInLogSpace();
 
     // Distribution over unary rules.
-    DiscreteFactor unaryRuleDistribution = CcgParser.buildUnaryRuleDistribution(unaryRules,
+    DiscreteFactor unaryRuleDistribution = CcgGrammarUtils.buildUnaryRuleDistribution(unaryRules,
         leftSyntaxVar.getDiscreteVariables().get(0));
     VariableNumMap unaryRuleInputVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_INPUT_VAR_NAME);
     VariableNumMap unaryRuleVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_VAR_NAME);
 
-    DiscreteFactor compiledSyntaxDistribution = CcgParser.compileUnaryAndBinaryRules(unaryRuleDistribution,
+    DiscreteFactor compiledSyntaxDistribution = CcgGrammarUtils.compileUnaryAndBinaryRules(unaryRuleDistribution,
         syntaxDistribution, syntaxType);
     VariableNumMap searchMoveVar = compiledSyntaxDistribution.getVars().getVariablesByName(
         CcgParser.PARENT_MOVE_SYNTAX_VAR_NAME);

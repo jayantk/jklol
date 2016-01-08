@@ -80,6 +80,8 @@ public class CcgGrammarUtils {
 
     // XXX: jayantk 1/8/2016 I think this loop does exactly the same thing as 
     // the previous one.
+    /*
+    Set<HeadedSyntacticCategory> allCategories = Sets.newHashSet();
     for (HeadedSyntacticCategory cat : syntacticCategories) {
       Preconditions.checkArgument(cat.isCanonicalForm());
       allCategories.addAll(canonicalizeCategories(cat.getSubcategories(featureValues)));
@@ -90,6 +92,8 @@ public class CcgGrammarUtils {
         cat = cat.getReturnType();
       }
     }
+    */
+
     return allCategories;
   }
 

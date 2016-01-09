@@ -601,6 +601,8 @@ public class CcgParser implements Serializable {
     chart.setFilledDepAccumulator(new long[input.size()][MAX_CHART_DEPS]);
     chart.setUnfilledDepVarIndexAccumulator(new int[input.size()][MAX_CHART_VAR_INDEX]);
     chart.setUnfilledDepAccumulator(new long[input.size()][MAX_CHART_DEPS]);
+    chart.setDepLongCache(new long[input.size()]);
+    chart.setDepProbCache(new double[input.size()]);
 
     initializeChartDistributions(chart);
   }
@@ -618,7 +620,7 @@ public class CcgParser implements Serializable {
     // sparsifyDependencyDistribution(chart);
   }
 
-  private void initializeChartTerminals(CcgChart chart, AnnotatedSentence sentence) {
+  public void initializeChartTerminals(CcgChart chart, AnnotatedSentence sentence) {
     for (int k = 0; k < lexicons.size(); k++) {
       CcgLexicon lexicon = lexicons.get(k);
       lexicon.initializeChart(chart, sentence, this, k);
@@ -1001,8 +1003,7 @@ public class CcgParser implements Serializable {
     chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);
   }
 
-  
-  public void applyBinary(CcgChart chart,
+  public final void applyBinary(CcgChart chart,
       int leftSpanStart, int leftSpanEnd, int leftIndex, ChartEntry leftRoot, double leftProb,
       int rightSpanStart, int rightSpanEnd, int rightIndex, ChartEntry rightRoot, double rightProb,
       CcgSearchMove searchMove, double ruleProb) {
@@ -1237,14 +1238,14 @@ public class CcgParser implements Serializable {
     // Get the weights of the generated dependencies.
     double depProb = 1.0;
     double curDepProb = 1.0;
-    long depCache = -1;
-    double depProbCache = 0.0;
+    long[] depLongCache = chart.getDepLongCache();
+    double[] depProbCache = chart.getDepProbCache();
     int filledDepArrayLength = filledDepArray.length;
     for (int depIndex = 0; depIndex < filledDepArrayLength; depIndex++) {
       // The contents of this loop takes ~1/3 of all parsing time.
       long depLong = filledDepArray[depIndex];
-      if (depLong == depCache) {
-        depProb *= depProbCache;
+      if (depLong == depLongCache[leftSpanStart]) {
+        depProb *= depProbCache[leftSpanStart];
         continue;
       }
 
@@ -1294,8 +1295,8 @@ public class CcgParser implements Serializable {
 
       depProb *= curDepProb;
 
-      depCache = depLong;
-      depProbCache = curDepProb;
+      depLongCache[leftSpanStart] = depLong;
+      depProbCache[leftSpanStart] = curDepProb;
     }
     // log.stopTimer("ccg_parse/beam_loop/dependencies");
 

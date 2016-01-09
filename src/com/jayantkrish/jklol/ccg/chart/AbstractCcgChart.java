@@ -55,6 +55,8 @@ public abstract class AbstractCcgChart implements CcgChart {
   private long[][] filledDepAccumulator;
   private int[][] unfilledDepVarIndexAccumulator;
   private long[][] unfilledDepAccumulator;
+  private long[] depLongCache;
+  private double[] depProbCache;
 
   private boolean finishedParsing;
 
@@ -96,161 +98,181 @@ public abstract class AbstractCcgChart implements CcgChart {
   }
 
   @Override
-  public void setPosTagsInt(int[] posTagsInt) {
+  public final void setPosTagsInt(int[] posTagsInt) {
     Preconditions.checkArgument(posTagsInt.length == size());
     this.posTagsInt = posTagsInt;
   }
 
   @Override
-  public void setWordDistances(int[] wordDistances) {
+  public final void setWordDistances(int[] wordDistances) {
     Preconditions.checkArgument(wordDistances.length == size() * size());
     this.wordDistances = wordDistances;
   }
 
   @Override
-  public void setPuncDistances(int[] puncDistances) {
+  public final void setPuncDistances(int[] puncDistances) {
     Preconditions.checkArgument(puncDistances.length == size() * size());
     this.puncDistances = puncDistances;
   }
 
   @Override
-  public void setVerbDistances(int[] verbDistances) {
+  public final void setVerbDistances(int[] verbDistances) {
     Preconditions.checkArgument(verbDistances.length == size() * size());
     this.verbDistances = verbDistances;
   }
 
   @Override
-  public void setChartCost(ChartCost entryFilter) {
+  public final void setChartCost(ChartCost entryFilter) {
     this.entryFilter = entryFilter;
   }
 
   @Override
-  public int[] getPosTagsInt() {
+  public final int[] getPosTagsInt() {
     return posTagsInt;
   }
 
   @Override
-  public int[] getWordDistances() {
+  public final int[] getWordDistances() {
     return wordDistances;
   }
 
   @Override
-  public int[] getPunctuationDistances() {
+  public final int[] getPunctuationDistances() {
     return puncDistances;
   }
 
   @Override
-  public int[] getVerbDistances() {
+  public final int[] getVerbDistances() {
     return verbDistances;
   }
 
   @Override
-  public void setDependencyTensor(Tensor tensor) {
+  public final void setDependencyTensor(Tensor tensor) {
     this.dependencyTensor = tensor;
   }
 
   @Override
-  public void setWordDistanceTensor(Tensor tensor) {
+  public final void setWordDistanceTensor(Tensor tensor) {
     this.wordDistanceTensor = tensor;
   }
 
   @Override
-  public void setPuncDistanceTensor(Tensor tensor) {
+  public final void setPuncDistanceTensor(Tensor tensor) {
     this.puncDistanceTensor = tensor;
   }
 
   @Override
-  public void setVerbDistanceTensor(Tensor tensor) {
+  public final void setVerbDistanceTensor(Tensor tensor) {
     this.verbDistanceTensor = tensor;
   }
 
   @Override
-  public void setSyntaxDistribution(DiscreteFactor syntaxDistribution) {
+  public final void setSyntaxDistribution(DiscreteFactor syntaxDistribution) {
     this.syntaxDistribution = syntaxDistribution;
   }
 
   @Override
-  public void setAssignmentVarIndexAccumulator(int[][] assignmentVarIndexAccumulator) {
+  public final void setAssignmentVarIndexAccumulator(int[][] assignmentVarIndexAccumulator) {
     this.assignmentVarIndexAccumulator = assignmentVarIndexAccumulator;
   }
 
   @Override
-  public void setAssignmentAccumulator(long[][] assignmentAccumulator) {
+  public final void setAssignmentAccumulator(long[][] assignmentAccumulator) {
     this.assignmentAccumulator = assignmentAccumulator;
   }
 
   @Override
-  public void setFilledDepAccumulator(long[][] filledDepAccumulator) {
+  public final void setFilledDepAccumulator(long[][] filledDepAccumulator) {
     this.filledDepAccumulator = filledDepAccumulator;
   }
 
   @Override
-  public void setUnfilledDepVarIndexAccumulator(int[][] unfilledDepVarIndexAccumulator) {
+  public final void setUnfilledDepVarIndexAccumulator(int[][] unfilledDepVarIndexAccumulator) {
     this.unfilledDepVarIndexAccumulator = unfilledDepVarIndexAccumulator;
   }
 
   @Override
-  public void setUnfilledDepAccumulator(long[][] unfilledDepAccumulator) {
+  public final void setUnfilledDepAccumulator(long[][] unfilledDepAccumulator) {
     this.unfilledDepAccumulator = unfilledDepAccumulator;
+  }
+  
+  @Override 
+  public void setDepLongCache(long[] depCache) {
+    this.depLongCache = depCache;
+  }
+  
+  @Override
+  public void setDepProbCache(double[] depProb) {
+    this.depProbCache = depProb;
   }
 
   @Override
-  public Tensor getDependencyTensor() {
+  public final Tensor getDependencyTensor() {
     return dependencyTensor;
   }
 
   @Override
-  public Tensor getWordDistanceTensor() {
+  public final Tensor getWordDistanceTensor() {
     return wordDistanceTensor;
   }
 
   @Override
-  public Tensor getPuncDistanceTensor() {
+  public final Tensor getPuncDistanceTensor() {
     return puncDistanceTensor;
   }
 
   @Override
-  public Tensor getVerbDistanceTensor() {
+  public final Tensor getVerbDistanceTensor() {
     return verbDistanceTensor;
   }
 
   @Override
-  public DiscreteFactor getSyntaxDistribution() {
+  public final DiscreteFactor getSyntaxDistribution() {
     return syntaxDistribution;
   }
 
   @Override
-  public int[][] getAssignmentVarIndexAccumulator() {
+  public final int[][] getAssignmentVarIndexAccumulator() {
     return assignmentVarIndexAccumulator;
   }
   
   @Override
-  public long[][] getAssignmentAccumulator() {
+  public final long[][] getAssignmentAccumulator() {
     return assignmentAccumulator;
   }
   
   @Override
-  public long[][] getFilledDepAccumulator() {
+  public final long[][] getFilledDepAccumulator() {
     return filledDepAccumulator;
   }
   
   @Override
-  public int[][] getUnfilledDepVarIndexAccumulator() {
+  public final int[][] getUnfilledDepVarIndexAccumulator() {
     return unfilledDepVarIndexAccumulator;
   }
   
   @Override
-  public long[][] getUnfilledDepAccumulator() {
+  public final long[][] getUnfilledDepAccumulator() {
     return unfilledDepAccumulator;
+  }
+  
+  @Override
+  public long[] getDepLongCache() {
+    return depLongCache;
+  }
+  
+  @Override
+  public double[] getDepProbCache() {
+    return depProbCache;
   }
 
   @Override
-  public boolean isFinishedParsing() {
+  public final boolean isFinishedParsing() {
     return finishedParsing;
   }
 
   @Override
-  public void setFinishedParsing(boolean finished) {
+  public final void setFinishedParsing(boolean finished) {
     this.finishedParsing = finished;
   }
 

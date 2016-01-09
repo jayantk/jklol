@@ -104,6 +104,10 @@ public interface CcgChart {
   public void setUnfilledDepVarIndexAccumulator(int[][] unfilledDepVarIndexAccumulator);
   
   public void setUnfilledDepAccumulator(long[][] unfilledDepAccumulator);
+  
+  public void setDepLongCache(long[] depCache);
+  
+  public void setDepProbCache(double[] depProb);
 
   /**
    * Gets the subset of all parser weights which may be used in this
@@ -130,6 +134,10 @@ public interface CcgChart {
   public int[][] getUnfilledDepVarIndexAccumulator();
   
   public long[][] getUnfilledDepAccumulator();
+  
+  public long[] getDepLongCache();
+  
+  public double[] getDepProbCache();
 
   /**
    * Gets the chart entries spanning the words {@code spanStart}-

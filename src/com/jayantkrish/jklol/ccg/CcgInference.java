@@ -1,9 +1,8 @@
 package com.jayantkrish.jklol.ccg;
 
-import java.util.Set;
+import java.util.List;
 
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
-import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
 
@@ -28,22 +27,16 @@ public interface CcgInference {
    */
   public CcgParse getBestParse(CcgParser parser, AnnotatedSentence sentence,
       ChartCost chartFilter, LogFunction log);
-
+  
   /**
-   * Finds the best parse of a supertagged {@code sentence},
-   * conditioned on observing any of the true syntactic tree,
-   * set of dependencies, and correct logical form for the sentence.
-   * 
+   * Finds a list of the (approximate) best parses for {@code sentence}.
+   *   
    * @param parser
    * @param sentence
    * @param chartFilter
    * @param log
-   * @param observedSyntacticTree
-   * @param observedDependencies
-   * @param observedLogicalForm
    * @return
    */
-  public CcgParse getBestConditionalParse(CcgParser parser, AnnotatedSentence sentence,
-      ChartCost chartFilter, LogFunction log, CcgSyntaxTree observedSyntacticTree,
-      Set<DependencyStructure> observedDependencies, Expression2 observedLogicalForm);
+  public List<CcgParse> beamSearch(CcgParser parser, AnnotatedSentence sentence,
+      ChartCost chartFilter, LogFunction log);
 }

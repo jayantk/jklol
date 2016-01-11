@@ -14,8 +14,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
-import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
-import com.jayantkrish.jklol.ccg.CcgExactInference;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
@@ -93,7 +92,6 @@ public class TestSyntacticCcgParser extends AbstractCli {
     atomic = parser.accepts("atomic", "Only print parses whose root category is atomic (i.e., non-functional).");
     pos = parser.accepts("pos", "Treat input as POS-tagged text, in the format word/POS.");
     printLf = parser.accepts("printLf", "Print logical forms for the generated parses.");
-    exactInference = parser.accepts("exactInference");
 
     testFile = parser.accepts("test", "If provided, running this program computes test error using " +
     		"the given file. Otherwise, this program parses a string provided on the command line. " +
@@ -117,13 +115,8 @@ public class TestSyntacticCcgParser extends AbstractCli {
 
     // Configure inference options
     CcgInference inferenceAlgorithm = null;
-    if (options.has(exactInference)) {
-      inferenceAlgorithm = new CcgExactInference(null, options.valueOf(maxParseTimeMillis),
-          options.valueOf(maxChartSize), options.valueOf(parserThreads));
-    } else {
-      inferenceAlgorithm = new CcgBeamSearchInference(null, null, options.valueOf(beamSize),
-          options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize), options.valueOf(parserThreads), true);
-    }
+    inferenceAlgorithm = new CcgCkyInference(null, options.valueOf(beamSize),
+        options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize), options.valueOf(parserThreads));
     
     if (options.has(testFile)) {
       // Parse all test examples.

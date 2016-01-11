@@ -11,16 +11,15 @@ import com.jayantkrish.jklol.util.HeapUtils;
 import com.jayantkrish.jklol.util.IntMultimap;
 
 public class CcgLeftToRightInference {
-
-  private final CcgParser parser;
+  
   private final int beamSize;
   
-  public CcgLeftToRightInference(CcgParser parser, int beamSize) {
-    this.parser = parser;
+  
+  public CcgLeftToRightInference(int beamSize) {
     this.beamSize = beamSize;
   }
 
-  public List<CcgParse> parse(AnnotatedSentence input) {
+  public List<CcgParse> parse(CcgParser parser, AnnotatedSentence input) {
     ChartCost filter = null;
 
     CcgLeftToRightChart chart = new CcgLeftToRightChart(input, Integer.MAX_VALUE);
@@ -87,19 +86,18 @@ public class CcgLeftToRightInference {
           Stack prev = stack.previous;
 
           ChartEntry[] prevEntryArray = chart.getChartEntriesForSpan(prev.spanStart, prev.spanEnd);
-          double[] prevEntryProbArray= chart.getChartEntryProbsForSpan(prev.spanStart, prev.spanEnd);
+          double[] prevEntryProbArray = chart.getChartEntryProbsForSpan(prev.spanStart, prev.spanEnd);
           IntMultimap prevTypes = IntMultimap.createFromUnsortedArrays(
               new int[] {prev.entry.getHeadedSyntax()}, new int[] {prev.chartEntryIndex}, 0);
           
           ChartEntry[] stackEntryArray = chart.getChartEntriesForSpan(stack.spanStart, stack.spanEnd);
-          double[] stackEntryProbArray= chart.getChartEntryProbsForSpan(stack.spanStart, stack.spanEnd);
+          double[] stackEntryProbArray = chart.getChartEntryProbsForSpan(stack.spanStart, stack.spanEnd);
           IntMultimap stackTypes = IntMultimap.createFromUnsortedArrays(
               new int[] {stack.entry.getHeadedSyntax()}, new int[] {stack.chartEntryIndex}, 0);
           
           int startNumEntries = chart.getNumChartEntriesForSpan(prev.spanStart, stack.spanEnd);
           parser.applySearchMoves(chart, prev.spanStart, prev.spanEnd, stack.spanStart, stack.spanEnd,
               prevEntryArray, prevEntryProbArray, prevTypes, stackEntryArray, stackEntryProbArray, stackTypes);
-          
           int endNumEntries = chart.getNumChartEntriesForSpan(prev.spanStart, stack.spanEnd);
 
           ChartEntry[] chartEntries = chart.getChartEntriesForSpan(prev.spanStart, stack.spanEnd);

@@ -6,7 +6,7 @@ import java.util.Set;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
@@ -40,13 +40,13 @@ public class VotingLexiconInduction {
   private final double l2Regularization;
   private final double initialStepSize;
 
-  private final CcgBeamSearchInference inference;
+  private final CcgCkyInference inference;
   private final ExpressionComparator comparator;
   
   private final VotingStrategy voter;
 
   public VotingLexiconInduction(int iterations, double l2Regularization, double initialStepSize,
-      CcgBeamSearchInference inference, ExpressionComparator comparator,
+      CcgCkyInference inference, ExpressionComparator comparator,
       VotingStrategy voter) {
     this.iterations = iterations;
     this.l2Regularization = l2Regularization;
@@ -149,7 +149,7 @@ public class VotingLexiconInduction {
   
   private static Set<LexiconEntry> genEntries(CcgExample example,
       SufficientStatistics currentParameters, Collection<LexiconEntry> currentLexicon,
-      Genlex genlex, LexiconInductionCcgParserFactory factory, CcgBeamSearchInference inference,
+      Genlex genlex, LexiconInductionCcgParserFactory factory, CcgCkyInference inference,
       ExpressionComparator comparator) {
 
     Set<LexiconEntry> exampleLexicon = Sets.newHashSet(currentLexicon);
@@ -287,12 +287,12 @@ public class VotingLexiconInduction {
     private final Set<LexiconEntry> currentLexicon;
     private final Genlex genlex;
     private final LexiconInductionCcgParserFactory factory;
-    private final CcgBeamSearchInference inference;
+    private final CcgCkyInference inference;
     private final ExpressionComparator comparator;
 
     public GenEntriesMapper(SufficientStatistics currentParameters,
         Set<LexiconEntry> currentLexicon, Genlex genlex, LexiconInductionCcgParserFactory factory,
-        CcgBeamSearchInference inference, ExpressionComparator comparator) {
+        CcgCkyInference inference, ExpressionComparator comparator) {
       super();
       this.currentParameters = currentParameters;
       this.currentLexicon = currentLexicon;

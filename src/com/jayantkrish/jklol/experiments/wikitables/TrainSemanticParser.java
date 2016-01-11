@@ -10,7 +10,7 @@ import joptsimple.OptionSpec;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
@@ -116,8 +116,8 @@ public class TrainSemanticParser extends AbstractCli {
         simplifier, comparator);
     
     int beamSize = 1000;
-    CcgBeamSearchInference inference = new CcgBeamSearchInference(null, comparator, beamSize, 1000,
-        Integer.MAX_VALUE, 1, false);
+    CcgCkyInference inference = new CcgCkyInference(null, beamSize, 1000,
+        Integer.MAX_VALUE, 1);
     GradientOracle<CcgParser, CcgExample> oracle = new CcgLoglikelihoodOracle(family,
         comparator, inference);
 

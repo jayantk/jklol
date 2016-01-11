@@ -1,8 +1,12 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.util.List;
+
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
+import com.jayantkrish.jklol.ccg.chart.SumChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -11,13 +15,29 @@ import com.jayantkrish.jklol.training.LogFunction;
 public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample> {
 
   private final ParametricCcgParser family;
+  
+  // Function for comparing the equality of logical forms.
+  private final ExpressionComparator comparator;
+
   private final CcgInference inferenceAlgorithm;
 
   private final double marginCost;
 
-  public CcgPerceptronOracle(ParametricCcgParser family, CcgInference inferenceAlgorithm,
-      double marginCost) {
+  /**
+   * Create a gradient oracle for training a CCG with either 
+   * a max-margin or perceptron objective.
+   * 
+   * @param family the family of CCG parsers 
+   * @param comparator function for comparing equality of logical
+   * forms. May be {@code null} if logical forms will not be used
+   * for training.
+   * @param inferenceAlgorithm
+   * @param marginCost
+   */
+  public CcgPerceptronOracle(ParametricCcgParser family, ExpressionComparator comparator,
+      CcgInference inferenceAlgorithm, double marginCost) {
     this.family = Preconditions.checkNotNull(family);
+    this.comparator = comparator;
     this.inferenceAlgorithm = Preconditions.checkNotNull(inferenceAlgorithm);
 
     this.marginCost = marginCost;
@@ -59,9 +79,8 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     // Calculate the best conditional parse, i.e., the highest weight parse
     // with the correct syntactic tree and set of semantic dependencies.
     log.startTimer("update_gradient/conditional_max_marginal");
-    CcgParse bestCorrectParse = inferenceAlgorithm.getBestConditionalParse(instantiatedParser,
-        example.getSentence(), null, log, example.getSyntacticParse(),
-        example.getDependencies(), example.getLogicalForm());
+    CcgParse bestCorrectParse = getBestConditionalParse(inferenceAlgorithm, instantiatedParser, comparator,
+        example, log);
     if (bestCorrectParse == null) {
       // Search error: couldn't find any correct parses.
       System.out.println("Search error (Correct): " + example.getSentence() + " " + example.getLogicalForm());
@@ -89,5 +108,37 @@ public class CcgPerceptronOracle implements GradientOracle<CcgParser, CcgExample
     // true parse. (Negate this value, because this is a maximization problem)
     return Math.min(0.0, Math.log(bestCorrectParse.getSubtreeProbability())
         - Math.log(bestPredictedParse.getSubtreeProbability()));
+  }
+  
+  public static CcgParse getBestConditionalParse(CcgInference inference, CcgParser parser,
+      ExpressionComparator comparator, CcgExample example, LogFunction log) {
+    
+    ChartCost syntacticCost = null;
+    if (example.hasSyntacticParse()) {
+      syntacticCost = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
+    }
+    ChartCost cost = SumChartCost.create(syntacticCost);
+    
+    if (example.hasDependencies() || example.hasLogicalForm()) {
+      // Have to use approximate inference. 
+      List<CcgParse> possibleParses = inference.beamSearch(parser, example.getSentence(), cost, log);
+      if (example.hasDependencies()) {
+        possibleParses = CcgLoglikelihoodOracle.filterParsesByDependencies(example.getDependencies(),
+            possibleParses);
+      }
+
+      if (example.hasLogicalForm()) {
+        possibleParses = CcgLoglikelihoodOracle.filterParsesByLogicalForm(example.getLogicalForm(),
+            comparator, possibleParses);
+      }
+
+      if (possibleParses.size() > 0) {
+        return possibleParses.get(0);
+      } else {
+        return null;
+      }
+    } else {
+      return inference.getBestParse(parser, example.getSentence(), cost, log);
+    }
   }
 }

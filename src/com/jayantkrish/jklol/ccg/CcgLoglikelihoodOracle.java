@@ -31,7 +31,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
   // Function for comparing the equality of logical forms.
   private final ExpressionComparator comparator;
   
-  private final CcgBeamSearchInference inference;
+  private final CcgInference inference;
 
   /**
    * 
@@ -41,10 +41,10 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
    * @param inference
    */
   public CcgLoglikelihoodOracle(ParametricCcgParser family, ExpressionComparator comparator, 
-      CcgBeamSearchInference inference) {
+      CcgInference inference) {
     this.family = Preconditions.checkNotNull(family);
     this.comparator = comparator;
-    this.inference = inference;
+    this.inference = Preconditions.checkNotNull(inference);
   }
 
   @Override
@@ -81,11 +81,10 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     // Condition parses on provided syntactic / lexicon information,
     // if any is provided.
     ChartCost syntacticCost = null;
-    ChartCost lexiconCost = null;
     if (example.hasSyntacticParse()) {
       syntacticCost = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
     }
-    ChartCost cost = SumChartCost.create(syntacticCost, lexiconCost);
+    ChartCost cost = SumChartCost.create(syntacticCost);
 
     List<CcgParse> possibleParses = null;
     if (cost != null) {
@@ -135,6 +134,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
 
   public static List<CcgParse> filterParsesByDependencies(Set<DependencyStructure> observedDependencies,
       Iterable<CcgParse> parses) {
+    Preconditions.checkNotNull(observedDependencies);
     List<CcgParse> correctParses = Lists.newArrayList();
     
     for (CcgParse parse : parses) {
@@ -147,6 +147,8 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
   
   public static List<CcgParse> filterParsesByLogicalForm(Expression2 observedLogicalForm,
     ExpressionComparator comparator, Iterable<CcgParse> parses) {
+    Preconditions.checkNotNull(observedLogicalForm);
+
     List<CcgParse> correctParses = Lists.newArrayList();
     for (CcgParse parse : parses) {
       Expression2 predictedLogicalForm = parse.getLogicalForm();

@@ -8,7 +8,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
-import com.jayantkrish.jklol.ccg.CcgExactInference;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
@@ -56,7 +56,7 @@ public class RunSemanticParser extends AbstractCli {
     EvalResult result = eval.eval(program, env, fgBuilder);
 
     CcgParser parser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);
-    CcgInference inferenceAlg = new CcgExactInference(null, -1L, Integer.MAX_VALUE, 1);
+    CcgInference inferenceAlg = CcgCkyInference.getDefault(100);
     ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
         <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
             new VariableCanonicalizationReplacementRule()));

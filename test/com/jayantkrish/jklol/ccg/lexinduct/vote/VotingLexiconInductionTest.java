@@ -9,7 +9,7 @@ import junit.framework.TestCase;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgBinaryRule;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgParser;
@@ -157,7 +157,7 @@ public class VotingLexiconInductionTest extends TestCase {
     System.out.println(initialLexicon);
 
     VotingLexiconInduction ind = new VotingLexiconInduction(10, 0.1, 1,
-        CcgBeamSearchInference.getDefault(1000), comparator, new MaxVote(extractor));
+        CcgCkyInference.getDefault(1000), comparator, new MaxVote(extractor));
 
     ParserInfo info = ind.train(factory, genlex, initialLexicon, examples, new DefaultLogFunction(1, false));
     CcgParser parser = info.getParser();

@@ -8,9 +8,8 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.ccg.CcgExactInference;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
-import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
@@ -47,7 +46,7 @@ public class TestSemanticParser extends AbstractCli {
     System.out.println("Read " + testExamples.size() + " test examples");
 
     CcgParser parser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);
-    CcgInference inferenceAlg = new CcgExactInference(null, -1L, Integer.MAX_VALUE, 1);
+    CcgCkyInference inferenceAlg = CcgCkyInference.getDefault(300);
     ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
         <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
             new VariableCanonicalizationReplacementRule(),

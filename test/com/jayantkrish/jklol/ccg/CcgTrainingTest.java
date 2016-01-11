@@ -249,39 +249,29 @@ public class CcgTrainingTest extends TestCase {
   }
 
   public void testTrainPerceptronLogicalFormOnly() {
-    CcgParser parser = trainPerceptronParser(family, trainingExamplesLfOnly, false, false);
+    CcgParser parser = trainPerceptronParser(family, trainingExamplesLfOnly, false);
     assertZeroDependencyError(parser, trainingExamples);
   }
 
   public void testTrainPerceptronWithSyntax() {
-    CcgParser parser = trainPerceptronParser(family, trainingExamplesWithSyntax, false, false);
+    CcgParser parser = trainPerceptronParser(family, trainingExamplesWithSyntax, false);
     assertZeroDependencyError(parser, trainingExamplesWithSyntax);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainPerceptronSyntaxOnly() {
-    CcgParser parser = trainPerceptronParser(family, trainingExamplesSyntaxOnly, false, false);
-    assertTrainedParserUsesSyntax(parser);
-  }
-
-  public void testTrainPerceptronSyntaxOnlyExactInference() {
-    CcgParser parser = trainPerceptronParser(family, trainingExamplesSyntaxOnly, true, false);
+    CcgParser parser = trainPerceptronParser(family, trainingExamplesSyntaxOnly, false);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainMaxMarginWithSyntax() {
-    CcgParser parser = trainPerceptronParser(family, trainingExamplesWithSyntax, false, true);
+    CcgParser parser = trainPerceptronParser(family, trainingExamplesWithSyntax, true);
     assertZeroDependencyError(parser, trainingExamplesWithSyntax);
     assertTrainedParserUsesSyntax(parser);
   }
 
   public void testTrainMaxMarginSyntaxOnly() {
-    CcgParser parser = trainPerceptronParser(family, trainingExamplesSyntaxOnly, false, true);
-    assertTrainedParserUsesSyntax(parser);
-  }
-
-  public void testTrainMaxMarginSyntaxOnlyExactInference() {
-    CcgParser parser = trainPerceptronParser(family, trainingExamplesSyntaxOnly, true, true);
+    CcgParser parser = trainPerceptronParser(family, trainingExamplesSyntaxOnly, true);
     assertTrainedParserUsesSyntax(parser);
   }
 
@@ -300,7 +290,7 @@ public class CcgTrainingTest extends TestCase {
   private CcgParser trainLoglikelihoodParser(ParametricCcgParser family, List<CcgExample> examples) {
     ExpressionComparator comparator = new SimplificationComparator(getExpressionSimplifier());
     CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family,
-        comparator, new CcgBeamSearchInference(null, comparator, 100, -1, Integer.MAX_VALUE, 1, false));
+        comparator, new CcgCkyInference(null, 100, -1, Integer.MAX_VALUE, 1));
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10, 1, 1,
         true, false, 0.1, new DefaultLogFunction());
 
@@ -310,16 +300,12 @@ public class CcgTrainingTest extends TestCase {
   }
 
   private CcgParser trainPerceptronParser(ParametricCcgParser family,
-      List<CcgExample> examples, boolean exactInference, boolean maxMargin) {
-    CcgInference inferenceAlg = null;
-    if (exactInference) {
-      inferenceAlg = new CcgExactInference(null, -1, Integer.MAX_VALUE, 1);
-    } else {
-      ExpressionComparator comparator = new SimplificationComparator(getExpressionSimplifier());
-      inferenceAlg = new CcgBeamSearchInference(null, comparator, 100, -1, Integer.MAX_VALUE, 1, true);
-    }
-    CcgPerceptronOracle oracle = new CcgPerceptronOracle(
-        family, inferenceAlg, maxMargin ? 1.0 : 0.0);
+      List<CcgExample> examples, boolean maxMargin) {
+    CcgInference inferenceAlg = new CcgCkyInference(null, 100, -1, Integer.MAX_VALUE, 1);
+    ExpressionComparator comparator = new SimplificationComparator(getExpressionSimplifier());
+    
+    CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, comparator,
+        inferenceAlg, maxMargin ? 1.0 : 0.0);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(100,
         1, 1, false, true, 0.0, new DefaultLogFunction());
 

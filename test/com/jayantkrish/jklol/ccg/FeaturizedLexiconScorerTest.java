@@ -91,9 +91,9 @@ public class FeaturizedLexiconScorerTest extends TestCase {
 
   public void testTraining() {
     ExpressionComparator comparator = new SimplificationComparator(ExpressionSimplifier.lambdaCalculus());
-    CcgInference inferenceAlg = new CcgBeamSearchInference(null, comparator, 100, -1, Integer.MAX_VALUE, 1, true);
-    
-    CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, inferenceAlg, 0.0);
+    CcgInference inferenceAlg = CcgCkyInference.getDefault(100);
+
+    CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, comparator, inferenceAlg, 0.0);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10,
         1, 1, false, true, 0.0, new DefaultLogFunction());
 

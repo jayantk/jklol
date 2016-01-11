@@ -14,8 +14,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
-import com.jayantkrish.jklol.ccg.CcgExactInference;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgInference;
@@ -117,7 +116,6 @@ public class TrainSyntacticCcgParser extends AbstractCli {
     maxMargin = parser.accepts("maxMargin").withRequiredArg().ofType(Double.class);
     ignoreSemantics = parser.accepts("ignoreSemantics");
     onlyObservedBinaryRules = parser.accepts("onlyObservedBinaryRules");
-    exactInference = parser.accepts("exactInference");
   }
 
   @Override
@@ -172,25 +170,18 @@ public class TrainSyntacticCcgParser extends AbstractCli {
       IoUtils.serializeObjectToFile(family, options.valueOf(logParametersDir) + File.separator + "family.ser");
     }
 
-    // Figure out what inference algorithm to use. Note that not
-    // all inference algorithms are compatible with all training
-    // methods.
-    CcgInference inferenceAlgorithm = null;
-    if (options.has(exactInference)) {
-      inferenceAlgorithm = new CcgExactInference(null, options.valueOf(maxParseTimeMillis),
-          options.valueOf(maxChartSize), options.valueOf(parserThreads));
-    } else {
-      inferenceAlgorithm = new CcgBeamSearchInference(null, null, options.valueOf(beamSize),
-          options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize), options.valueOf(parserThreads), true);
-    }
+    // Configure the inference algorithm.
+    CcgInference inferenceAlgorithm = new CcgCkyInference(null, options.valueOf(beamSize),
+          options.valueOf(maxParseTimeMillis), options.valueOf(maxChartSize),
+          options.valueOf(parserThreads));
 
     // Train the model.
     GradientOracle<CcgParser, CcgExample> oracle = null;
     ExpressionComparator comparator = new SimplificationComparator(ExpressionSimplifier.lambdaCalculus());
     if (options.has(maxMargin)) {
-      oracle = new CcgPerceptronOracle(family, inferenceAlgorithm, options.valueOf(maxMargin));
+      oracle = new CcgPerceptronOracle(family, comparator, inferenceAlgorithm, options.valueOf(maxMargin));
     } else {
-      oracle = new CcgLoglikelihoodOracle(family, comparator, (CcgBeamSearchInference) inferenceAlgorithm);
+      oracle = new CcgLoglikelihoodOracle(family, comparator, inferenceAlgorithm);
     }
     GradientOptimizer trainer = createGradientOptimizer(trainingExamples.size());
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),

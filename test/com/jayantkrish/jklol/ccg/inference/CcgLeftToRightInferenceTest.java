@@ -11,8 +11,7 @@ public class CcgLeftToRightInferenceTest extends CcgParserTest {
 
   @Override
   public List<CcgParse> beamSearch(CcgParser parser, List<String> words, List<String> posTags, int beamSize) {
-    CcgLeftToRightInference inference = new CcgLeftToRightInference(parser, beamSize);
-    
-    return inference.parse(new AnnotatedSentence(words, posTags));
+    CcgLeftToRightInference inference = new CcgLeftToRightInference(beamSize);
+    return inference.parse(parser, new AnnotatedSentence(words, posTags));
   }
 }

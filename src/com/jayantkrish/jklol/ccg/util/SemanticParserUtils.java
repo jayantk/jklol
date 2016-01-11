@@ -3,8 +3,9 @@ package com.jayantkrish.jklol.ccg.util;
 import java.util.Collections;
 import java.util.List;
 
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
-import com.jayantkrish.jklol.ccg.CcgInference;
+import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
@@ -34,7 +35,7 @@ public class SemanticParserUtils {
    * @return
    */
   public static SemanticParserLoss testSemanticParser(List<CcgExample> testExamples, CcgParser parser,
-      CcgInference inferenceAlg, ExpressionSimplifier simplifier, ExpressionComparator comparator,
+      CcgCkyInference inferenceAlg, ExpressionSimplifier simplifier, ExpressionComparator comparator,
       List<SemanticParserExampleLoss> exampleLossAccumulator, boolean print) {
     int numCorrect = 0;
     int numCorrectLfPossible = 0;
@@ -61,13 +62,14 @@ public class SemanticParserUtils {
           // Make lf print out as null.
           lf = Expression2.constant("null");
         }
-        
-        CcgParse conditionalParse = inferenceAlg.getBestConditionalParse(parser,
-            example.getSentence(), null, log, null, null, correctLf);
-        if (conditionalParse != null) {
+
+        List<CcgParse> parses = inferenceAlg.beamSearch(parser, example.getSentence(), null, log);
+        List<CcgParse> conditionalParses = CcgLoglikelihoodOracle.filterParsesByLogicalForm(
+            correctLf, comparator, parses);
+        if (conditionalParses.size() > 0) {
           correctLfPossible = 1;
         }
-        
+
         List<DependencyStructure> deps = parse.getAllDependencies();
         List<LexiconEntryInfo> entries = parse.getSpannedLexiconEntries();
 

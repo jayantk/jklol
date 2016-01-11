@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.inference;
+package com.jayantkrish.jklol.ccg.chart;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -8,8 +8,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.chart.AbstractCcgChart;
-import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.HeapUtils;

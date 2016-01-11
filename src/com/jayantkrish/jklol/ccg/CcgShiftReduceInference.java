@@ -1,32 +1,48 @@
-package com.jayantkrish.jklol.ccg.inference;
+package com.jayantkrish.jklol.ccg;
 
 import java.util.List;
 
-import com.jayantkrish.jklol.ccg.CcgParse;
-import com.jayantkrish.jklol.ccg.CcgParser;
+import com.jayantkrish.jklol.ccg.chart.CcgLeftToRightChart;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.util.HeapUtils;
 import com.jayantkrish.jklol.util.IntMultimap;
 
-public class CcgLeftToRightInference {
+/**
+ * Shift-reduce CCG parsing algorithm.
+ * 
+ * @author jayantk
+ */
+public class CcgShiftReduceInference implements CcgInference {
   
   private final int beamSize;
   
-  
-  public CcgLeftToRightInference(int beamSize) {
+  public CcgShiftReduceInference(int beamSize) {
     this.beamSize = beamSize;
   }
+  
+  @Override
+  public CcgParse getBestParse(CcgParser parser, AnnotatedSentence sentence,
+      ChartCost chartFilter, LogFunction log) {
+    List<CcgParse> parses = beamSearch(parser, sentence, chartFilter, log);
 
-  public List<CcgParse> parse(CcgParser parser, AnnotatedSentence input) {
-    ChartCost filter = null;
+    if (parses.size() > 0) {
+      return parses.get(0);
+    } else {
+      return null;
+    }
+  }
 
-    CcgLeftToRightChart chart = new CcgLeftToRightChart(input, Integer.MAX_VALUE);
-    parser.initializeChart(chart, input, filter);
-    parser.initializeChartTerminals(chart, input);
+  @Override
+  public List<CcgParse> beamSearch(CcgParser parser, AnnotatedSentence sentence,
+      ChartCost chartFilter, LogFunction log) {
+    CcgLeftToRightChart chart = new CcgLeftToRightChart(sentence, Integer.MAX_VALUE);
+    parser.initializeChart(chart, sentence, chartFilter);
+    parser.initializeChartTerminals(chart, sentence);
     
-    int inputLength = input.getWords().size();
+    int inputLength = sentence.getWords().size();
 
     // Working heap for queuing parses to process next.
     double[] heapValues = new double[beamSize + 1];

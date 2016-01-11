@@ -1243,6 +1243,8 @@ public class CcgParser implements Serializable {
     int filledDepArrayLength = filledDepArray.length;
     for (int depIndex = 0; depIndex < filledDepArrayLength; depIndex++) {
       // The contents of this loop takes ~1/3 of all parsing time.
+      // TODO: possible speed improvement: use a hash table to cache
+      // more than one depLong per core.
       long depLong = filledDepArray[depIndex];
       if (depLong == depLongCache[leftSpanStart]) {
         depProb *= depProbCache[leftSpanStart];

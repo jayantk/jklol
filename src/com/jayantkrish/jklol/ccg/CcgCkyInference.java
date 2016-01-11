@@ -41,6 +41,12 @@ public class CcgCkyInference implements CcgInference {
     this.numThreads = numThreads;
   }
 
+  /**
+   * Get a CKY inference algorithm with sane default parameters.
+   * 
+   * @param beamSize
+   * @return
+   */
   public static CcgCkyInference getDefault(int beamSize) {
     return new CcgCkyInference(null, beamSize, -1, Integer.MAX_VALUE, 1);
   }
@@ -48,7 +54,6 @@ public class CcgCkyInference implements CcgInference {
   @Override
   public CcgParse getBestParse(CcgParser parser, AnnotatedSentence sentence,
       ChartCost chartFilter, LogFunction log) {
-    // There's no reason to do beam search in this case:
     ChartCost filter = SumChartCost.create(searchFilter, chartFilter);
     
     return parser.parse(sentence, filter, log, maxParseTimeMillis,

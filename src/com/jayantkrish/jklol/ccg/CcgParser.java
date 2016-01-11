@@ -923,13 +923,6 @@ public class CcgParser implements Serializable {
   }
 
   private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {
-    SparseTensor syntaxDistributionTensor = (SparseTensor) chart.getSyntaxDistribution().getWeights();
-    Tensor binaryRuleTensor = binaryRuleDistribution.getWeights();
-
-    long[] syntaxKeyNums = syntaxDistributionTensor.getKeyNums();
-    long[] dimensionOffsets = syntaxDistributionTensor.getDimensionOffsets();
-    int tensorSize = syntaxDistributionTensor.size();
-
     for (int i = 0; i < spanEnd - spanStart; i++) {
       // Index j only gets used if we allow the skipping of terminals.
       ChartEntry[] leftTrees = chart.getChartEntriesForSpan(spanStart, spanStart + i);
@@ -940,67 +933,81 @@ public class CcgParser implements Serializable {
       double[] rightProbs = chart.getChartEntryProbsForSpan(spanStart + i + 1, spanEnd);
       IntMultimap rightTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart + i + 1, spanEnd);
 
-      if (leftTypes == null || rightTypes == null) {
-        // At least one of the partial spans has no possible parses. This may
-        // happen if some single-word spans have no lexicon entries.
-        continue;
-      }
-
-      // log.startTimer("ccg_parse/beam_loop");
-      for (int leftType : leftTypes.keySetArray()) {
-        long keyNumPrefix = leftType * dimensionOffsets[0]; // syntaxDistributionTensor.dimKeyPrefixToKeyNum(key);
-        int index = syntaxDistributionTensor.getNearestIndex(keyNumPrefix);
-        if (index == -1 || index >= tensorSize) {
-          continue;
-        }
-        long maxKeyNum = keyNumPrefix + dimensionOffsets[0];
-        long curKeyNum = syntaxKeyNums[index];
-
-        while (curKeyNum < maxKeyNum && index < tensorSize) {
-          int rightType = (int) (((curKeyNum - keyNumPrefix) / dimensionOffsets[1]) % dimensionOffsets[0]);
-          if (rightTypes.containsKey(rightType)) {
-            // Get the operation we're supposed to apply at this chart entry.
-            CcgSearchMove searchMove = (CcgSearchMove) searchMoveType.getValue(
-                (int) ((curKeyNum - keyNumPrefix) % dimensionOffsets[1]));
-
-            // Apply the binary rule.
-            double ruleProb = binaryRuleTensor.get(searchMove.getBinaryCombinatorKeyNum());
-
-            for (int leftIndex : leftTypes.getArray(leftType)) {
-              ChartEntry leftRoot = leftTrees[leftIndex];
-              double leftProb = leftProbs[leftIndex];
-
-              long leftUnaryKeyNum = searchMove.getLeftUnaryKeyNum();
-              if (leftUnaryKeyNum != -1) {
-                leftProb *= unaryRuleTensor.get(leftUnaryKeyNum);
-              }
-
-              for (int rightIndex : rightTypes.getArray(rightType)) {
-                ChartEntry rightRoot = rightTrees[rightIndex];
-                double rightProb = rightProbs[rightIndex];
-
-                long rightUnaryKeyNum = searchMove.getRightUnaryKeyNum();
-                if (rightUnaryKeyNum != -1) {
-                  rightProb *= unaryRuleTensor.get(searchMove.getRightUnaryKeyNum());
-                }
-
-                applyBinary(chart, spanStart, spanStart + i, leftIndex, leftRoot, leftProb,
-                    spanStart + i + 1, spanEnd, rightIndex, rightRoot, rightProb, searchMove, ruleProb);
-              }
-            } 
-          }
-
-          // Advance the iterator over rules.
-          index++;
-          if (index < tensorSize) {
-            curKeyNum = syntaxKeyNums[index];
-          }
-        }
-      }
-      // log.stopTimer("ccg_parse/beam_loop");
+      applySearchMoves(chart, spanStart, spanStart + i, spanStart + i + 1, spanEnd,
+          leftTrees, leftProbs, leftTypes, rightTrees, rightProbs, rightTypes);
     }
 
     chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);
+  }
+  
+  public final void applySearchMoves(CcgChart chart, int leftSpanStart, int leftSpanEnd,
+      int rightSpanStart, int rightSpanEnd, ChartEntry[] leftTrees, double[] leftProbs,
+      IntMultimap leftTypes, ChartEntry[] rightTrees, double[] rightProbs, IntMultimap rightTypes) {
+    
+    Tensor binaryRuleTensor = binaryRuleDistribution.getWeights();
+    SparseTensor syntaxDistributionTensor = (SparseTensor) chart.getSyntaxDistribution().getWeights();
+    long[] syntaxKeyNums = syntaxDistributionTensor.getKeyNums();
+    long[] dimensionOffsets = syntaxDistributionTensor.getDimensionOffsets();
+    int tensorSize = syntaxDistributionTensor.size();
+
+    if (leftTypes == null || rightTypes == null) {
+      // At least one of the partial spans has no possible parses. This may
+      // happen if some single-word spans have no lexicon entries.
+      return;
+    }
+
+    // log.startTimer("ccg_parse/beam_loop");
+    for (int leftType : leftTypes.keySetArray()) {
+      long keyNumPrefix = leftType * dimensionOffsets[0]; // syntaxDistributionTensor.dimKeyPrefixToKeyNum(key);
+      int index = syntaxDistributionTensor.getNearestIndex(keyNumPrefix);
+      if (index == -1 || index >= tensorSize) {
+        continue;
+      }
+      long maxKeyNum = keyNumPrefix + dimensionOffsets[0];
+      long curKeyNum = syntaxKeyNums[index];
+
+      while (curKeyNum < maxKeyNum && index < tensorSize) {
+        int rightType = (int) (((curKeyNum - keyNumPrefix) / dimensionOffsets[1]) % dimensionOffsets[0]);
+        if (rightTypes.containsKey(rightType)) {
+          // Get the operation we're supposed to apply at this chart entry.
+          CcgSearchMove searchMove = (CcgSearchMove) searchMoveType.getValue(
+              (int) ((curKeyNum - keyNumPrefix) % dimensionOffsets[1]));
+
+          // Apply the binary rule.
+          double ruleProb = binaryRuleTensor.get(searchMove.getBinaryCombinatorKeyNum());
+
+          for (int leftIndex : leftTypes.getArray(leftType)) {
+            ChartEntry leftRoot = leftTrees[leftIndex];
+            double leftProb = leftProbs[leftIndex];
+
+            long leftUnaryKeyNum = searchMove.getLeftUnaryKeyNum();
+            if (leftUnaryKeyNum != -1) {
+              leftProb *= unaryRuleTensor.get(leftUnaryKeyNum);
+            }
+
+            for (int rightIndex : rightTypes.getArray(rightType)) {
+              ChartEntry rightRoot = rightTrees[rightIndex];
+              double rightProb = rightProbs[rightIndex];
+
+              long rightUnaryKeyNum = searchMove.getRightUnaryKeyNum();
+              if (rightUnaryKeyNum != -1) {
+                rightProb *= unaryRuleTensor.get(searchMove.getRightUnaryKeyNum());
+              }
+
+              applyBinary(chart, leftSpanStart, leftSpanEnd, leftIndex, leftRoot, leftProb,
+                  rightSpanStart, rightSpanEnd, rightIndex, rightRoot, rightProb, searchMove, ruleProb);
+            }
+          } 
+        }
+
+        // Advance the iterator over rules.
+        index++;
+        if (index < tensorSize) {
+          curKeyNum = syntaxKeyNums[index];
+        }
+      }
+    }
+    // log.stopTimer("ccg_parse/beam_loop");
   }
 
   public final void applyBinary(CcgChart chart,

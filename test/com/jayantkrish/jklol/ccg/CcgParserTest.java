@@ -210,10 +210,14 @@ public class CcgParserTest extends TestCase {
     List<CcgParse> parses = beamSearch(parser, Arrays.asList("blue"), 10);
     assertEquals(2, parses.size());
     CcgParse best = parses.get(0);
+    CcgParse second = parses.get(1);
+    System.out.println(best.getSubtreeProbability());
+    System.out.println(second.getSubtreeProbability());
+    
     assertEquals(3.0, best.getSubtreeProbability());
     assertEquals(SyntacticCategory.parseFrom("N"), best.getSyntacticCategory());
     
-    CcgParse second = parses.get(1);
+    
     assertEquals(1.0, second.getSubtreeProbability());
     assertEquals(SyntacticCategory.parseFrom("N/N"), second.getSyntacticCategory());
   }
@@ -223,7 +227,8 @@ public class CcgParserTest extends TestCase {
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
     // CcgParse parse = parse(parser, Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"));
-    
+
+    System.out.println(parse);
     System.out.println(parse.getAllDependencies());
 
     assertEquals(2.0, parse.getNodeProbability());
@@ -279,11 +284,12 @@ public class CcgParserTest extends TestCase {
 
   public void testBeamSearch2() {
     List<CcgParse> parses = beamSearch(parser, 
-        Arrays.asList("people", "that", "quickly", "eat", "berries", "in", "houses"), 10);
+        Arrays.asList("people", "that", "quickly", "eat", "berries", "in", "houses"), 100);
 
     for (CcgParse parse : parses) {
       System.out.println(parse);
       System.out.println(parse.getAllDependencies());
+      System.out.println(parse.getSubtreeProbability());
     }
 
     assertEquals(3, parses.size());
@@ -850,7 +856,7 @@ public class CcgParserTest extends TestCase {
   public void testLargeConjunction() {
     List<CcgParse> parses = beamSearch(parserWithCompositionNormalForm, 
         Arrays.asList("people", "or", "berries", "or", "people", "or", "people", "or", "people",
-            "or", "people"), 100);
+            "or", "people"), 1000);
     // "eat", "berries", "or", "eat", "people"
     
     System.out.println(parses.size());
@@ -1028,20 +1034,18 @@ public class CcgParserTest extends TestCase {
     assertTrue(foundString);
   }
 
-  private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
+  public List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       int beamSize) {
-    return parser.beamSearch(new AnnotatedSentence(words,
-        Collections.nCopies(words.size(), DEFAULT_POS)), beamSize, null, new NullLogFunction(),
-        -1, Integer.MAX_VALUE, 16);
+    return beamSearch(parser, words, Collections.nCopies(words.size(), DEFAULT_POS), beamSize);
   }
 
-  private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
+  public List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       List<String> posTags, int beamSize) {
     return parser.beamSearch(new AnnotatedSentence(words, 
         posTags), beamSize, null, new NullLogFunction(), -1, Integer.MAX_VALUE, 16);
   }
 
-  private CcgParse parse(CcgParser parser, List<String> words) {
+  public CcgParse parse(CcgParser parser, List<String> words) {
     return parser.parse(new AnnotatedSentence(words,
         Collections.nCopies(words.size(), DEFAULT_POS)), null, null, -1L, Integer.MAX_VALUE, 16);
   }

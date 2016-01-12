@@ -109,22 +109,6 @@ public interface CcgChart {
   
   public void setDepProbCache(double[] depProb);
 
-  /**
-   * Gets the subset of all parser weights which may be used in this
-   * parse.
-   * 
-   * @return
-   */
-  public Tensor getDependencyTensor();
-
-  public Tensor getWordDistanceTensor();
-
-  public Tensor getPuncDistanceTensor();
-
-  public Tensor getVerbDistanceTensor();
-
-  public DiscreteFactor getSyntaxDistribution();
-  
   public int[][] getAssignmentVarIndexAccumulator();
   
   public long[][] getAssignmentAccumulator();

@@ -603,21 +603,6 @@ public class CcgParser implements Serializable {
     chart.setUnfilledDepAccumulator(new long[input.size()][MAX_CHART_DEPS]);
     chart.setDepLongCache(new long[input.size()]);
     chart.setDepProbCache(new double[input.size()]);
-
-    initializeChartDistributions(chart);
-  }
-
-  private void initializeChartDistributions(CcgChart chart) {
-    // Default: initialize chart with no dependency distribution
-    // pruning.
-    chart.setDependencyTensor(dependencyTensor);
-    chart.setWordDistanceTensor(wordDistanceTensor);
-    chart.setPuncDistanceTensor(puncDistanceTensor);
-    chart.setVerbDistanceTensor(verbDistanceTensor);
-    chart.setSyntaxDistribution(compiledSyntaxDistribution);
-
-    // Sparsifying the dependencies actually slows the code down.
-    // sparsifyDependencyDistribution(chart);
   }
 
   public void initializeChartTerminals(CcgChart chart, AnnotatedSentence sentence) {
@@ -875,53 +860,6 @@ public class CcgParser implements Serializable {
     return true;
   }
 
-  public void sparsifyDependencyDistribution(CcgChart chart) {
-    // Identify all possible assignments to the dependency head and
-    // argument variables, so that we can look up probabilities in a
-    // sparser tensor.
-    Set<Long> possiblePredicates = Sets.newHashSet(predicatesInRules);
-    int numTerminals = chart.size();
-    for (int spanStart = 0; spanStart < numTerminals; spanStart++) {
-      for (int spanEnd = spanStart; spanEnd < numTerminals; spanEnd++) {
-        int numEntries = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
-        ChartEntry[] entries = chart.getChartEntriesForSpan(spanStart, spanEnd);
-        for (int i = 0; i < numEntries; i++) {
-          // Identify possible predicates.
-          for (long assignment : entries[i].getAssignments()) {
-            possiblePredicates.add((assignment >> ASSIGNMENT_PREDICATE_OFFSET) & PREDICATE_MASK);
-          }
-          for (long depLong : entries[i].getUnfilledDependencies()) {
-            possiblePredicates.add(((depLong >> SUBJECT_OFFSET) & PREDICATE_MASK) - MAX_ARG_NUM);
-          }
-        }
-      }
-    }
-
-    // Sparsify the dependency tensor for faster parsing.
-    long[] keyNums = Longs.toArray(possiblePredicates);
-    double[] values = new double[keyNums.length];
-    Arrays.fill(values, 1.0);
-
-    int headVarNum = dependencyTensor.getDimensionNumbers()[0];
-    int argVarNum = dependencyTensor.getDimensionNumbers()[3];
-    int predVarSize = dependencyTensor.getDimensionSizes()[0];
-
-    SparseTensor keyIndicator = SparseTensor.fromUnorderedKeyValues(new int[] { headVarNum },
-        new int[] { predVarSize }, keyNums, values);
-
-    Tensor smallDependencyTensor = dependencyTensor.retainKeys(keyIndicator)
-        .retainKeys(keyIndicator.relabelDimensions(new int[] { argVarNum }));
-
-    Tensor smallWordDistanceTensor = wordDistanceTensor.retainKeys(keyIndicator);
-    Tensor smallPuncDistanceTensor = puncDistanceTensor.retainKeys(keyIndicator);
-    Tensor smallVerbDistanceTensor = verbDistanceTensor.retainKeys(keyIndicator);
-
-    chart.setDependencyTensor(smallDependencyTensor);
-    chart.setWordDistanceTensor(smallWordDistanceTensor);
-    chart.setPuncDistanceTensor(smallPuncDistanceTensor);
-    chart.setVerbDistanceTensor(smallVerbDistanceTensor);
-  }
-
   private void calculateInsideBeam(int spanStart, int spanEnd, CcgChart chart, LogFunction log) {
     for (int i = 0; i < spanEnd - spanStart; i++) {
       // Index j only gets used if we allow the skipping of terminals.
@@ -945,7 +883,7 @@ public class CcgParser implements Serializable {
       IntMultimap leftTypes, ChartEntry[] rightTrees, double[] rightProbs, IntMultimap rightTypes) {
     
     Tensor binaryRuleTensor = binaryRuleDistribution.getWeights();
-    SparseTensor syntaxDistributionTensor = (SparseTensor) chart.getSyntaxDistribution().getWeights();
+    SparseTensor syntaxDistributionTensor = (SparseTensor) compiledSyntaxDistribution.getWeights();
     long[] syntaxKeyNums = syntaxDistributionTensor.getKeyNums();
     long[] dimensionOffsets = syntaxDistributionTensor.getDimensionOffsets();
     int tensorSize = syntaxDistributionTensor.size();
@@ -1032,10 +970,10 @@ public class CcgParser implements Serializable {
     int[] verbDistances = chart.getVerbDistances();
     int numTerminals = chart.size();
     
-    Tensor currentDependencyTensor = chart.getDependencyTensor();
-    Tensor currentWordTensor = chart.getWordDistanceTensor();
-    Tensor currentPuncTensor = chart.getPuncDistanceTensor();
-    Tensor currentVerbTensor = chart.getVerbDistanceTensor();
+    Tensor currentDependencyTensor = dependencyTensor;
+    Tensor currentWordTensor = wordDistanceTensor;
+    Tensor currentPuncTensor = puncDistanceTensor;
+    Tensor currentVerbTensor = verbDistanceTensor;
 
     // Determine if these chart entries can be combined under the
     // normal form constraints. Normal form constraints state that 

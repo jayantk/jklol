@@ -435,4 +435,14 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   double[] getValues();
+  
+  /**
+   * Returns a version of this tensor that only supports get operations.
+   * Get operations on the returned {@code TensorHash} may be faster than
+   * on this tensor. This method is used as a precomputation step when
+   * fast random access is required.
+   * 
+   * @return
+   */
+  public TensorHash toHash();
 }

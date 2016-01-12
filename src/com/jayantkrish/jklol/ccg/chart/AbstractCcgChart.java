@@ -12,7 +12,6 @@ import com.jayantkrish.jklol.ccg.LexiconEntryInfo;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
-import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IntMultimap;
 
 /**
@@ -37,14 +36,6 @@ public abstract class AbstractCcgChart implements CcgChart {
   private int[] verbDistances;
 
   protected ChartCost entryFilter;
-
-  // The parser weights which might be used in this sentence.
-  // This is a subset of all parser weights, which is precomputed
-  // to make lookups more efficient during parsing.
-  private Tensor dependencyTensor;
-  private Tensor wordDistanceTensor;
-  private Tensor puncDistanceTensor;
-  private Tensor verbDistanceTensor;
 
   // The syntactic category combinations that will be considered
   // while parsing this sentence.
@@ -147,31 +138,6 @@ public abstract class AbstractCcgChart implements CcgChart {
   }
 
   @Override
-  public final void setDependencyTensor(Tensor tensor) {
-    this.dependencyTensor = tensor;
-  }
-
-  @Override
-  public final void setWordDistanceTensor(Tensor tensor) {
-    this.wordDistanceTensor = tensor;
-  }
-
-  @Override
-  public final void setPuncDistanceTensor(Tensor tensor) {
-    this.puncDistanceTensor = tensor;
-  }
-
-  @Override
-  public final void setVerbDistanceTensor(Tensor tensor) {
-    this.verbDistanceTensor = tensor;
-  }
-
-  @Override
-  public final void setSyntaxDistribution(DiscreteFactor syntaxDistribution) {
-    this.syntaxDistribution = syntaxDistribution;
-  }
-
-  @Override
   public final void setAssignmentVarIndexAccumulator(int[][] assignmentVarIndexAccumulator) {
     this.assignmentVarIndexAccumulator = assignmentVarIndexAccumulator;
   }
@@ -204,31 +170,6 @@ public abstract class AbstractCcgChart implements CcgChart {
   @Override
   public void setDepProbCache(double[] depProb) {
     this.depProbCache = depProb;
-  }
-
-  @Override
-  public final Tensor getDependencyTensor() {
-    return dependencyTensor;
-  }
-
-  @Override
-  public final Tensor getWordDistanceTensor() {
-    return wordDistanceTensor;
-  }
-
-  @Override
-  public final Tensor getPuncDistanceTensor() {
-    return puncDistanceTensor;
-  }
-
-  @Override
-  public final Tensor getVerbDistanceTensor() {
-    return verbDistanceTensor;
-  }
-
-  @Override
-  public final DiscreteFactor getSyntaxDistribution() {
-    return syntaxDistribution;
   }
 
   @Override

@@ -51,6 +51,12 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   public double[] getValues() {
     return super.values;
   }
+  
+  @Override
+  public TensorHash toHash() {
+    // Dense tensors already support fast random access.
+    return this;
+  }
 
   @Override
   public Tensor slice(int[] dimensionNumbers, int[] key) {

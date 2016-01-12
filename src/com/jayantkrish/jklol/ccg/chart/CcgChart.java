@@ -4,10 +4,8 @@ import java.util.List;
 
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
-import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IntMultimap;
 
 public interface CcgChart {
@@ -78,23 +76,6 @@ public interface CcgChart {
 
   public int[] getVerbDistances();
 
-  /**
-   * Caches the subset of the parser's semantic dependencies which may
-   * get used during the parse of this sentence. This cache improves
-   * the speed of weight lookups during parsing.
-   * 
-   * @param tensor
-   */
-  public void setDependencyTensor(Tensor tensor);
-
-  public void setWordDistanceTensor(Tensor tensor);
-
-  public void setPuncDistanceTensor(Tensor tensor);
-
-  public void setVerbDistanceTensor(Tensor tensor);
-
-  public void setSyntaxDistribution(DiscreteFactor syntaxDistribution);
-  
   public void setAssignmentVarIndexAccumulator(int[][] assignmentVarIndexAccumulator);
   
   public void setAssignmentAccumulator(long[][] assignmentAccumulator);

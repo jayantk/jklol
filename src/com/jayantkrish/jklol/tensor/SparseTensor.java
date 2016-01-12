@@ -101,6 +101,11 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   public double[] getValues() {
     return values;
   }
+  
+  @Override 
+  public TensorHash toHash() {
+    return SparseTensorHash.fromTensor(this);
+  }
 
   /**
    * Returns an iterator over all assignments (keys) in this table.

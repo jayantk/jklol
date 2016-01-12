@@ -32,6 +32,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.tensor.TensorHash;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.ArrayUtils;
@@ -116,6 +117,7 @@ public class CcgParser implements Serializable {
   private final DiscreteVariable dependencyPosType;
 
   private final Tensor dependencyTensor;
+  private final TensorHash dependencyTensorHash;
   private final long dependencyHeadOffset;
   private final long dependencySyntaxOffset;
   private final long dependencyArgNumOffset;
@@ -131,15 +133,18 @@ public class CcgParser implements Serializable {
   private final VariableNumMap wordDistanceVar;
   private final DiscreteFactor wordDistanceFactor;
   private final Tensor wordDistanceTensor;
+  private final TensorHash wordDistanceTensorHash;
 
   private final VariableNumMap puncDistanceVar;
   private final DiscreteFactor puncDistanceFactor;
   private final Tensor puncDistanceTensor;
+  private final TensorHash puncDistanceTensorHash;
   private final Set<String> puncTagSet;
 
   private final VariableNumMap verbDistanceVar;
   private final DiscreteFactor verbDistanceFactor;
   private final Tensor verbDistanceTensor;
+  private final TensorHash verbDistanceTensorHash;
   private final Set<String> verbTagSet;
 
   private final long distanceHeadOffset;
@@ -256,6 +261,7 @@ public class CcgParser implements Serializable {
     DiscreteVariable dependencyArgType = dependencyArgVar.getDiscreteVariables().get(0);
     Preconditions.checkArgument(dependencyHeadType.equals(dependencyArgType));
     this.dependencyTensor = dependencyDistribution.getWeights();
+    this.dependencyTensorHash = dependencyTensor.toHash();
     this.dependencyHeadOffset = dependencyTensor.getDimensionOffsets()[0];
     this.dependencySyntaxOffset = dependencyTensor.getDimensionOffsets()[1];
     this.dependencyArgNumOffset = dependencyTensor.getDimensionOffsets()[2];
@@ -270,12 +276,14 @@ public class CcgParser implements Serializable {
     VariableNumMap expectedWordVars = distanceDependencyVars.union(wordDistanceVar);
     Preconditions.checkArgument(expectedWordVars.equals(wordDistanceFactor.getVars()));
     this.wordDistanceTensor = wordDistanceFactor.getWeights();
+    this.wordDistanceTensorHash = wordDistanceTensor.toHash();
 
     this.puncDistanceVar = puncDistanceVar;
     this.puncDistanceFactor = puncDistanceFactor;
     VariableNumMap expectedPuncVars = distanceDependencyVars.union(puncDistanceVar);
     Preconditions.checkArgument(expectedPuncVars.equals(puncDistanceFactor.getVars()));
     this.puncDistanceTensor = puncDistanceFactor.getWeights();
+    this.puncDistanceTensorHash = puncDistanceTensor.toHash();
     this.puncTagSet = puncTagSet;
 
     this.verbDistanceVar = verbDistanceVar;
@@ -283,6 +291,7 @@ public class CcgParser implements Serializable {
     VariableNumMap expectedVerbVars = distanceDependencyVars.union(verbDistanceVar);
     Preconditions.checkArgument(expectedVerbVars.equals(verbDistanceFactor.getVars()));
     this.verbDistanceTensor = verbDistanceFactor.getWeights();
+    this.verbDistanceTensorHash = verbDistanceTensor.toHash();
     this.verbTagSet = verbTagSet;
 
     this.distanceHeadOffset = verbDistanceTensor.getDimensionOffsets()[0];
@@ -969,11 +978,11 @@ public class CcgParser implements Serializable {
     int[] puncDistances = chart.getPunctuationDistances();
     int[] verbDistances = chart.getVerbDistances();
     int numTerminals = chart.size();
-    
-    Tensor currentDependencyTensor = dependencyTensor;
-    Tensor currentWordTensor = wordDistanceTensor;
-    Tensor currentPuncTensor = puncDistanceTensor;
-    Tensor currentVerbTensor = verbDistanceTensor;
+
+    TensorHash currentDependencyTensor = dependencyTensorHash;
+    TensorHash currentWordTensor = wordDistanceTensorHash;
+    TensorHash currentPuncTensor = puncDistanceTensorHash;
+    TensorHash currentVerbTensor = verbDistanceTensorHash;
 
     // Determine if these chart entries can be combined under the
     // normal form constraints. Normal form constraints state that 

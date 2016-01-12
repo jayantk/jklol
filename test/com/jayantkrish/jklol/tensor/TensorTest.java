@@ -695,6 +695,17 @@ public abstract class TensorTest extends TestCase {
     assertEquals(5.0, table.get(largestKeys[2]));
   }
 
+  public void testToHash() {
+    TensorHash hash = table.toHash();
+    Iterator<KeyValue> iter = table.keyValueIterator();
+    while (iter.hasNext()) {
+      KeyValue kv = iter.next();
+      long keyNum = table.dimKeyToKeyNum(kv.getKey());
+      
+      assertEquals(kv.getValue(), hash.get(keyNum));
+    }
+  }
+
   /**
    * This is a simple version of the elementwise multiply algorithm which looks
    * at all pairs of keys in {@code first} and {@code second}.

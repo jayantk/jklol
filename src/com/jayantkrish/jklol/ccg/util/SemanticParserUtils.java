@@ -3,8 +3,8 @@ package com.jayantkrish.jklol.ccg.util;
 import java.util.Collections;
 import java.util.List;
 
-import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
+import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
@@ -35,7 +35,7 @@ public class SemanticParserUtils {
    * @return
    */
   public static SemanticParserLoss testSemanticParser(List<CcgExample> testExamples, CcgParser parser,
-      CcgCkyInference inferenceAlg, ExpressionSimplifier simplifier, ExpressionComparator comparator,
+      CcgInference inferenceAlg, ExpressionSimplifier simplifier, ExpressionComparator comparator,
       List<SemanticParserExampleLoss> exampleLossAccumulator, boolean print) {
     int numCorrect = 0;
     int numCorrectLfPossible = 0;

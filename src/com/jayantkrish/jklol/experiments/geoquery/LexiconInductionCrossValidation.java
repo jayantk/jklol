@@ -18,6 +18,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
+import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
@@ -256,7 +257,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
             new CommutativeReplacementRule("and:<t*,t>")));
     ExpressionComparator comparator = new SimplificationComparator(simplifier);
 
-    CcgCkyInference inferenceAlgorithm = new CcgCkyInference(null, beamSize,
+    CcgInference inferenceAlgorithm = new CcgCkyInference(null, beamSize,
         -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors());
 
     CcgParser ccgParser = trainSemanticParser(ccgTrainingExamples, lexiconEntryLines,
@@ -331,7 +332,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   public static CcgParser trainSemanticParser(List<CcgExample> trainingExamples,
       List<String> lexiconEntryLines, List<String> unknownLexiconEntryLines,
       List<String> ruleEntries, CcgFeatureFactory featureFactory,
-      CcgCkyInference inferenceAlgorithm, ExpressionComparator comparator,
+      CcgInference inferenceAlgorithm, ExpressionComparator comparator,
       int iterations, double l2Penalty) {
     ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntryLines,
         unknownLexiconEntryLines, ruleEntries, featureFactory, CcgExample.getPosTagVocabulary(trainingExamples),

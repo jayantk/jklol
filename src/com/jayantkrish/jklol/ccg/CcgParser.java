@@ -187,6 +187,7 @@ public class CcgParser implements Serializable {
   private final long headedBinaryRulePredicateOffset;
   private final long headedBinaryRulePosOffset;
   private final Tensor headedBinaryRuleTensor;
+  private final TensorHash headedBinaryRuleTensorHash;
 
   // Indicator tensor specifying possible ways to combine pairs of
   // syntactic categories.
@@ -325,6 +326,7 @@ public class CcgParser implements Serializable {
         VariableNumMap.unionAll(binaryRuleDistribution.getVars(), headedBinaryPredicateVar, headedBinaryPosVar)));
     
     headedBinaryRuleTensor = headedBinaryRuleDistribution.getWeights();
+    headedBinaryRuleTensorHash = headedBinaryRuleTensor.toHash();
     long[] headedBinaryOffsets = headedBinaryRuleTensor.getDimensionOffsets();
     headedBinaryRuleCombinatorOffset = headedBinaryOffsets[2];
     headedBinaryRulePredicateOffset = headedBinaryOffsets[3];
@@ -559,24 +561,22 @@ public class CcgParser implements Serializable {
       log = new NullLogFunction();
     }
 
-    log.startTimer("initialize_chart");
+    log.startTimer("ccg_parse/initialize_chart");
     initializeChart(chart, input, beamFilter);
     initializeChartTerminals(chart, input);
-    log.stopTimer("initialize_chart");
+    log.stopTimer("ccg_parse/initialize_chart");
 
-    log.startTimer("calculate_inside_beam");
+    log.startTimer("ccg_parse/calculate_inside_beam");
     boolean finishedParsing = false;
     if (numThreads <= 1) {
       finishedParsing = calculateInsideBeamSingleThreaded(chart, log, maxParseTimeMillis);
     } else {
       finishedParsing = calculateInsideBeamParallel(chart, log, maxParseTimeMillis, numThreads);
     }
-    log.stopTimer("calculate_inside_beam");
+    log.stopTimer("ccg_parse/calculate_inside_beam");
 
     if (finishedParsing) {
-      log.startTimer("reweight_root_entries");
       reweightRootEntries(chart);
-      log.stopTimer("reweight_root_entries");
     }
     chart.setFinishedParsing(finishedParsing);
   }
@@ -881,7 +881,7 @@ public class CcgParser implements Serializable {
       IntMultimap rightTypes = chart.getChartEntriesBySyntacticCategoryForSpan(spanStart + i + 1, spanEnd);
 
       applySearchMoves(chart, spanStart, spanStart + i, spanStart + i + 1, spanEnd,
-          leftTrees, leftProbs, leftTypes, rightTrees, rightProbs, rightTypes);
+          leftTrees, leftProbs, leftTypes, rightTrees, rightProbs, rightTypes, log);
     }
 
     chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);
@@ -889,7 +889,8 @@ public class CcgParser implements Serializable {
   
   public final void applySearchMoves(CcgChart chart, int leftSpanStart, int leftSpanEnd,
       int rightSpanStart, int rightSpanEnd, ChartEntry[] leftTrees, double[] leftProbs,
-      IntMultimap leftTypes, ChartEntry[] rightTrees, double[] rightProbs, IntMultimap rightTypes) {
+      IntMultimap leftTypes, ChartEntry[] rightTrees, double[] rightProbs, IntMultimap rightTypes,
+      LogFunction log) {
     
     Tensor binaryRuleTensor = binaryRuleDistribution.getWeights();
     SparseTensor syntaxDistributionTensor = (SparseTensor) compiledSyntaxDistribution.getWeights();
@@ -903,7 +904,7 @@ public class CcgParser implements Serializable {
       return;
     }
 
-    // log.startTimer("ccg_parse/beam_loop");
+    log.startTimer("ccg_parse/beam_loop");
     for (int leftType : leftTypes.keySetArray()) {
       long keyNumPrefix = leftType * dimensionOffsets[0]; // syntaxDistributionTensor.dimKeyPrefixToKeyNum(key);
       int index = syntaxDistributionTensor.getNearestIndex(keyNumPrefix);
@@ -942,7 +943,8 @@ public class CcgParser implements Serializable {
               }
 
               applyBinary(chart, leftSpanStart, leftSpanEnd, leftIndex, leftRoot, leftProb,
-                  rightSpanStart, rightSpanEnd, rightIndex, rightRoot, rightProb, searchMove, ruleProb);
+                  rightSpanStart, rightSpanEnd, rightIndex, rightRoot, rightProb, searchMove, ruleProb,
+                  log);
             }
           } 
         }
@@ -954,13 +956,13 @@ public class CcgParser implements Serializable {
         }
       }
     }
-    // log.stopTimer("ccg_parse/beam_loop");
+    log.stopTimer("ccg_parse/beam_loop");
   }
 
   public final void applyBinary(CcgChart chart,
       int leftSpanStart, int leftSpanEnd, int leftIndex, ChartEntry leftRoot, double leftProb,
       int rightSpanStart, int rightSpanEnd, int rightIndex, ChartEntry rightRoot, double rightProb,
-      CcgSearchMove searchMove, double ruleProb) {
+      CcgSearchMove searchMove, double ruleProb, LogFunction log) {
 
     int[] assignmentVarIndexAccumulator = chart.getAssignmentVarIndexAccumulator()[leftSpanStart];
     long[] assignmentAccumulator = chart.getAssignmentAccumulator()[leftSpanStart];
@@ -978,11 +980,6 @@ public class CcgParser implements Serializable {
     int[] puncDistances = chart.getPunctuationDistances();
     int[] verbDistances = chart.getVerbDistances();
     int numTerminals = chart.size();
-
-    TensorHash currentDependencyTensor = dependencyTensorHash;
-    TensorHash currentWordTensor = wordDistanceTensorHash;
-    TensorHash currentPuncTensor = puncDistanceTensorHash;
-    TensorHash currentVerbTensor = verbDistanceTensorHash;
 
     // Determine if these chart entries can be combined under the
     // normal form constraints. Normal form constraints state that 
@@ -1018,7 +1015,6 @@ public class CcgParser implements Serializable {
         }
       }
     }
-
 
     // log.startTimer("ccg_parse/beam_loop/fill_dependencies");
     // Fill dependencies based on the current assignment.
@@ -1101,8 +1097,7 @@ public class CcgParser implements Serializable {
       }
     }
     assignmentVarIndexAccumulator[leftInverseRelabeling.length] = numAssignments;
-
-    // log.startTimer("ccg_parse/beam_loop/relabel_assignment");
+    // log.stopTimer("ccg_parse/beam_loop/relabel_assignment");
 
     // Determine which unfilled dependencies should be propagated to
     // the result.
@@ -1184,7 +1179,7 @@ public class CcgParser implements Serializable {
       long combinatorWordPosKeyNum = binaryCombinatorKeyNumWithOffset 
           + (predicate * headedBinaryRulePredicateOffset)
           + (posTag * headedBinaryRulePosOffset);
-      headedRuleProb *= headedBinaryRuleTensor.get(combinatorWordPosKeyNum);
+      headedRuleProb *= headedBinaryRuleTensorHash.get(combinatorWordPosKeyNum);
     }
     // log.stopTimer("ccg_parse/beam_loop/headed_rule_weights");
 
@@ -1224,7 +1219,7 @@ public class CcgParser implements Serializable {
       // Get the probability of this
       // predicate-argument combination.
       // log.startTimer("chart_entry/dependency_prob");
-      curDepProb = currentDependencyTensor.get(depNum);
+      curDepProb = dependencyTensorHash.get(depNum);
       // log.stopTimer("chart_entry/dependency_prob");
 
       // Compute distance features.
@@ -1240,11 +1235,11 @@ public class CcgParser implements Serializable {
           + (headSyntaxNum * distanceSyntaxOffset) + (argNumNum * distanceArgNumOffset)
           + (headPosNum * distanceHeadPosOffset);
       long wordDistanceKeyNum = distanceKeyNumBase + (wordDistance * distanceDistanceOffset);
-      curDepProb *= currentWordTensor.get(wordDistanceKeyNum);
+      curDepProb *= wordDistanceTensorHash.get(wordDistanceKeyNum);
       long puncDistanceKeyNum = distanceKeyNumBase + (puncDistance * distanceDistanceOffset);
-      curDepProb *= currentPuncTensor.get(puncDistanceKeyNum);
+      curDepProb *= puncDistanceTensorHash.get(puncDistanceKeyNum);
       long verbDistanceKeyNum = distanceKeyNumBase + (verbDistance * distanceDistanceOffset);
-      curDepProb *= currentVerbTensor.get(verbDistanceKeyNum);
+      curDepProb *= verbDistanceTensorHash.get(verbDistanceKeyNum);
       // log.stopTimer("chart_entry/lookup_distance");
       // System.out.println(longToUnfilledDependency(depLong)
       // + " " + depProb);

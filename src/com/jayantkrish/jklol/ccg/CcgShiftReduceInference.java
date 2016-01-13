@@ -113,7 +113,8 @@ public class CcgShiftReduceInference implements CcgInference {
           
           int startNumEntries = chart.getNumChartEntriesForSpan(prev.spanStart, stack.spanEnd);
           parser.applySearchMoves(chart, prev.spanStart, prev.spanEnd, stack.spanStart, stack.spanEnd,
-              prevEntryArray, prevEntryProbArray, prevTypes, stackEntryArray, stackEntryProbArray, stackTypes);
+              prevEntryArray, prevEntryProbArray, prevTypes, stackEntryArray, stackEntryProbArray, stackTypes,
+              log);
           int endNumEntries = chart.getNumChartEntriesForSpan(prev.spanStart, stack.spanEnd);
 
           ChartEntry[] chartEntries = chart.getChartEntriesForSpan(prev.spanStart, stack.spanEnd);

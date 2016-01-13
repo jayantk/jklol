@@ -165,7 +165,6 @@ public class SparseLogSpaceTensorAdapter extends AbstractTensor {
 
   @Override
   public TensorHash toHash() {
-    // return this;
     return new LogTensorHashAdapter(logWeights.toHash());
   }
 

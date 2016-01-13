@@ -96,7 +96,7 @@ public class AlignmentModelTrainingTest extends TestCase {
     SufficientStatistics initial = pam.getNewSufficientStatistics();
     initial.increment(1.0);
     
-    int numIterations = 1000;
+    int numIterations = 100;
     Lbfgs lbfgs = new Lbfgs(numIterations, 10, 1e-6, new DefaultLogFunction(numIterations - 1, false));
 
     ExpectationMaximization em = new ExpectationMaximization(50, new DefaultLogFunction());

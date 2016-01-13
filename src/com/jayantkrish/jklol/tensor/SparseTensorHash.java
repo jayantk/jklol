@@ -39,7 +39,7 @@ public class SparseTensorHash implements TensorHash {
       return new SparseTensorHash(new long[] { -1 }, new double[] { 0 }, 1);
     }
 
-    int numBins = tensor.size() * ((int) Math.log(tensor.size())) * 3;
+    int numBins = tensor.size() * ((int) Math.ceil(1 + Math.log(tensor.size()))) * 3;
     int[] keyCounts = new int[numBins];
     Arrays.fill(keyCounts, 0);
     long[] keys = tensor.getKeyNums();

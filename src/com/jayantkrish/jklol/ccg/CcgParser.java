@@ -904,7 +904,7 @@ public class CcgParser implements Serializable {
       return;
     }
 
-    log.startTimer("ccg_parse/beam_loop");
+    // log.startTimer("ccg_parse/beam_loop");
     for (int leftType : leftTypes.keySetArray()) {
       long keyNumPrefix = leftType * dimensionOffsets[0]; // syntaxDistributionTensor.dimKeyPrefixToKeyNum(key);
       int index = syntaxDistributionTensor.getNearestIndex(keyNumPrefix);
@@ -956,7 +956,7 @@ public class CcgParser implements Serializable {
         }
       }
     }
-    log.stopTimer("ccg_parse/beam_loop");
+    // log.stopTimer("ccg_parse/beam_loop");
   }
 
   public final void applyBinary(CcgChart chart,

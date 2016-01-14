@@ -11,11 +11,16 @@ public class CpsTransformTest extends TestCase {
   }
   
   public void testLambda() {
-    runTest("(continuation (lambda x k (k x)))", "(lambda x x)");
+    runTest("(continuation (lambda k x (k x)))", "(lambda x x)");
   }
   
   public void testApplication() {
-    runTest("(c d (lambda $0 (a b $0 continuation)))", "(a b (c d))");
+    runTest("(c (lambda $0 (a continuation b $0)) d)", "(a b (c d))");
+  }
+  
+  public void testLambda2() {
+    runTest("(count:<<a,t>,i> continuation (lambda $0 $1 (animal:<a,t> (lambda $2 (eats:<a,<a,t>> (lambda $3 (and:<t*,t> $0 $2 $3)) $1 \"bears\":a)) $1)))",
+        "(count:<<a,t>,i> (lambda $0 (and:<t*,t> (animal:<a,t> $0) (eats:<a,<a,t>> $0 \"bears\":a))))");
   }
 
   private void runTest(String expected, String input) {
@@ -27,7 +32,7 @@ public class CpsTransformTest extends TestCase {
     Expression2 continuation = Expression2.constant("continuation");
     
     Expression2 resultExp = s.apply(CpsTransform.apply(inputExp, continuation));
-    
+
     assertEquals(expectedExp, resultExp);
   }
 }

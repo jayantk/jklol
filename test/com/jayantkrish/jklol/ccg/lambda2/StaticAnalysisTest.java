@@ -115,7 +115,7 @@ public class StaticAnalysisTest extends TestCase {
     String expression = "(lambda $0 (lambda $1 (cause:<e,<e,t>> $0 ($1 foo:a))))";
     runTypeInferenceTest(expression, "<e,<<a,e>,t>>");
   }
-  
+
   public void testRepeatedArguments() {
     runTypeInferenceTest("(lambda $0 $1 (and:<t*,t> (bar:<e,t> $0) ($1 $0) (foo:<e,t> $0)))", "<e,<<e,t>,t>>");
   }

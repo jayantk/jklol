@@ -150,6 +150,16 @@ public class StaticAnalysisTest extends TestCase {
     Type predicted = StaticAnalysis.inferType(exp, expected, typeDeclaration);
     assertEquals(expected, predicted);
   }
+  
+  public void testSomething5() {
+    runTypeInferenceTest("(get-denotation-c:<<d,⊥>,<<<t,⊥>,<a,⊥>>,⊥>> (lambda $0 (display:<⊤,⊥> $0)) (lambda $0 $1 (animal-c:<<t,⊥>,<a,⊥>> (lambda $2 (plant-c:<<t,⊥>,<a,⊥>> (lambda $3 (and-c:<<t,⊥>,<t*,⊥>> $0 $2 $3)) $1)) $1)))",
+        "⊥");
+  }
+
+  public void testSomething6() {
+    runTypeInferenceTest("(get-denotation-c:<<d,⊥>,<<<t,⊥>,<a,⊥>>,⊥>> (lambda $0 (display:<⊤,⊥> $0)) (lambda $0 $1 (secondary-consumer-c:<<t,⊥>,<a,⊥>> (lambda $2 (top-predator-c:<<t,⊥>,<a,⊥>> (lambda $3 (and-c:<<t,⊥>,<t*,⊥>> $0 $2 $3)) $1)) $1)))",
+        "⊥");
+  }
 
   public void testVariablesSameName() {
     runTypeInferenceTest("(lambda f (and:<t*,t> (f texas:e) ((lambda f (state:<e,t> f)) austin:e)))",

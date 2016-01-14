@@ -225,7 +225,7 @@ public class StaticAnalysis {
         if (subexpression.isConstant()) {
           // Get the type of this constant if it is declared. 
           Type newType = typeDeclaration.getType(subexpression.getConstant());
-          updated = updated || updateType(index, newType, subexpressionTypeMap, typeDeclaration, expression);
+          updated = updateType(index, newType, subexpressionTypeMap, typeDeclaration, expression) || updated;
 
           Scope scope = scopes.getScope(index);
           int bindingIndex = scope.getBindingIndex(subexpression.getConstant());
@@ -234,8 +234,8 @@ public class StaticAnalysis {
             Type myType = subexpressionTypeMap.get(index);
             Type bindingType = subexpressionTypeMap.get(bindingIndex);
             
-            updated = updated || updateType(index, bindingType, subexpressionTypeMap, typeDeclaration, expression);
-            updated = updated || updateType(bindingIndex, myType, subexpressionTypeMap, typeDeclaration, expression);
+            updated = updateType(index, bindingType, subexpressionTypeMap, typeDeclaration, expression) || updated;
+            updated = updateType(bindingIndex, myType, subexpressionTypeMap, typeDeclaration, expression) || updated;
           }
 
         } else if (subexpression.getSubexpressions().size() > 1 && 
@@ -251,18 +251,19 @@ public class StaticAnalysis {
             newType = newType.addArgument(subexpressionTypeMap.get(childIndexes[i]));
           }
 
-          updated = updated || updateType(index, newType, subexpressionTypeMap, typeDeclaration, expression);
+          updated = updateType(index, newType, subexpressionTypeMap, typeDeclaration, expression) || updated;
           
           // Propagate the expression's type back to the arguments / body
           Type lambdaType = subexpressionTypeMap.get(index);
+
           for (int i = 1; i < childIndexes.length - 1; i++) {
             Type argType = lambdaType.getArgumentType();
-            updated = updated || updateType(childIndexes[i], argType, subexpressionTypeMap, typeDeclaration, expression);
+            updated = updateType(childIndexes[i], argType, subexpressionTypeMap, typeDeclaration, expression) || updated;
             lambdaType = lambdaType.getReturnType();
           }
-          
-          updated = updated || updateType(childIndexes[childIndexes.length - 1], lambdaType,
-              subexpressionTypeMap, typeDeclaration, expression);
+
+          updated = updateType(childIndexes[childIndexes.length - 1], lambdaType,
+              subexpressionTypeMap, typeDeclaration, expression) || updated;
 
         } else {
           // Application
@@ -280,16 +281,16 @@ public class StaticAnalysis {
               if (!rest.acceptsRepeatedArguments()) {
                 rest = rest.getReturnType();
               }
-              updated = updated || updateType(childIndexes[i], argType,
-                  subexpressionTypeMap, typeDeclaration, expression);
+              updated = updateType(childIndexes[i], argType, subexpressionTypeMap,
+                  typeDeclaration, expression) || updated;
             }
 
             if (rest.acceptsRepeatedArguments()) {
               rest = rest.getReturnType();
             }
 
-            updated = updated || updateType(index, rest, subexpressionTypeMap, typeDeclaration,
-                expression);
+            updated = updateType(index, rest, subexpressionTypeMap, typeDeclaration, expression) 
+                || updated;
           }
 
           // Propagate type information on arguments and return value
@@ -299,8 +300,8 @@ public class StaticAnalysis {
             Type argType = subexpressionTypeMap.get(childIndexes[i]);
             functionType = functionType.addArgument(argType);
           }
-          updated = updated || updateType(functionIndex, functionType, subexpressionTypeMap,
-              typeDeclaration, expression);
+          updated = updateType(functionIndex, functionType, subexpressionTypeMap,
+              typeDeclaration, expression) || updated;
         }
       }
     }
@@ -321,6 +322,8 @@ public class StaticAnalysis {
       TypeDeclaration typeDeclaration, Expression2 expression) {
     Type oldType = typeMap.get(index);
     Type newType = typeDeclaration.unify(oldType, type);
+    
+    // System.out.println("old: " + oldType + " update: " + type + " new: " + newType);
 
     if (!newType.equals(oldType)) {
       // System.out.println(index + " " + expression.getSubexpression(index) + " " + oldType + " " + type + " -> " + newType);

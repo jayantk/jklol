@@ -335,17 +335,20 @@ public class StaticAnalysis {
   }
 
   public static String getNewVariableName(Expression2 expression) {
-    // TODO: do this in a canonical way
-    int random = (int) (Math.random() * 1000000.0);
-    return "var" + random;
+    return getNewVariableNames(expression, 1).get(0);
   }
-  
+
   public static List<String> getNewVariableNames(Expression2 expression, int num) {
-    // TODO: warning, this may break if the above generates a single
-    // canonical name for expression.
     List<String> names = Lists.newArrayList();
+
+    // TODO: do this in a canonical way.
+    String varName = null;
     for (int i = 0; i < num; i++) {
-      names.add(getNewVariableName(expression));
+      do {
+        int random = (int) (Math.random() * 1000000.0);
+        varName = "var" + random;
+      } while (expression.hasSubexpression(Expression2.constant(varName)));
+      names.add(varName);
     }
     return names;
   }

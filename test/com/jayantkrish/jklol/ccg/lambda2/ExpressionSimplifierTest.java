@@ -100,7 +100,7 @@ public class ExpressionSimplifierTest extends TestCase {
         + "(lambda $2 (loc:<lo,<lo,t>> $2 $1)) ))",
         "(lambda $0 (lambda $1 (loc:<lo,<lo,t>> $1 $0)))");
   }
-
+  
   private void runTest(ExpressionSimplifier simp, String input, String expected) {
     ExpressionParser<Expression2> parser = ExpressionParser.expression2();
     Expression2 inputExpression = parser.parse(input);

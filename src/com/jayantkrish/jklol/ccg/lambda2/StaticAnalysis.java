@@ -334,12 +334,13 @@ public class StaticAnalysis {
     }
   }
 
-  public static String getNewVariableName(Expression2 expression) {
-    return getNewVariableNames(expression, 1).get(0);
+  public static String getNewVariableName(Expression2... expressions) {
+    return getNewVariableNames(1, expressions).get(0);
   }
 
-  public static List<String> getNewVariableNames(Expression2 expression, int num) {
+  public static List<String> getNewVariableNames(int num, Expression2... expressions) {
     List<String> names = Lists.newArrayList();
+    Expression2 combined = Expression2.nested(expressions);
 
     // TODO: do this in a canonical way.
     String varName = null;
@@ -347,7 +348,7 @@ public class StaticAnalysis {
       do {
         int random = (int) (Math.random() * 1000000.0);
         varName = "var" + random;
-      } while (expression.hasSubexpression(Expression2.constant(varName)));
+      } while (combined.hasSubexpression(Expression2.constant(varName)) || names.contains(varName));
       names.add(varName);
     }
     return names;

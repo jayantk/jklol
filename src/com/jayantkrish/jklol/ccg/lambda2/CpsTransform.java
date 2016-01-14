@@ -36,7 +36,8 @@ public class CpsTransform {
       return Expression2.nested(continuation, cpsExp);
     } else {
       List<Expression2> subexpressions = exp.getSubexpressions();
-      List<String> newNames = StaticAnalysis.getNewVariableNames(exp, subexpressions.size());
+      List<String> newNames = StaticAnalysis.getNewVariableNames(subexpressions.size(),
+          exp, continuation);
       List<Expression2> newExprs = Expression2.constants(newNames);
       
       // Continuation is the last argument to each function.
@@ -51,7 +52,7 @@ public class CpsTransform {
       Expression2 result = Expression2.nested(app);
       for (int i = newNames.size() - 1; i >= 0; i--) {
         result = T(subexpressions.get(i), 
-            Expression2.lambda(Lists.newArrayList(newNames.get(i)), result));
+            Expression2.lambda(Lists.newArrayList(newNames.get(i)), result) );
       }
       return result;
     }

@@ -325,7 +325,7 @@ public class CcgParse {
           return Expression2.nested(functionLogicalForm, argumentLogicalForm);
         } else {
           // Composition.
-          List<String> remainingArgsRenamed = StaticAnalysis.getNewVariableNames(argumentLogicalForm, numArgsToKeep);
+          List<String> remainingArgsRenamed = StaticAnalysis.getNewVariableNames(numArgsToKeep, argumentLogicalForm);
           List<Expression2> remainingArgExpressions = Expression2.constants(remainingArgsRenamed);
           List<Expression2> applicationExpressions = Lists.newArrayList(argumentLogicalForm);
           applicationExpressions.addAll(remainingArgExpressions);

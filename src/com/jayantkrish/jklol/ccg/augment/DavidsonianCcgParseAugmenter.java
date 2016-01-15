@@ -143,7 +143,7 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
       Expression2 body = StaticAnalysis.getLambdaBody(parentExpression, 0).substitute(firstArg, quantifiedVar);
 
       return ExpressionParser.expression2().parse(
-          "(lambda $L $R (lambda $1 (forall (qvar (set $R $1)) " + body + ")))");
+          "(lambda ($L $R) (lambda ($1) (forall (qvar (set $R $1)) " + body + ")))");
     }
   }
 
@@ -220,13 +220,13 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
     boundEntityVars.remove("e" + result.getHeadVariable());
     String expr = null;
     if (boundEntityVars.size() > 0) {
-      expr = "(lambda e" + result.getHeadVariable() + "(exists " + Joiner.on(" ").join(boundEntityVars) + " " + body + "))";
+      expr = "(lambda (e" + result.getHeadVariable() + ") (exists " + Joiner.on(" ").join(boundEntityVars) + " " + body + "))";
     } else {
-      expr = "(lambda e" + result.getHeadVariable() + " " + body + ")";
+      expr = "(lambda (e" + result.getHeadVariable() + ") " + body + ")";
     }
 
     for (int i = args.size() - 1; i >= 0; i--) {
-      expr = "(lambda f" + args.get(i).getHeadVariable() + " " + expr + ")";
+      expr = "(lambda (f" + args.get(i).getHeadVariable() + ") " + expr + ")";
     }
     
     return ExpressionParser.expression2().parse(expr);
@@ -283,7 +283,7 @@ public class DavidsonianCcgParseAugmenter implements CcgParseAugmenter {
     } else {
       String argFunc = null;
       if (arg.getArgumentType().isAtomic() && boundEntityVars.contains(arg.getArgumentType().getHeadVariable())) {
-        argFunc = "(lambda x (= x e" + arg.getArgumentType().getHeadVariable() + "))";
+        argFunc = "(lambda (x) (= x e" + arg.getArgumentType().getHeadVariable() + "))";
       } else { 
         argFunc = "f" + arg.getArgumentType().getHeadVariable();
       }

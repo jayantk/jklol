@@ -11,21 +11,21 @@ public class CpsTransformTest extends TestCase {
   }
   
   public void testLambda() {
-    runTest("(continuation (lambda k x (k x)))", "(lambda x x)");
+    runTest("(continuation (lambda (k x) (k x)))", "(lambda (x) x)");
   }
-  
+
   public void testApplication() {
-    runTest("(c (lambda $0 (a continuation b $0)) d)", "(a b (c d))");
+    runTest("(c (lambda ($0) (a continuation b $0)) d)", "(a b (c d))");
   }
   
   public void testSomething1() {
-    runTest("(count:<<a,t>,i> continuation (lambda $0 $1 (animal:<a,t> (lambda $2 (eats:<a,<a,t>> (lambda $3 (and:<t*,t> $0 $2 $3)) $1 \"bears\":a)) $1)))",
-        "(count:<<a,t>,i> (lambda $0 (and:<t*,t> (animal:<a,t> $0) (eats:<a,<a,t>> $0 \"bears\":a))))");
+    runTest("(count:<<a,t>,i> continuation (lambda ($0 $1) (animal:<a,t> (lambda ($2) (eats:<a,<a,t>> (lambda ($3) (and:<t*,t> $0 $2 $3)) $1 \"bears\":a)) $1)))",
+        "(count:<<a,t>,i> (lambda ($0) (and:<t*,t> (animal:<a,t> $0) (eats:<a,<a,t>> $0 \"bears\":a))))");
   }
   
   public void testSomething2() {
-    runTest("(continuation (lambda $0 $1 (eats:<a,<a,t>> (lambda $2 (sun:<a,t> (lambda $3 (and:<t*,t> $0 $2 $3)) $1)) $1 \"grasses and other plants\":a)))",
-        "(lambda $0 (and:<t*,t> (eats:<a,<a,t>> $0 \"grasses and other plants\":a) (sun:<a,t> $0)))");
+    runTest("(continuation (lambda ($0 $1) (eats:<a,<a,t>> (lambda ($2) (sun:<a,t> (lambda ($3) (and:<t*,t> $0 $2 $3)) $1)) $1 \"grasses and other plants\":a)))",
+        "(lambda ($0) (and:<t*,t> (eats:<a,<a,t>> $0 \"grasses and other plants\":a) (sun:<a,t> $0)))");
   }
 
   private void runTest(String expected, String input) {

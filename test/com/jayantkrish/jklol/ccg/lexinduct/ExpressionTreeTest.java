@@ -17,11 +17,11 @@ import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
 public class ExpressionTreeTest extends TestCase {
   
   String[] expressionStrings = new String[] {
-      "(lambda $0 (lambda $1 (and:<t*,t> (state:<lo,t> $1) (next_to:<lo,<lo,t>> $0 $1))))",
-      "(lambda $0 (lambda $1 (and:<t*,t> (state:<lo,t> $1) (next_to:<lo,<lo,t>> $0 texas:lo))))",
-      "(lambda $0 (and:<t*,t> (major:<lo,t> $0) (river:<lo,t> $0) (loc:<lo,<lo,t>> $0 texas:lo)))",
-      "(count:<<e,t>,i> (lambda $0 (and:<t*,t> (state:<s,t> $0) (exists:<<e,t>,t> (lambda $1 (and:<t*,t> (city:<c,t> $1) (named:<e,<n,t>> $1 springfield:n) (loc:<lo,<lo,t>> $1 $0)))))))",
-      "(lambda $0 (cause:<e,<e,t>> (decrease:<a,e> \"raccoons\":a) ($0 \"fish\":a)))",
+      "(lambda ($0) (lambda ($1) (and:<t*,t> (state:<lo,t> $1) (next_to:<lo,<lo,t>> $0 $1))))",
+      "(lambda ($0) (lambda ($1) (and:<t*,t> (state:<lo,t> $1) (next_to:<lo,<lo,t>> $0 texas:lo))))",
+      "(lambda ($0) (and:<t*,t> (major:<lo,t> $0) (river:<lo,t> $0) (loc:<lo,<lo,t>> $0 texas:lo)))",
+      "(count:<<e,t>,i> (lambda ($0) (and:<t*,t> (state:<s,t> $0) (exists:<<e,t>,t> (lambda ($1) (and:<t*,t> (city:<c,t> $1) (named:<e,<n,t>> $1 springfield:n) (loc:<lo,<lo,t>> $1 $0)))))))",
+      "(lambda ($0) (cause:<e,<e,t>> (decrease:<a,e> \"raccoons\":a) ($0 \"fish\":a)))",
   };
 
   Expression2[] expressions = new Expression2[expressionStrings.length];
@@ -74,7 +74,7 @@ public class ExpressionTreeTest extends TestCase {
     List<ExpressionNode> nodes = Lists.newArrayList();
     tree.getAllExpressionNodes(nodes);
     
-    Expression2 vacuous = parser.parse("(lambda $0 ($0 \"fish\":a))");
+    Expression2 vacuous = parser.parse("(lambda ($0) ($0 \"fish\":a))");
     
     for (ExpressionNode node : nodes) {
       assertFalse(comparator.equals(node.getExpression(), vacuous));

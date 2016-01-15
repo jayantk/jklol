@@ -89,7 +89,7 @@ public class ExpressionTree {
     for (int i = 1; i < expression.size(); i++) {
       int depth = expression.getDepth(i);
       Scope scope = StaticAnalysis.getEnclosingScope(expression, i);
-      if (depth <= (maxDepth + scope.getDepth()) && !StaticAnalysis.isPartOfSpecialForm(expression, i)) {
+      if (depth <= (maxDepth + scope.getDepth()) && !StaticAnalysis.isPartOfSpecialForm(expression, scope, i)) {
 
         List<Expression2> genLefts = Lists.newArrayList();
         List<Type> leftTypes = Lists.newArrayList();
@@ -155,7 +155,7 @@ public class ExpressionTree {
       List<Expression2> argExpressions, List<Type> argTypes, List<Expression2> funcExpressions,
       List<Type> funcTypes) {
     Expression2 lambdaTemplate = ExpressionParser.expression2()
-        .parse("(lambda ARGS BODY)");
+        .parse("(lambda (ARGS) BODY)");
     Expression2 applicationTemplate = ExpressionParser.expression2()
         .parse("(FUNC VALUES)");
 
@@ -216,7 +216,7 @@ public class ExpressionTree {
       Scope scope, List<Expression2> argExpressions, List<Type> argTypes, List<Expression2> funcExpressions,
       List<Type> funcTypes) {
     Expression2 lambdaTemplate = ExpressionParser.expression2()
-        .parse("(lambda ARGS BODY)");
+        .parse("(lambda (ARGS) BODY)");
     Expression2 andTemplate = ExpressionParser.expression2()
         .parse("(and:<t*,t> BODY)");
     Expression2 applicationTemplate = ExpressionParser.expression2()

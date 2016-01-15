@@ -44,28 +44,28 @@ public class VotingLexiconInductionTest extends TestCase {
       {"us in plano", "(in:<e,<e,t>> us:e plano:e)"},
       {"does texas border plano ?", "(border:<e,<e,t>> texas:e plano:e)"},
       {"is plano in texas", "(in:<e,<e,t>> plano:e texas:e)"},
-      {"city in texas", "(lambda x (and:<t*,t> (city:<e,t> x) (in:<e,<e,t>> x texas:e)))"},
-      {"major city in texas", "(lambda x (and:<t*,t> (major:<e,t> x) (city:<e,t> x) (in:<e,<e,t>> x texas:e)))"},
-      {"state in us", "(lambda x (and:<t*,t> (state:<e,t> x) (in:<e,<e,t>> x us:e)))"},
-/*      {"biggest city", "(argmax:<<e,t>,<<e,i>,e>> (lambda x (city:<e,t> x)) (lambda x (size:<e,i> x)))"},
-      {"biggest state", "(argmax:<<e,t>,<<e,i>,e>> (lambda x (state:<e,t> x)) (lambda x (size:<e,i> x)))"},
-      {"what city is the biggest in texas", "(argmax:<<e,t>,<<e,i>,e>> (lambda x (and:<t*,t> (city:<e,t> x) (in:<e,<e,t>> x texas:e))) (lambda x (size:<e,i> x)))"}
+      {"city in texas", "(lambda (x) (and:<t*,t> (city:<e,t> x) (in:<e,<e,t>> x texas:e)))"},
+      {"major city in texas", "(lambda (x) (and:<t*,t> (major:<e,t> x) (city:<e,t> x) (in:<e,<e,t>> x texas:e)))"},
+      {"state in us", "(lambda (x) (and:<t*,t> (state:<e,t> x) (in:<e,<e,t>> x us:e)))"},
+/*      {"biggest city", "(argmax:<<e,t>,<<e,i>,e>> (lambda (x) (city:<e,t> x)) (lambda (x) (size:<e,i> x)))"},
+      {"biggest state", "(argmax:<<e,t>,<<e,i>,e>> (lambda (x) (state:<e,t> x)) (lambda (x) (size:<e,i> x)))"},
+      {"what city is the biggest in texas", "(argmax:<<e,t>,<<e,i>,e>> (lambda (x) (and:<t*,t> (city:<e,t> x) (in:<e,<e,t>> x texas:e))) (lambda (x) (size:<e,i> x)))"}
 */  };
   
   String[][] templateStrings = new String[][] {{"NP{0}", "$0", "$0", "e"},
-      {"N{0}", "(lambda x ($0 x))", "$0", "<e,t>"},
-      {"((S{0}\\NP{1}){0}/NP{2}){0}", "(lambda x y ($0 x y))", "$0", "<e,<e,t>>"},
-      {"((S{0}\\NP{1}){0}/NP{2}){0}", "(lambda y x ($0 x y))", "$0", "<e,<e,t>>"},
-      {"((N{0}\\N{0}){1}/NP{2}){1}", "(lambda x f y (and:<t*,t> (f y) ($0 x y)))", "$0", "<e,<e,t>>"},
-      {"((N{0}\\N{0}){1}/NP{2}){1}", "(lambda x f y (and:<t*,t> (f y) ($0 y x)))", "$0", "<e,<e,t>>"},
-      {"(N{0}/N{0}){1}", "(lambda f x (and:<t*,t> (f x) ($0 x)))", "$0", "<e,t>"},
+      {"N{0}", "(lambda (x) ($0 x))", "$0", "<e,t>"},
+      {"((S{0}\\NP{1}){0}/NP{2}){0}", "(lambda (x y) ($0 x y))", "$0", "<e,<e,t>>"},
+      {"((S{0}\\NP{1}){0}/NP{2}){0}", "(lambda (y x) ($0 x y))", "$0", "<e,<e,t>>"},
+      {"((N{0}\\N{0}){1}/NP{2}){1}", "(lambda (x f y) (and:<t*,t> (f y) ($0 x y)))", "$0", "<e,<e,t>>"},
+      {"((N{0}\\N{0}){1}/NP{2}){1}", "(lambda (x f y) (and:<t*,t> (f y) ($0 y x)))", "$0", "<e,<e,t>>"},
+      {"(N{0}/N{0}){1}", "(lambda (f x) (and:<t*,t> (f x) ($0 x)))", "$0", "<e,t>"},
       {"SKIP{0}", "skip"},
   };
   
   String[] initialLexiconStrings = new String[] {
       "texas,NP{0},texas:e,0 texas:e",
       "plano,NP{0},plano:e,0 plano:e",
-      "in,((N{0}\\N{0}){1}/N{2}){1},\"(lambda y x (in:<e,<e,t>> x y))\",\"1 in:<e,<e,t>>\",\"in:<e,<e,t>> 1 0\",\"in:<e,<e,t>> 2 2\"",
+      "in,((N{0}\\N{0}){1}/N{2}){1},\"(lambda (y x) (in:<e,<e,t>> x y))\",\"1 in:<e,<e,t>>\",\"in:<e,<e,t>> 1 0\",\"in:<e,<e,t>> 2 2\"",
   };
 
   ExpressionSimplifier simplifier;
@@ -109,12 +109,12 @@ public class VotingLexiconInductionTest extends TestCase {
     }
 
     String[] ruleLines = {"DUMMY{0} BLAH{0}",
-        "SKIP{0} NP{1} NP{1},(lambda $L $R $R)",
-        "SKIP{0} N{1} N{1},(lambda $L $R $R)",
-        "SKIP{0} S{1} S{1},(lambda $L $R $R)",
-        "NP{1} SKIP{0} NP{1},(lambda $L $R $L)",
-        "N{1} SKIP{0} N{1},(lambda $L $R $L)",
-        "S{1} SKIP{0} S{1},(lambda $L $R $L)",
+        "SKIP{0} NP{1} NP{1},(lambda ($L $R) $R)",
+        "SKIP{0} N{1} N{1},(lambda ($L $R) $R)",
+        "SKIP{0} S{1} S{1},(lambda ($L $R) $R)",
+        "NP{1} SKIP{0} NP{1},(lambda ($L $R) $L)",
+        "N{1} SKIP{0} N{1},(lambda ($L $R) $L)",
+        "S{1} SKIP{0} S{1},(lambda ($L $R) $L)",
     };
     List<CcgUnaryRule> unaryRules = Lists.newArrayList();
     List<CcgBinaryRule> binaryRules = Lists.newArrayList();

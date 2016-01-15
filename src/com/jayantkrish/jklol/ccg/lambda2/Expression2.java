@@ -64,7 +64,7 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
   public static Expression2 lambda(List<String> argNames, Expression2 body) {
     List<Expression2> lambdaBody = Lists.newArrayList();
     lambdaBody.add(Expression2.constant(StaticAnalysis.LAMBDA));
-    lambdaBody.addAll(Expression2.constants(argNames));
+    lambdaBody.add(Expression2.nested(Expression2.constants(argNames)));
     lambdaBody.add(body);
     return Expression2.nested(lambdaBody);
   }

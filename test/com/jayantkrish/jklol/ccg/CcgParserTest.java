@@ -62,13 +62,13 @@ public class CcgParserTest extends TestCase {
       "berries,N{0},berries,0 berries",
       "apple,N{0},apple,0 apple",
       "houses,N{0},houses,0 houses",
-      "eat,((S[b]{0}\\N{1}){0}/N{2}){0},(lambda $2 $1 (exists a b (and ($1 a) ($2 b) (eat a b)))),0 eat,eat 1 1,eat 2 2",
-      "that,((N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0},(lambda $2 $1 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
-      "that,((N{1}\\N{1}){0}/(S[0]{2}/N{3}){2}){0},(lambda $2 $1 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
-      "quickly,(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0},(lambda $1 $1),0 quickly,quickly 1 1",
-      "in,((N{1}\\N{1}){0}/N{2}){0},(lambda $2 $1 (lambda c (exists d (and ($1 c) ($2 d) (in c d))))),0 in,in 1 1,in 2 2",
+      "eat,((S[b]{0}\\N{1}){0}/N{2}){0},(lambda ($2 $1) (exists a b (and ($1 a) ($2 b) (eat a b)))),0 eat,eat 1 1,eat 2 2",
+      "that,((N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0},(lambda ($2 $1) (lambda (x) (and ($1 x) ($2 (lambda (y) (equals y x)))))),0 that,that 1 1,that 2 2",
+      "that,((N{1}\\N{1}){0}/(S[0]{2}/N{3}){2}){0},(lambda ($2 $1) (lambda (x) (and ($1 x) ($2 (lambda (y) (equals y x)))))),0 that,that 1 1,that 2 2",
+      "quickly,(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0},(lambda ($1) $1),0 quickly,quickly 1 1",
+      "in,((N{1}\\N{1}){0}/N{2}){0},(lambda ($2 $1) (lambda (c) (exists d (and ($1 c) ($2 d) (in c d))))),0 in,in 1 1,in 2 2",
       "amazingly,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 amazingly,amazingly 1 2",
-      "tasty,(N{1}/N{1}){0},(lambda $1 (lambda e (and (tasty e) ($1 e)))),0 tasty,tasty 1 1",
+      "tasty,(N{1}/N{1}){0},(lambda ($1) (lambda (e) (and (tasty e) ($1 e)))),0 tasty,tasty 1 1",
       "in,(((S[1]{1}\\N{2}){1}\\(S[1]{1}\\N{2}){1}){0}/N{3}){0},,0 in,in 1 1,in 2 3",
       "and,((N{1}\\N{1}){0}/N{1}){0},,0 and",
       "almost,(((N{1}\\N{1}){2}/N{3}){2}/((N{1}\\N{1}){2}/N{3}){2}){0},,0 almost,almost 1 2",
@@ -79,10 +79,10 @@ public class CcgParserTest extends TestCase {
       "about,(NP{0}/(S[1]{1}\\N{2}){1}){0},,0 about,about 1 1",
       "eating,((S[ng]{0}\\N{1}){0}/N{2}){0},,0 eat,eat 1 1,eat 2 2",
       "rapidly,((S[1]{1}\\N{2}){1}/(S[1]{1}\\N{2}){1}){0},,0 rapidly,rapidly 1 1",
-      "colorful,(N{1}/N{1}){0},(lambda $1 (lambda e (and (colorful e) ($1 e)))),0 colorful,colorful 1 1",
+      "colorful,(N{1}/N{1}){0},(lambda ($1) (lambda (e) (and (colorful e) ($1 e)))),0 colorful,colorful 1 1",
       "*not_a_word*,(NP{0}/N{1}){0},,0 *not_a_word*",
       "near,((S[1]{1}/(S[1]{1}\\N{0}){1}){0}/N{2}){0},,0 near,near 2 2",
-      "the,(N{0}/N{0}){1},(lambda $1 $1),1 the,the 1 0",
+      "the,(N{0}/N{0}){1},(lambda ($1) $1),1 the,the 1 0",
       "exactly,(S[1]{1}/S[1]{1}){0},,0 exactly,exactly 1 1",
       "green,(N{0}/N{0}){1},,1 green,green_(N{0}/N{0}){1} 1 0",
       "blue,N{0},blue,0 blue",
@@ -90,7 +90,7 @@ public class CcgParserTest extends TestCase {
       "backward,(N{1}\\N{1}){0},backward,0 backward,backward 1 1",
       "a,(NP{1}/N{1}){0},,0 a,a 1 1",
       "#,#{0},#,0 #",
-      "stringfunc,(S{0}/String{1}){0},(lambda $1 (stringFunc $1)),0 stringfunc,stringfunc 1 1",
+      "stringfunc,(S{0}/String{1}){0},(lambda ($1) (stringFunc $1)),0 stringfunc,stringfunc 1 1",
       };
   
   private static final String[] unknownLexicon = {
@@ -112,12 +112,12 @@ public class CcgParserTest extends TestCase {
 
   private static final double[] unknownWeights = { 3.0 };
 
-  private static final String[] binaryRuleArray = { ";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda $L $R $L)",
+  private static final String[] binaryRuleArray = { ";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda ($L $R) $L)",
       ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"",
-      "conj{1} N{0} (N{0}\\N{0}){1},(lambda $L $R (lambda $0 (lambda x (forall (pred (set $R $0)) (pred x))))),CONJUNCTION",
+      "conj{1} N{0} (N{0}\\N{0}){1},(lambda ($L $R) (lambda ($0) (lambda (x) (forall (pred (set $R $0)) (pred x))))),CONJUNCTION",
       "conj{2} (S[0]{0}\\N{1}){0} ((S[0]{0}\\N{1}){0}\\(S[0]{0}\\N{1}){0}){2},,CONJUNCTION",
-      "\"N{0} N{1} N{1}\",\"(lambda $L $R (lambda j (exists k (and ($L k) ($R j) (special:compound k j)))))\",\"OTHER\",\"special:compound 1 0\",\"special:compound 2 1\"",
-      "#{5} N{1} (N{0}\\N{0}){1},(lambda $C $R (lambda $L (lambda x (exists y (and ($L x) ($R y) (compound y x)))))),OTHER,special:compound 1 0,special:compound 2 1"
+      "\"N{0} N{1} N{1}\",\"(lambda ($L $R) (lambda (j) (exists k (and ($L k) ($R j) (special:compound k j)))))\",\"OTHER\",\"special:compound 1 0\",\"special:compound 2 1\"",
+      "#{5} N{1} (N{0}\\N{0}){1},(lambda ($C $R) (lambda ($L) (lambda (x) (exists y (and ($L x) ($R y) (compound y x)))))),OTHER,special:compound 1 0,special:compound 2 1"
   };
 
   private static final String[] unaryRuleArray = { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1}",
@@ -164,11 +164,11 @@ public class CcgParserTest extends TestCase {
     parserWithCompositionNormalForm = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, unknownWeights, true, false, true, false);
     parserWithUnary = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, unaryRuleArray, weights, unknownWeights, false, false, false, false);
     parserWithUnaryAndComposition = parseLexicon(lexicon, unknownLexicon, binaryRuleArray,
-        new String[] { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1},(lambda $0 (lambda $1 ($1 $0)))" }, weights, unknownWeights, true, false, false, false);
+        new String[] { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1},(lambda ($0) (lambda ($1) ($1 $0)))" }, weights, unknownWeights, true, false, false, false);
 
     parserWordSkip = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, unknownWeights, false, true, false, false);
     
-    parserWithString = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "String{0} N{0},(lambda x x)" }, weights, unknownWeights, false, true, false, true);
+    parserWithString = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "String{0} N{0},(lambda (x) x)" }, weights, unknownWeights, false, true, false, true);
 
     exp = ExpressionParser.expression2();
     simplifier = new ExpressionSimplifier(Arrays.
@@ -360,12 +360,12 @@ public class CcgParserTest extends TestCase {
 
   public void testParseLogicalFormApplication2() {
     runLogicalFormTest(parser, Arrays.asList("i", "that", "eat", "berries"),
-        "(lambda x (and (i x) (exists a b (and (equals a x) (berries b) (eat a b)))))");
+        "(lambda (x) (and (i x) (exists a b (and (equals a x) (berries b) (eat a b)))))");
   }
 
   public void testParseLogicalFormComposition() {
     runLogicalFormTest(parserWithComposition, Arrays.asList("the", "colorful", "tasty"), 
-        "(lambda $1 (lambda e (and (colorful e) (and (tasty e) ($1 e)))))");
+        "(lambda ($1) (lambda (e) (and (colorful e) (and (tasty e) ($1 e)))))");
   }
 
   public void testParseLogicalFormBinaryRule() {
@@ -381,7 +381,7 @@ public class CcgParserTest extends TestCase {
 
   public void testParseLogicalFormBinaryRule3() {
     runLogicalFormTest(parserWithComposition, Arrays.asList("people", "berries"),
-        "(lambda j (exists k (and (people k) (berries j) (special:compound k j))))");
+        "(lambda (j) (exists k (and (people k) (berries j) (special:compound k j))))");
   }
 
   public void testParseLogicalFormConjunction() {
@@ -394,7 +394,7 @@ public class CcgParserTest extends TestCase {
         Arrays.asList("berries", "that", "i", "eat"), 10);
 
     Expression2 expectedLf = exp.parse(
-        "(lambda x (and (berries x) (exists a b (and (i a) (equals b x) (eat a b)))))");
+        "(lambda (x) (and (berries x) (exists a b (and (i a) (equals b x) (eat a b)))))");
     boolean foundN = false;
     for (CcgParse parse : parses) {
       String root = parse.getSyntacticCategory().getValue();
@@ -1285,8 +1285,8 @@ public class CcgParserTest extends TestCase {
     }
 
     if (useStringLexicon) {
-      CcgCategory stringCategory = CcgCategory.parseFrom("String{0},(lambda $0 $0),0 special:string");
-      CcgCategory unknownCategory = CcgCategory.parseFrom("Unknown{0},(lambda $0 unknownCommand),0 special:unknown");
+      CcgCategory stringCategory = CcgCategory.parseFrom("String{0},(lambda ($0) $0),0 special:string");
+      CcgCategory unknownCategory = CcgCategory.parseFrom("Unknown{0},(lambda ($0) unknownCommand),0 special:unknown");
       CcgLexicon stringLexicon = new StringLexicon(terminalVar, Arrays.asList(stringCategory, unknownCategory),
           Arrays.asList(CategorySpanConfig.ALL_SPANS, CategorySpanConfig.WHOLE_SENTENCE),
           StringLexicon.getDefaultDetokenizer());

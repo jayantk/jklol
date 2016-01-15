@@ -332,11 +332,7 @@ public class CcgParse {
           Expression2 argumentApplication = Expression2.nested(applicationExpressions);
 
           Expression2 body = Expression2.nested(functionLogicalForm, argumentApplication);
-          List<Expression2> functionExpressions = Lists.newArrayList();
-          functionExpressions.add(Expression2.constant("lambda"));
-          functionExpressions.addAll(remainingArgExpressions);
-          functionExpressions.add(body);
-          return Expression2.nested(functionExpressions);
+          return Expression2.lambda(remainingArgsRenamed, body);
         }
       }
 

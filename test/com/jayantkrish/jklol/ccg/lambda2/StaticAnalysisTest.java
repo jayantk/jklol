@@ -18,9 +18,9 @@ public class StaticAnalysisTest extends TestCase {
   
   String[] expressionStrings = new String[] {
     "(foo bar baz)",
-    "(lambda foo (foo bar baz))",
-    "(lambda foo (foo bar (lambda baz (abcd)) baz))",
-    "(lambda foo (foo bar (lambda baz (abcd baz))))",
+    "(lambda (foo) (foo bar baz))",
+    "(lambda (foo) (foo bar (lambda (baz) (abcd)) baz))",
+    "(lambda (foo) (foo bar (lambda (baz) (abcd baz))))",
   };
   
   Expression2[] expressions = new Expression2[expressionStrings.length];
@@ -65,23 +65,26 @@ public class StaticAnalysisTest extends TestCase {
     
     scope = StaticAnalysis.getEnclosingScope(expressions[1], 1);
     assertEquals(Sets.newHashSet("foo"), scope.getBoundVariables());
-    scope = StaticAnalysis.getEnclosingScope(expressions[1], 3);
+    scope = StaticAnalysis.getEnclosingScope(expressions[1], 4);
     assertEquals(Sets.newHashSet("foo"), scope.getBoundVariables());
-    scope = StaticAnalysis.getEnclosingScope(expressions[1], 6);
+    scope = StaticAnalysis.getEnclosingScope(expressions[1], 7);
     assertEquals(Sets.newHashSet("foo"), scope.getBoundVariables());
     assertEquals(1, scope.getStart());
-    assertEquals(7, scope.getEnd());
+    assertEquals(8, scope.getEnd());
+    assertEquals(3, scope.getBindingIndex("foo"));
 
-    scope = StaticAnalysis.getEnclosingScope(expressions[2], 5);
+    scope = StaticAnalysis.getEnclosingScope(expressions[2], 6);
     assertEquals(Sets.newHashSet("foo"), scope.getBoundVariables());
-    scope = StaticAnalysis.getEnclosingScope(expressions[2], 7);
+    scope = StaticAnalysis.getEnclosingScope(expressions[2], 8);
     assertEquals(Sets.newHashSet("foo", "baz"), scope.getBoundVariables());
-    scope = StaticAnalysis.getEnclosingScope(expressions[2], 9);
-    assertEquals(Sets.newHashSet("foo", "baz"), scope.getBoundVariables());
-    assertEquals(7, scope.getStart());
-    assertEquals(11, scope.getEnd());
-
     scope = StaticAnalysis.getEnclosingScope(expressions[2], 11);
+    assertEquals(Sets.newHashSet("foo", "baz"), scope.getBoundVariables());
+    assertEquals(8, scope.getStart());
+    assertEquals(13, scope.getEnd());
+    assertEquals(3, scope.getBindingIndex("foo"));
+    assertEquals(10, scope.getBindingIndex("baz"));
+
+    scope = StaticAnalysis.getEnclosingScope(expressions[2], 13);
     assertEquals(Sets.newHashSet("foo"), scope.getBoundVariables());
   }
 
@@ -95,74 +98,74 @@ public class StaticAnalysisTest extends TestCase {
     runTypeInferenceTest("foo:<lo,i>", "<e,i>");
   }
 
-  public void testTypeInferenceLambda() {
-    runTypeInferenceTest("(lambda $0 (foo:<e,t> $0))", "<e,t>");
-    runTypeInferenceTest("(lambda $0 $1 (and:<t,<t,t>> ($1 $0) (foo:<e,t> $0)))", "<e,<<e,t>,t>>");
+    public void testTypeInferenceLambda() {
+    runTypeInferenceTest("(lambda ($0) (foo:<e,t> $0))", "<e,t>");
+    runTypeInferenceTest("(lambda ($0 $1) (and:<t,<t,t>> ($1 $0) (foo:<e,t> $0)))", "<e,<<e,t>,t>>");
   }
   
   public void testTypeInferenceNestedLambda() {
-    String expression = "(count:<<e,t>,i> (lambda $0 (and:<t,<t,t>> (state:<e,t> $0)"
-        + "(exists:<<e,t>,t> (lambda $1 (and:<t,<t,t>> (city:<e,t> $1) (loc:<e,<e,t>> $1 $0)))))))";
+    String expression = "(count:<<e,t>,i> (lambda ($0) (and:<t,<t,t>> (state:<e,t> $0)"
+        + "(exists:<<e,t>,t> (lambda ($1) (and:<t,<t,t>> (city:<e,t> $1) (loc:<e,<e,t>> $1 $0)))))))";
     runTypeInferenceTest(expression, "i");
   }
   
   public void testTypeInferenceNestedLambdaFunction() {
-    String expression = "(lambda $0 (count:<<e,t>,i> $0))";
+    String expression = "(lambda ($0) (count:<<e,t>,i> $0))";
     runTypeInferenceTest(expression, "<<e,t>,i>");
   }
   
   public void testTypeInferenceNestedLambdaFunction2() {
-    String expression = "(lambda $0 (lambda $1 (cause:<e,<e,t>> $0 ($1 foo:a))))";
+    String expression = "(lambda ($0) (lambda ($1) (cause:<e,<e,t>> $0 ($1 foo:a))))";
     runTypeInferenceTest(expression, "<e,<<a,e>,t>>");
   }
 
   public void testRepeatedArguments() {
-    runTypeInferenceTest("(lambda $0 $1 (and:<t*,t> (bar:<e,t> $0) ($1 $0) (foo:<e,t> $0)))", "<e,<<e,t>,t>>");
+    runTypeInferenceTest("(lambda ($0 $1) (and:<t*,t> (bar:<e,t> $0) ($1 $0) (foo:<e,t> $0)))", "<e,<<e,t>,t>>");
   }
 
   public void testUnknownPropagation() {
-    runTypeInferenceTest("(lambda $0 $1 ($0 $1))", "<<⊤,⊤>,<⊤,⊤>>");
+    runTypeInferenceTest("(lambda ($0 $1) ($0 $1))", "<<⊤,⊤>,<⊤,⊤>>");
   }
 
   public void testMultipleArguments() {
-    runTypeInferenceTest("(lambda $f0 (argmax:<<e,t>,<<e,i>,e>> $f0 (lambda $1 (size:<lo,i> $1))))",
+    runTypeInferenceTest("(lambda ($f0) (argmax:<<e,t>,<<e,i>,e>> $f0 (lambda ($1) (size:<lo,i> $1))))",
         "<<e,t>,e>");
   }
   
   public void testSomething() {
-    runTypeInferenceTest("(lambda $f0 (named:<e,<n,t>> $f0 austin:n))", "<e,t>");
+    runTypeInferenceTest("(lambda ($f0) (named:<e,<n,t>> $f0 austin:n))", "<e,t>");
   }
   
   public void testSomething2() {
-    runTypeInferenceTest("(lambda $f0 $f1 (and:<t*,t> ($f0 $f1) (exists:<<e,t>,t> (lambda $1 (and:<t*,t> (city:<c,t> $1) (named:<e,<n,t>> $1 austin:n) (loc:<lo,<lo,t>> $1 $f1))))))",
+    runTypeInferenceTest("(lambda ($f0 $f1) (and:<t*,t> ($f0 $f1) (exists:<<e,t>,t> (lambda ($1) (and:<t*,t> (city:<c,t> $1) (named:<e,<n,t>> $1 austin:n) (loc:<lo,<lo,t>> $1 $f1))))))",
         "<<e,t>,<e,t>>");
   }
   
   public void testSomething3() {
-    runTypeInferenceTest("(lambda $0 (size:<lo,i> (argmax:<<e,t>,<<e,i>,e>> (lambda $1 ($0 $1)) (lambda $1 (size:<lo,i> $1)))))",
+    runTypeInferenceTest("(lambda ($0) (size:<lo,i> (argmax:<<e,t>,<<e,i>,e>> (lambda ($1) ($0 $1)) (lambda ($1) (size:<lo,i> $1)))))",
         "<<e,t>,i>");
   }
   
   public void testSomething4() {
     Type expected = Type.parseFrom("<<e,t>,<e,<e,t>>>");
     Expression2 exp = ExpressionParser.expression2().parse(
-        "(lambda $0 (lambda $1 (lambda $2 (and:<t*,t> ($0 $2) (loc:<lo,<lo,t>> $2 $1)))))");
+        "(lambda ($0) (lambda ($1) (lambda ($2) (and:<t*,t> ($0 $2) (loc:<lo,<lo,t>> $2 $1)))))");
     Type predicted = StaticAnalysis.inferType(exp, expected, typeDeclaration);
     assertEquals(expected, predicted);
   }
   
   public void testSomething5() {
-    runTypeInferenceTest("(get-denotation-c:<<d,⊥>,<<<t,⊥>,<a,⊥>>,⊥>> (lambda $0 (display:<⊤,⊥> $0)) (lambda $0 $1 (animal-c:<<t,⊥>,<a,⊥>> (lambda $2 (plant-c:<<t,⊥>,<a,⊥>> (lambda $3 (and-c:<<t,⊥>,<t*,⊥>> $0 $2 $3)) $1)) $1)))",
+    runTypeInferenceTest("(get-denotation-c:<<d,⊥>,<<<t,⊥>,<a,⊥>>,⊥>> (lambda ($0) (display:<⊤,⊥> $0)) (lambda ($0 $1) (animal-c:<<t,⊥>,<a,⊥>> (lambda ($2) (plant-c:<<t,⊥>,<a,⊥>> (lambda ($3) (and-c:<<t,⊥>,<t*,⊥>> $0 $2 $3)) $1)) $1)))",
         "⊥");
   }
 
   public void testSomething6() {
-    runTypeInferenceTest("(get-denotation-c:<<d,⊥>,<<<t,⊥>,<a,⊥>>,⊥>> (lambda $0 (display:<⊤,⊥> $0)) (lambda $0 $1 (secondary-consumer-c:<<t,⊥>,<a,⊥>> (lambda $2 (top-predator-c:<<t,⊥>,<a,⊥>> (lambda $3 (and-c:<<t,⊥>,<t*,⊥>> $0 $2 $3)) $1)) $1)))",
+    runTypeInferenceTest("(get-denotation-c:<<d,⊥>,<<<t,⊥>,<a,⊥>>,⊥>> (lambda ($0) (display:<⊤,⊥> $0)) (lambda ($0 $1) (secondary-consumer-c:<<t,⊥>,<a,⊥>> (lambda ($2) (top-predator-c:<<t,⊥>,<a,⊥>> (lambda ($3) (and-c:<<t,⊥>,<t*,⊥>> $0 $2 $3)) $1)) $1)))",
         "⊥");
   }
 
   public void testVariablesSameName() {
-    runTypeInferenceTest("(lambda f (and:<t*,t> (f texas:e) ((lambda f (state:<e,t> f)) austin:e)))",
+    runTypeInferenceTest("(lambda (f) (and:<t*,t> (f texas:e) ((lambda (f) (state:<e,t> f)) austin:e)))",
         "<<e,t>,t>");
   }
 

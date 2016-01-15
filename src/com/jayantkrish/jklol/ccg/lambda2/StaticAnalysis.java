@@ -121,14 +121,19 @@ public class StaticAnalysis {
         if (constant.equals(LAMBDA)) {
           // Read off the variables and add them to a static scope.
           Expression2 lambdaExpression = expression.getSubexpression(i - 1);
-          List<Expression2> subexpressions = lambdaExpression.getSubexpressions();
-
-          // First expression is LAMBDA, last is body.
+          // The nested expression after the lambda keyword contains the arguments.
+          int argExpressionIndex = i + 1;
+          Expression2 argExpression = expression.getSubexpression(argExpressionIndex);
+          Preconditions.checkState(!argExpression.isConstant(),
+              "Ill-formed lambda expression: %s", lambdaExpression);
+          
+          List<Expression2> subexpressions = argExpression.getSubexpressions();
+          
           Map<String, Integer> bindings = Maps.newHashMap();
-          for (int j = 1; j < subexpressions.size() - 1; j++) {
+          for (int j = 0; j < subexpressions.size(); j++) {
             Preconditions.checkState(subexpressions.get(j).isConstant(),
                 "Illegal lambda expression %s", lambdaExpression);
-            bindings.put(subexpressions.get(j).getConstant(), i + j);
+            bindings.put(subexpressions.get(j).getConstant(), argExpressionIndex + j + 1);
           }
 
           int scopeStart = i;
@@ -158,14 +163,17 @@ public class StaticAnalysis {
   }
   
   public static List<String> getLambdaArguments(Expression2 expression, int index) {
-    int[] children = expression.getChildIndexes(index);
+    Preconditions.checkArgument(isLambda(expression, index));
+
+    // index + 2 is the nested expression containing argument names.
+    int[] children = expression.getChildIndexes(index + 2);
     List<String> args = Lists.newArrayList();
-    for (int i = 1; i < children.length - 1; i++){
+    for (int i = 0; i < children.length; i++) {
       args.add(expression.getSubexpression(children[i]).getConstant());
     }
     return args;
   }
-  
+
   public static Expression2 getLambdaBody(Expression2 expression) {
     return getLambdaBody(expression, 0);
   }
@@ -174,23 +182,18 @@ public class StaticAnalysis {
     int[] children = expression.getChildIndexes(index);
     return expression.getSubexpression(children[children.length - 1]);
   }
-
-  public static boolean isPartOfSpecialForm(Expression2 expression, int index) {
-    int parentIndex = expression.getParentExpressionIndex(index);
-    if (parentIndex == -1) {
+  
+  public static boolean isPartOfSpecialForm(Expression2 expression, Scope scope, int index) {
+    if (scope.getParent() == null) {
       return false;
     } else {
-      Expression2 parent = expression.getSubexpression(parentIndex);
-      
-      Expression2 sub = parent.getSubexpression(1);
-      if (sub.isConstant() && sub.getConstant().equals(LAMBDA)) {
-        int bodyIndex = parentIndex + parent.getSubexpressions().size();
-        return index < bodyIndex;
-      }
-      return false;
+      // This is a hacky way to detect if index points to a lambda or its arguments
+      int lambdaIndex = scope.getStart() - 1;
+      int[] childIndexes = expression.getChildIndexes(lambdaIndex);
+      return index < childIndexes[childIndexes.length - 1];
     }
   }
-  
+
   public static Type inferType(Expression2 expression, TypeDeclaration typeDeclaration) {
     return inferType(expression, TypeDeclaration.TOP, typeDeclaration);
   }
@@ -238,17 +241,16 @@ public class StaticAnalysis {
             updated = updateType(bindingIndex, myType, subexpressionTypeMap, typeDeclaration, expression) || updated;
           }
 
-        } else if (subexpression.getSubexpressions().size() > 1 && 
-            subexpression.getSubexpression(1).isConstant() && 
-            subexpression.getSubexpression(1).getConstant().equals(LAMBDA)) {
+        } else if (isLambda(subexpression)) {
           // Lambda expression. Propagate argument / body types to the whole expression,
           // and the expressions type back to the arguments / body.
           int[] childIndexes = expression.getChildIndexes(index);
           int bodyIndex = childIndexes[childIndexes.length - 1];
-          
+          int[] argIndexes = expression.getChildIndexes(childIndexes[1]);
+
           Type newType = subexpressionTypeMap.get(bodyIndex);
-          for (int i = childIndexes.length - 2; i >= 1; i--) {
-            newType = newType.addArgument(subexpressionTypeMap.get(childIndexes[i]));
+          for (int i = argIndexes.length - 1; i >= 0; i--) {
+            newType = newType.addArgument(subexpressionTypeMap.get(argIndexes[i]));
           }
 
           updated = updateType(index, newType, subexpressionTypeMap, typeDeclaration, expression) || updated;
@@ -256,16 +258,15 @@ public class StaticAnalysis {
           // Propagate the expression's type back to the arguments / body
           Type lambdaType = subexpressionTypeMap.get(index);
 
-          for (int i = 1; i < childIndexes.length - 1; i++) {
+          for (int i = 0; i < argIndexes.length; i++) {
             Type argType = lambdaType.getArgumentType();
-            updated = updateType(childIndexes[i], argType, subexpressionTypeMap, typeDeclaration, expression) || updated;
+            updated = updateType(argIndexes[i], argType, subexpressionTypeMap, typeDeclaration, expression) || updated;
             lambdaType = lambdaType.getReturnType();
           }
 
-          updated = updateType(childIndexes[childIndexes.length - 1], lambdaType,
+          updated = updateType(bodyIndex, lambdaType,
               subexpressionTypeMap, typeDeclaration, expression) || updated;
-
-        } else {
+        } else if (!StaticAnalysis.isPartOfSpecialForm(expression, scopes.getScope(index), index)) {
           // Application
           int[] childIndexes = expression.getChildIndexes(index);
           int functionIndex = childIndexes[0];
@@ -311,10 +312,16 @@ public class StaticAnalysis {
   private static void initializeSubexpressionTypeMap(Expression2 expression,
       Map<Integer, Type> subexpressionTypeMap) {
     for (int i = 0; i < expression.size(); i++) {
-      if (!(expression.isConstant() && expression.getConstant().equals(LAMBDA))) {
-        // Don't include the lambda part of lambda expressions.
-        subexpressionTypeMap.put(i, TypeDeclaration.TOP);
+      int parentIndex = expression.getParentExpressionIndex(i);
+      
+      if (parentIndex != -1 && StaticAnalysis.isLambda(expression, parentIndex)) {
+        // Don't include "lambda" or the nested expression containing lambda arguments
+        int[] childIndexes = expression.getChildIndexes(parentIndex);
+        if (i == childIndexes[0] || i == childIndexes[1]) {
+          continue;
+        }
       }
+      subexpressionTypeMap.put(i, TypeDeclaration.TOP);
     }
   }
 
@@ -357,8 +364,8 @@ public class StaticAnalysis {
   public static class Scope {
     // Index in the program of the first expression within an
     // expression that defines a new scope. For example, in:
-    // (foo (lambda x body))
-    // a scope would start at index 3 and end at 6.
+    // (foo (lambda (x) body))
+    // a scope would start at index 3 and end at 7.
     private final int start;
     // End of the expression that defines a new scope.
     // Exclusive index.

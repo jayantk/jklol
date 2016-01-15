@@ -28,20 +28,20 @@ import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 public class FeaturizedLexiconScorerTest extends TestCase {
   
   private static final String[] lexicon = {
-      "block,N{0},(lambda x (pred:block x)),0 pred:block",
-      "block,NP{0},(lambda x (pred:object x)),0 pred:object",
-      "foo,ABC{0},(lambda x (pred:object x)),0 pred:object",
-      "bar,ABCD{0},(lambda x (pred:object x)),0 pred:object",
+      "block,N{0},(lambda (x) (pred:block x)),0 pred:block",
+      "block,NP{0},(lambda (x) (pred:object x)),0 pred:object",
+      "foo,ABC{0},(lambda (x) (pred:object x)),0 pred:object",
+      "bar,ABCD{0},(lambda (x) (pred:object x)),0 pred:object",
   };
   
   private static final String[] unknownLexicon = {};
   private static final String[] ruleArray = {"ABC{0} ABCD{0}", "ABC{0} ABC{0} ABCD{0}"};
 
   private static final String[] trainingData = {
-      "red block#########(lambda x (pred:block x))",
-      "block red#########(lambda x (pred:object x))",
-      "block block red#########(lambda x (pred:object x))",
-      "block block red#########(lambda x (pred:object x))",
+      "red block#########(lambda (x) (pred:block x))",
+      "block red#########(lambda (x) (pred:object x))",
+      "block block red#########(lambda (x) (pred:object x))",
+      "block block red#########(lambda (x) (pred:object x))",
   };
   
   private ParametricCcgParser family;

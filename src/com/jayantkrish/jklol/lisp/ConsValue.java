@@ -71,7 +71,7 @@ public class ConsValue {
   }
   
   public static List<Object> consListToList(Object consList) {
-    return consListToList(Object.class);
+    return consListToList(consList, Object.class);
   }
 
   public static <T> List<T> consListToList(Object consList, Class<T> clazz) {

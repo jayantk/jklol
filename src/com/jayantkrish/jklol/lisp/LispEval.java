@@ -55,13 +55,13 @@ public class LispEval {
           return result;
         } else if (constantName.equals("lambda")) {
           // Create and return a function value representing this function.
-          Preconditions.checkArgument(subexpressions.size() == 3);
+          LispUtil.checkArgument(subexpressions.size() == 3);
 
           List<SExpression> argumentExpressions = subexpressions.get(1).getSubexpressions();
           int[] argumentNameIndexes = new int[argumentExpressions.size()];
           int ind = 0;
           for (SExpression argumentExpression : argumentExpressions) {
-            Preconditions.checkArgument(argumentExpression.isConstant());
+            LispUtil.checkArgument(argumentExpression.isConstant());
             argumentNameIndexes[ind] = argumentExpression.getConstantIndex();
             ind++;
           }
@@ -70,7 +70,7 @@ public class LispEval {
           return new EvalResult(new LambdaValue(argumentExpressions, argumentNameIndexes,
               functionBody, environment));
         } else if (constantName.equals("if")) {
-          Preconditions.checkArgument(subexpressions.size() == 4);
+          LispUtil.checkArgument(subexpressions.size() == 4);
           Object testCondition = eval(subexpressions.get(1), environment).getValue();
           if (ConstantValue.TRUE.equals(testCondition)) {
             return eval(subexpressions.get(2), environment);
@@ -98,7 +98,7 @@ public class LispEval {
         List<Object> arguments = values.subList(1, values.size());
 
         int[] argumentNameIndexes = functionToApply.getArgumentNameIndexes(); 
-        Preconditions.checkArgument(argumentNameIndexes.length == arguments.size(),
+        LispUtil.checkArgument(argumentNameIndexes.length == arguments.size(),
             "Wrong number of arguments: expected %s, got %s",
             functionToApply.getArgumentExpressions(), arguments);
 

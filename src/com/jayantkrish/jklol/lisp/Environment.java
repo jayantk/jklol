@@ -99,7 +99,7 @@ public class Environment {
       return bindings.get(symbolIndex);
     }
 
-    Preconditions.checkState(parentEnvironment != null,
+    LispUtil.checkState(parentEnvironment != null,
         "Tried accessing unbound variable: %s", symbolTable.get(symbolIndex));
     Object value = parentEnvironment.getValue(symbolIndex, symbolTable);
     return value;

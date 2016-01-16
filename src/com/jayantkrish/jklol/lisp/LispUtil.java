@@ -29,7 +29,7 @@ public class LispUtil {
 
     for (String filename : filenames) {
       for (String line : IoUtils.readLines(filename)) {
-        line = line.replaceAll("^ *;.*", "");
+        line = line.replaceAll("^[ \t]*;.*", "");
         programBuilder.append(line);
         programBuilder.append(" ");
       }

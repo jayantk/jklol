@@ -266,7 +266,7 @@ public class StaticAnalysis {
 
           updated = updateType(bodyIndex, lambdaType,
               subexpressionTypeMap, typeDeclaration, expression) || updated;
-        } else if (!StaticAnalysis.isPartOfSpecialForm(expression, scopes.getScope(index), index)) {
+        } else if (true) {
           // Application
           int[] childIndexes = expression.getChildIndexes(index);
           int functionIndex = childIndexes[0];

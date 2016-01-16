@@ -244,7 +244,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     
     // Initialize CCG parser components.
     List<CcgExample> ccgTrainingExamples = alignmentExamplesToCcgExamples(trainingData);
-    List<String> ruleEntries = Arrays.asList("\"DUMMY{0} DUMMY{0}\",\"(lambda $L $L)\"");
+    List<String> ruleEntries = Arrays.asList("\"DUMMY{0} DUMMY{0}\",\"(lambda ($L) $L)\"");
 
     FeatureVectorGenerator<StringContext> featureGen = getCcgFeatureFactory(ccgTrainingExamples);
     ccgTrainingExamples = featurizeExamples(ccgTrainingExamples, featureGen);

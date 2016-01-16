@@ -21,6 +21,7 @@ public class StaticAnalysisTest extends TestCase {
     "(lambda (foo) (foo bar baz))",
     "(lambda (foo) (foo bar (lambda (baz) (abcd)) baz))",
     "(lambda (foo) (foo bar (lambda (baz) (abcd baz))))",
+    "(lambda (foo) (foo bar (lambda (baz) (abcd baz))))",
   };
   
   Expression2[] expressions = new Expression2[expressionStrings.length];
@@ -130,6 +131,11 @@ public class StaticAnalysisTest extends TestCase {
   public void testMultipleArguments() {
     runTypeInferenceTest("(lambda ($f0) (argmax:<<e,t>,<<e,i>,e>> $f0 (lambda ($1) (size:<lo,i> $1))))",
         "<<e,t>,e>");
+  }
+  
+  public void testMultipleArguments2() {
+    runTypeInferenceTest("(lambda ($f0 $f1) (argmax:<<e,t>,<<e,i>,e>> $f0 $f1))",
+        "<<e,t>,<<e,i>,e>>");
   }
   
   public void testSomething() {

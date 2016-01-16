@@ -67,7 +67,7 @@ public class LispEval {
           }
 
           SExpression functionBody = subexpressions.get(2); 
-          return new EvalResult(new LambdaValue(argumentExpressions, argumentNameIndexes,
+          return new EvalResult(new LambdaValue(argumentExpressions, argumentNameIndexes, false,
               functionBody, environment));
         } else if (constantName.equals("if")) {
           LispUtil.checkArgument(subexpressions.size() == 4);

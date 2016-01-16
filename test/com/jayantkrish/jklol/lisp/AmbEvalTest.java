@@ -79,6 +79,12 @@ public class AmbEvalTest extends TestCase {
     Object expected = runTest("(list 123 456)");
     assertEquals(expected, value);
   }
+  
+  public void testVarargs() {
+    Object value = runTest("((lambda (x y . rest) (cons (* x y) rest)) 2 3 4 5 7)");
+    Object expected = runTest("(list 6 4 5 7)");
+    assertEquals(expected, value);
+  }
 
   public void testAmbMarginals1() {
     Object value = runTest("(get-marginals (amb (list 1 2) (list 2 2)))");

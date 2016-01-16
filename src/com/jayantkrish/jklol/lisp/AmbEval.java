@@ -60,6 +60,8 @@ public class AmbEval {
   private static final int OPT_MM_SYMBOL_INDEX = 13;
   private static final int NEW_FG_SCOPE_INDEX = 14;
   
+  private static final int PERIOD_INDEX = 15;
+  
   private final IndexedList<String> symbolTable;
 
   public AmbEval(IndexedList<String> symbolTable) {
@@ -142,14 +144,26 @@ public class AmbEval {
     } else {
       argumentExpressions = arguments.getSubexpressions();
     }
-
-    int[] argumentNameIndexes = new int[argumentExpressions.size()];
-    int ind = 0;
-    for (SExpression argumentExpression : argumentExpressions) {
+    
+    // Check whether the declaration has varargs.
+    boolean varargs = false;
+    List<SExpression> actualArguments = Lists.newArrayList();
+    for (int j = 0; j < argumentExpressions.size(); j++) {
+      SExpression argumentExpression = argumentExpressions.get(j);
       LispUtil.checkArgument(argumentExpression.isConstant(),
           "%s is not a constant. Argument list: %s", argumentExpression, arguments);
-      argumentNameIndexes[ind] = argumentExpression.getConstantIndex();
-      ind++;
+      if (argumentExpression.getConstantIndex() == PERIOD_INDEX) {
+        LispUtil.checkArgument(j == argumentExpressions.size() - 2,
+            "Invalid varargs lambda declaration. Arguments: %s", arguments);
+        varargs = true;
+      } else {
+        actualArguments.add(argumentExpression);
+      }
+    }
+
+    int[] argumentNameIndexes = new int[actualArguments.size()];
+    for (int j = 0; j < actualArguments.size(); j++) {
+      argumentNameIndexes[j] = actualArguments.get(j).getConstantIndex();
     }
 
     SExpression functionBody = null;
@@ -162,7 +176,7 @@ public class AmbEval {
       functionBody = SExpression.nested(functionBodyComponents);
     }
 
-    return new AmbLambdaValue(new LambdaValue(argumentExpressions, argumentNameIndexes,
+    return new AmbLambdaValue(new LambdaValue(actualArguments, argumentNameIndexes, varargs,
         functionBody, environment), this);
   }
   
@@ -699,6 +713,8 @@ public class AmbEval {
     symbolTable.add("opt");
     symbolTable.add("opt-mm");
     symbolTable.add("new-fg-scope");
+    
+    symbolTable.add(".");
 
     return symbolTable;
   }
@@ -719,13 +735,29 @@ public class AmbEval {
 
     @Override
     public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder gfgBuilder) {
-      int[] argumentNameIndexes = lambdaValue.getArgumentNameIndexes(); 
-      LispUtil.checkArgument(argumentNameIndexes.length == argumentValues.size(),
-          "Wrong number of arguments: expected %s, got %s to procedure: %s",
-          lambdaValue.getArgumentExpressions(), argumentValues, this);
+      int[] argumentNameIndexes = lambdaValue.getArgumentNameIndexes();
 
       Environment boundEnvironment = Environment.extend(lambdaValue.getEnvironment());
-      boundEnvironment.bindNames(argumentNameIndexes, argumentValues);
+      if (lambdaValue.hasVarargs()) {
+        LispUtil.checkArgument(argumentValues.size() > argumentNameIndexes.length - 1,
+            "Wrong number of arguments: expected %s, got %s to procedure: %s",
+            lambdaValue.getArgumentExpressions(), argumentValues, this);
+        // Last argument is the varargs parameter. 
+        for (int i = 0; i < argumentNameIndexes.length - 1; i++) {
+          boundEnvironment.bindName(argumentNameIndexes[i], argumentValues.get(i));
+        }
+
+        Object remainingArgumentList = ConsValue.listToConsList(
+            argumentValues.subList(argumentNameIndexes.length - 1, argumentValues.size()));
+        boundEnvironment.bindName(argumentNameIndexes[argumentNameIndexes.length - 1], remainingArgumentList);
+      } else {
+        System.out.println("BYE");
+        LispUtil.checkArgument(argumentNameIndexes.length == argumentValues.size(),
+            "Wrong number of arguments: expected %s, got %s to procedure: %s",
+            lambdaValue.getArgumentExpressions(), argumentValues, this);
+
+        boundEnvironment.bindNames(argumentNameIndexes, argumentValues);
+      }
 
       return eval.eval(lambdaValue.getBody(), boundEnvironment, gfgBuilder).getValue();
     }

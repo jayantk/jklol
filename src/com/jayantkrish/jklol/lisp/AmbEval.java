@@ -751,7 +751,6 @@ public class AmbEval {
             argumentValues.subList(argumentNameIndexes.length - 1, argumentValues.size()));
         boundEnvironment.bindName(argumentNameIndexes[argumentNameIndexes.length - 1], remainingArgumentList);
       } else {
-        System.out.println("BYE");
         LispUtil.checkArgument(argumentNameIndexes.length == argumentValues.size(),
             "Wrong number of arguments: expected %s, got %s to procedure: %s",
             lambdaValue.getArgumentExpressions(), argumentValues, this);

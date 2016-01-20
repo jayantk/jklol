@@ -104,4 +104,9 @@ public class LispUtil {
   public static void checkState(boolean condition) {
     checkState(condition, "");
   }
+
+  public static <T> T cast(Object o, Class<T> clazz) {
+    checkArgument(clazz.isInstance(o));
+    return clazz.cast(o);
+  }
 }

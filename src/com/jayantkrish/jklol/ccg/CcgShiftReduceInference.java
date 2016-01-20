@@ -8,8 +8,8 @@ import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
-import com.jayantkrish.jklol.util.HeapUtils;
 import com.jayantkrish.jklol.util.IntMultimap;
+import com.jayantkrish.jklol.util.KbestHeap;
 
 /**
  * Shift-reduce CCG parsing algorithm.
@@ -44,16 +44,16 @@ public class CcgShiftReduceInference implements CcgInference {
     parser.initializeChartTerminals(chart, sentence);
 
     // Working heap for queuing parses to process next.
-    Heap heap = new Heap(beamSize);
-    heap.queue(Stack.empty());
+    KbestHeap<ShiftReduceStack> heap = new KbestHeap<ShiftReduceStack>(beamSize, new ShiftReduceStack[0]);
+    heap.offer(ShiftReduceStack.empty(), 1.0);
 
     // Array of elements in the current beam.
-    Stack[] currentBeam = new Stack[beamSize + 1];
+    ShiftReduceStack[] currentBeam = new ShiftReduceStack[beamSize + 1];
     int currentBeamSize = 0;
 
     while (heap.size() > 0) {
       // Copy the heap to the current beam.
-      Stack[] keys = heap.getKeys();
+      ShiftReduceStack[] keys = heap.getKeys();
       for (int i = 0; i < heap.size(); i++) {
         currentBeam[i] = keys[i];
       }
@@ -66,7 +66,7 @@ public class CcgShiftReduceInference implements CcgInference {
       heap.clear();
       
       for (int i = 0; i < currentBeamSize; i++) {
-        Stack stack = currentBeam[i];
+        ShiftReduceStack stack = currentBeam[i];
         // System.out.println("Processing " + stack);
         shift(stack, chart, heap);
         reduce(stack, chart, heap, parser, log);
@@ -79,7 +79,7 @@ public class CcgShiftReduceInference implements CcgInference {
     return chart.decodeBestParsesForSpan(0, chart.size() - 1, beamSize, parser);
   }
   
-  public static final void shift(Stack stack, CcgChart chart, Heap heap) {
+  public static final void shift(ShiftReduceStack stack, CcgChart chart, KbestHeap<ShiftReduceStack> heap) {
     // Perform SHIFT actions.
     // The possible shift actions are the chart entries at
     // the span (curToken, curToken) to the span (curToken, inputLength - 1).
@@ -101,18 +101,18 @@ public class CcgShiftReduceInference implements CcgInference {
           // System.out.println("SHIFT: " + curToken + "," + spanEnd);
 
           // Queue the shift action by adding it to the heap.
-          Stack nextStack = stack.push(curToken, spanEnd, j, entries[j], probs[j]);
-          heap.queue(nextStack);
+          ShiftReduceStack nextStack = stack.push(curToken, spanEnd, j, entries[j], probs[j]);
+          heap.offer(nextStack, nextStack.totalProb);
         }
       }
     }
   }
   
-  public static final void reduce(Stack stack, CcgChart chart, Heap heap, CcgParser parser,
-      LogFunction log) {
+  public static final void reduce(ShiftReduceStack stack, CcgChart chart, KbestHeap<ShiftReduceStack> heap,
+      CcgParser parser, LogFunction log) {
     // Perform REDUCE actions.
     if (stack.size > 1) {
-      Stack prev = stack.previous;
+      ShiftReduceStack prev = stack.previous;
 
       ChartEntry[] prevEntryArray = chart.getChartEntriesForSpan(prev.spanStart, prev.spanEnd);
       double[] prevEntryProbArray = chart.getChartEntryProbsForSpan(prev.spanStart, prev.spanEnd);
@@ -134,92 +134,9 @@ public class CcgShiftReduceInference implements CcgInference {
       double[] chartProbs = chart.getChartEntryProbsForSpan(prev.spanStart, stack.spanEnd);
       for (int j = startNumEntries; j < endNumEntries; j++) {
         // System.out.println("REDUCE: " + stack + " --> " + parser.getSyntaxVarType().getValue(chartEntries[j].getHeadedSyntax()));
-        Stack toQueue = prev.previous.push(prev.spanStart, stack.spanEnd, j, chartEntries[j], chartProbs[j]);
-        heap.queue(toQueue);
+        ShiftReduceStack toQueue = prev.previous.push(prev.spanStart, stack.spanEnd, j, chartEntries[j], chartProbs[j]);
+        heap.offer(toQueue, toQueue.totalProb);
       }
-    }
-  }
-  
-  private static class Stack {
-    public final int spanStart;
-    public final int spanEnd;
-    public final int chartEntryIndex;
-    public final ChartEntry entry;
-    public final double entryProb;
-    
-    public final Stack previous;
-
-    public final int size;
-    public final double totalProb;
-
-    public Stack(int spanStart, int spanEnd, int chartEntryIndex, ChartEntry entry,
-        double entryProb, Stack previous) {
-      this.spanStart = spanStart;
-      this.spanEnd = spanEnd;
-      this.chartEntryIndex = chartEntryIndex;
-      this.entry = entry;
-      this.entryProb = entryProb;
-      
-      if (previous == null) {
-        this.size = 0;
-        this.totalProb = entryProb;
-      } else {
-        this.size = 1 + previous.size;
-        this.totalProb = previous.totalProb * entryProb;
-      }
-      
-      this.previous = previous;
-    }
-
-    public static Stack empty() {
-      return new Stack(-1, -1, -1, null, 1.0, null);
-    }
-
-    public Stack push(int spanStart, int spanEnd, int chartEntryIndex, ChartEntry entry, double prob) {
-      return new Stack(spanStart, spanEnd, chartEntryIndex, entry, prob, this);
-    }
-    
-    @Override
-    public String toString() {
-      String prevString = previous == null ? "" : previous.toString();
-      return spanStart + "," + spanEnd + " : " + prevString;
-    }
-  }
-  
-  private static class Heap {
-    private double[] values;
-    private Stack[] keys;
-    private int size;
-    private int maxElements;
-    
-    public Heap(int maxElements) {
-      values = new double[maxElements + 1];
-      keys = new Stack[maxElements + 1];
-      size = 0;
-      this.maxElements = maxElements;
-    }
-
-    public final int queue(Stack toQueue) {
-      HeapUtils.offer(keys, values, size, toQueue, toQueue.totalProb);
-      size++;
-
-      if (size > maxElements) {
-        HeapUtils.removeMin(keys, values, size);
-        size--;
-      }
-      return size;
-    }
-    
-    public int size() {
-      return size;
-    }
-    
-    public Stack[] getKeys() {
-      return keys;
-    }
-    
-    public void clear() {
-      this.size = 0;
     }
   }
 }

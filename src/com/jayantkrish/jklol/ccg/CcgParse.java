@@ -64,7 +64,7 @@ public class CcgParse {
   private final int spanStart;
   private final int spanEnd;
 
-  private CcgParse(HeadedSyntacticCategory syntax, LexiconEntryInfo lexiconEntry,
+  protected CcgParse(HeadedSyntacticCategory syntax, LexiconEntryInfo lexiconEntry,
       List<String> spannedWords, List<String> posTags, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double probability, CcgParse left, CcgParse right,
       Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {

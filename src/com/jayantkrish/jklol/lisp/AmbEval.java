@@ -356,12 +356,7 @@ public class AmbEval {
     Object value = eval(subexpressions.get(1), environment, builder).getValue();
 
     if (value instanceof AmbValue) {
-      VariableNumMap targetVar = ((AmbValue) value).getVar();
-      BranchingFactorGraph fg = builder.buildConnectedComponent(targetVar);
-
-      MarginalSet marginals = fg.getMarginals(targetVar);
-      DiscreteFactor varMarginal = marginals.getMarginal(targetVar.getOnlyVariableNum())
-          .coerceToDiscrete();
+      DiscreteFactor varMarginal = ambToMarginals((AmbValue) value, builder, true);
       
       Iterator<Outcome> iter = varMarginal.outcomeIterator();
       List<Object> outcomes = Lists.newArrayList();
@@ -379,6 +374,21 @@ public class AmbEval {
       Object outcomesConsList = ConsValue.listToConsList(Arrays.asList(value));
       Object weightsConsList = ConsValue.listToConsList(Arrays.asList(1.0));
       return new EvalResult(new ConsValue(outcomesConsList, new ConsValue(weightsConsList, ConstantValue.NIL)));
+    }
+  }
+  
+  public DiscreteFactor ambToMarginals(AmbValue value, ParametricBfgBuilder builder, boolean normalize) {
+    VariableNumMap targetVar = ((AmbValue) value).getVar();
+    BranchingFactorGraph fg = builder.buildConnectedComponent(targetVar);
+
+    MarginalSet marginals = fg.getMarginals(targetVar);
+    DiscreteFactor varMarginal = marginals.getMarginal(targetVar.getOnlyVariableNum())
+        .coerceToDiscrete();
+    
+    if (normalize) {
+      return varMarginal;
+    } else {
+      return varMarginal.product(Math.exp(marginals.getLogPartitionFunction()));
     }
   }
 

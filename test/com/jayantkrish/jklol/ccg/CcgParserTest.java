@@ -91,6 +91,7 @@ public class CcgParserTest extends TestCase {
       "a,(NP{1}/N{1}){0},,0 a,a 1 1",
       "#,#{0},#,0 #",
       "stringfunc,(S{0}/String{1}){0},(lambda ($1) (stringFunc $1)),0 stringfunc,stringfunc 1 1",
+      "people backward,N{0},people_backward,0 people_backward",
       };
   
   private static final String[] unknownLexicon = {
@@ -108,7 +109,7 @@ public class CcgParserTest extends TestCase {
       1.0, 0.5,
       1.0, 1.0,
       0.5, 1.0,
-      1.0, 1.0, 1.0, 1.0, 0.75, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+      1.0, 1.0, 1.0, 1.0, 0.75, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
 
   private static final double[] unknownWeights = { 3.0 };
 
@@ -1033,6 +1034,11 @@ public class CcgParserTest extends TestCase {
     assertTrue(foundN);
     assertTrue(foundString);
   }
+  
+  public void testMultiwordLexiconEntry() {
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("people", "backward"), 20);
+    assertEquals(2, parses.size());
+  }
 
   public List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       int beamSize) {
@@ -1066,7 +1072,7 @@ public class CcgParserTest extends TestCase {
     Set<String> semanticPredicates = Sets.newHashSet();
     for (int i = 0; i < lexicon.length; i++) {
       int commaInd = lexicon[i].indexOf(",");
-      words.add(Arrays.asList(lexicon[i].substring(0, commaInd)));
+      words.add(Arrays.asList(lexicon[i].substring(0, commaInd).split(" ")));
 
       CcgCategory category = CcgCategory.parseFrom(lexicon[i].substring(commaInd + 1));
       categories.add(category);
@@ -1126,7 +1132,7 @@ public class CcgParserTest extends TestCase {
     TableFactorBuilder terminalBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < lexicon.length; i++) {
       int commaInd = lexicon[i].indexOf(",");
-      List<String> wordList = Arrays.asList(lexicon[i].substring(0, commaInd));
+      List<String> wordList = Arrays.asList(lexicon[i].substring(0, commaInd).split(" "));
       CcgCategory category = CcgCategory.parseFrom(lexicon[i].substring(commaInd + 1));
       terminalBuilder.setWeight(vars.outcomeArrayToAssignment(wordList, category), weights[i]);
     }

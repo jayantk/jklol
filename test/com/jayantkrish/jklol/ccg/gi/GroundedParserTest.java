@@ -23,8 +23,10 @@ public class GroundedParserTest extends TestCase {
     "2,N{0},2,0 num",
     "3,N{0},3,0 num",
     "4,N{0},4,0 num",
-    "+,((N{1}\\N{1}){0}/N{2}){0},(lambda (x y) (+ x y)),0 +,",
-    "1_or_2,N{0},(amb (list 1 2) (list 2.0 3.0))"
+    "+,((N{1}\\N{1}){0}/N{2}){0},(lambda (x y) (+ x y)),0 +",
+    "1_or_2,N{0},(amb (list 1 2) (list 2.0 3.0)),0 num",
+    "1_or_2,N{0},1,0 num",
+    "1_or_2,N{0},2,0 num",
   };
 
   private static final String[] ruleArray = {"DUMMY{0} BLAH{0}"};

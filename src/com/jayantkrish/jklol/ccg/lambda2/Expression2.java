@@ -77,6 +77,18 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
     return constantName;
   }
 
+  public boolean isStringValue() {
+    return constantName != null && constantName.matches("\".*\"");
+  }
+
+  public String getStringValue() {
+    if (isStringValue()) {
+      return constantName.substring(1, constantName.length()-1).replaceAll("\\\\\"", "\"");
+    } else {
+      return null;
+    }
+  }
+
   public List<Expression2> getSubexpressions() {
     return subexpressions;
   }

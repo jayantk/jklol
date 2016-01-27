@@ -6,32 +6,39 @@ import java.util.List;
 
 import junit.framework.TestCase;
 
+import com.google.common.base.Joiner;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.IndexedList;
 
-public class GroundedParserTest extends TestCase {
+public class GroundedParserContinuationTest extends TestCase {
 
   private static final String[] lexicon = {
     "1,N{0},1,0 num",
     "2,N{0},2,0 num",
     "3,N{0},3,0 num",
     "4,N{0},4,0 num",
-    "+,((N{1}\\N{1}){0}/N{2}){0},(lambda (x y) (+ x y)),0 +",
-    "1_or_2,N{0},(amb (list 1 2) (list 2.0 3.0)),0 num",
+    "+,((N{1}\\N{1}){0}/N{2}){0},(lambda (x y) (+-k x y)),0 +",
+    "1_or_2,N{0},(queue-k (list-k 1 2)),0 num",
 //    "1_or_2,N{0},1,0 num",
 //    "1_or_2,N{0},2,0 num",
+  };
+  
+  private static final String[] predicateDefs = {
+    "(define list-k (k . args) (lambda (world) ((k args) world)))",
+    "(define +-k (k x y) (lambda (world) ((k (+ x y)) world)))"
   };
 
   private static final String[] ruleArray = {"DUMMY{0} BLAH{0}"};
 
   private GroundedParser parser;
-  private GroundedParser kParser;
   
   private static final double TOLERANCE = 1e-6;
   
@@ -44,13 +51,14 @@ public class GroundedParserTest extends TestCase {
     IndexedList<String> symbolTable = AmbEval.getInitialSymbolTable();
     AmbEval ambEval = new AmbEval(symbolTable);
     Environment env = AmbEval.getDefaultEnvironment(symbolTable);
+    ExpressionParser<SExpression> sexpParser = ExpressionParser.sExpression(symbolTable);
+    SExpression predicateProgram = sexpParser.parse("(begin " + Joiner.on("\n").join(predicateDefs) + ")");
+    ambEval.eval(predicateProgram, env, null);
+    
     ExpressionSimplifier simplifier = ExpressionSimplifier.lambdaCalculus();
     
-    IncrementalEval eval = new AmbIncrementalEval(ambEval, env, simplifier);
+    ContinuationIncrementalEval eval = new ContinuationIncrementalEval(ambEval, env, simplifier);
     parser = new GroundedParser(ccgParser, eval);
-    
-    ContinuationIncrementalEval kEval = new ContinuationIncrementalEval(ambEval, env, simplifier);
-    kParser = new GroundedParser(ccgParser, kEval);
   }
 
   public void testParse() {
@@ -66,19 +74,11 @@ public class GroundedParserTest extends TestCase {
     assertEquals(2.0, parses.get(1).getSubtreeProbability(), TOLERANCE);
     assertEquals(3, parses.get(1).getDenotation());
   }
-  
-  public void testContinuationParse() {
-    List<GroundedCcgParse> parses = beamSearch(kParser, Arrays.asList("1"));
-
-    for (GroundedCcgParse parse : parses) {
-      System.out.println(parse.getSubtreeProbability() + " " + parse.getLogicalForm() + " " + parse.getDenotation());
-    }
-  }
 
   public List<GroundedCcgParse> beamSearch(GroundedParser parser, List<String> words) {
     AnnotatedSentence sentence = new AnnotatedSentence(words,
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG));
-    Object initialDiagram = null;
+    Object initialDiagram = new Object();
     return parser.beamSearch(sentence, initialDiagram, 10);
   }
   
@@ -91,4 +91,6 @@ public class GroundedParserTest extends TestCase {
       return null;
     }
   }
+
+  
 }

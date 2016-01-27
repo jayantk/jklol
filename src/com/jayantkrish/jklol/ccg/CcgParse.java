@@ -294,51 +294,55 @@ public class CcgParse {
       Expression2 leftLogicalForm = left.getLogicalForm();
       Expression2 rightLogicalForm = right.getLogicalForm();
 
-      if (leftLogicalForm == null || rightLogicalForm == null) {
-        return null;
-      }
-
-      if (combinator.getBinaryRule() != null) {
-        // Binary rules have a two-argument function that is applied to the 
-        // left and right logical forms to produce the answer.
-        Expression2 combinatorExpression = combinator.getBinaryRule().getLogicalForm();
-        if (combinatorExpression != null) {
-          return Expression2.nested(Expression2.nested(combinatorExpression, leftLogicalForm),
-              rightLogicalForm);
-        }
-
-      } else if (leftLogicalForm != null && rightLogicalForm != null) {
-        // Function application or composition.
-        Expression2 functionLogicalForm = null;
-        Expression2 argumentLogicalForm = null;
-        if (combinator.isArgumentOnLeft()) {
-          functionLogicalForm = rightLogicalForm;
-          argumentLogicalForm = leftLogicalForm;
-        } else {
-          functionLogicalForm = leftLogicalForm;
-          argumentLogicalForm = rightLogicalForm;
-        }
-
-        int numArgsToKeep = combinator.getArgumentReturnDepth();
-        if (numArgsToKeep == 0) {
-          // Function application
-          return Expression2.nested(functionLogicalForm, argumentLogicalForm);
-        } else {
-          // Composition.
-          List<String> remainingArgsRenamed = StaticAnalysis.getNewVariableNames(numArgsToKeep, argumentLogicalForm);
-          List<Expression2> remainingArgExpressions = Expression2.constants(remainingArgsRenamed);
-          List<Expression2> applicationExpressions = Lists.newArrayList(argumentLogicalForm);
-          applicationExpressions.addAll(remainingArgExpressions);
-          Expression2 argumentApplication = Expression2.nested(applicationExpressions);
-
-          Expression2 body = Expression2.nested(functionLogicalForm, argumentApplication);
-          return Expression2.lambda(remainingArgsRenamed, body);
-        }
-      }
-
-      // Unknown combinator.
+      return getCombinatorLogicalForm(leftLogicalForm, rightLogicalForm);
+    }
+  }
+  
+  protected Expression2 getCombinatorLogicalForm(Expression2 leftLf, Expression2 rightLf) {
+    if (leftLf == null || rightLf == null) {
       return null;
     }
+
+    if (combinator.getBinaryRule() != null) {
+      // Binary rules have a two-argument function that is applied to the 
+      // left and right logical forms to produce the answer.
+      Expression2 combinatorExpression = combinator.getBinaryRule().getLogicalForm();
+      if (combinatorExpression != null) {
+        return Expression2.nested(Expression2.nested(combinatorExpression, leftLf),
+            rightLf);
+      }
+
+    } else if (leftLf != null && rightLf != null) {
+      // Function application or composition.
+      Expression2 functionLogicalForm = null;
+      Expression2 argumentLogicalForm = null;
+      if (combinator.isArgumentOnLeft()) {
+        functionLogicalForm = rightLf;
+        argumentLogicalForm = leftLf;
+      } else {
+        functionLogicalForm = leftLf;
+        argumentLogicalForm = rightLf;
+      }
+
+      int numArgsToKeep = combinator.getArgumentReturnDepth();
+      if (numArgsToKeep == 0) {
+        // Function application
+        return Expression2.nested(functionLogicalForm, argumentLogicalForm);
+      } else {
+        // Composition.
+        List<String> remainingArgsRenamed = StaticAnalysis.getNewVariableNames(numArgsToKeep, argumentLogicalForm);
+        List<Expression2> remainingArgExpressions = Expression2.constants(remainingArgsRenamed);
+        List<Expression2> applicationExpressions = Lists.newArrayList(argumentLogicalForm);
+        applicationExpressions.addAll(remainingArgExpressions);
+        Expression2 argumentApplication = Expression2.nested(applicationExpressions);
+
+        Expression2 body = Expression2.nested(functionLogicalForm, argumentApplication);
+        return Expression2.lambda(remainingArgsRenamed, body);
+      }
+    }
+
+    // Unknown combinator.
+    return null;
   }
 
   /**

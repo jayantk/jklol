@@ -793,6 +793,10 @@ public class AmbEval {
     public String toString() {
       return baseFunction.toString();
     }
+    
+    public FunctionValue getBaseFunction() {
+      return baseFunction;
+    }
   }
 
   public static class RaisedBuiltinFunction implements AmbFunctionValue {

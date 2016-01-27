@@ -43,6 +43,13 @@ public class KbestHeap<T> {
     }
     return size;
   }
+  
+  public T removeMin() {
+    T min = keys[0];
+    HeapUtils.removeMin(keys, values, size);
+    size--;
+    return min;
+  }
 
   public int size() {
     return size;

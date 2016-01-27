@@ -760,35 +760,42 @@ public class CcgParser implements Serializable {
         numChartEntries);
     chart.clearChartEntriesForSpan(spanStart, spanEnd);
 
-    Tensor rootSyntaxTensor = rootSyntaxDistribution.getWeights();
-    Tensor headedRootTensor = headedRootSyntaxDistribution.getWeights();
-    int[] currentPosTags = chart.getPosTagsInt();
     for (int i = 0; i < entries.length; i++) {
       ChartEntry entry = entries[i];
-      double rootProb = rootSyntaxTensor.get(entry.getHeadedSyntax());
-      
-      double headedRootProb = 1.0;
-      int headSyntax = entry.getHeadedSyntax();
-      int headVar = entry.getHeadVariable();
-      long[] assignments = entry.getAssignments();
-      for (int j = 0; j < assignments.length; j++) {
-        long assignment = assignments[j];
-        int varNum = (int) ((assignment >> ASSIGNMENT_VAR_NUM_OFFSET) & VAR_NUM_MASK); 
-        if (varNum == headVar) {
-          long predicate = (assignment >> ASSIGNMENT_PREDICATE_OFFSET) & PREDICATE_MASK;
-          int wordIndex = (int) ((assignment >> ASSIGNMENT_WORD_IND_OFFSET) & WORD_IND_MASK);
-          int posTag = currentPosTags[wordIndex];
-
-          long headedRootKeyNum = (headSyntax * headedRootSyntaxOffset)
-              + (predicate * headedRootPredicateOffset)
-              + (posTag * headedRootPosOffset);
-          headedRootProb *= headedRootTensor.get(headedRootKeyNum);
-        }
-      }
-      chart.addChartEntryForSpan(entry, probs[i] * rootProb * headedRootProb, spanStart, spanEnd,
+      double rootProb = scoreRootEntry(entry, chart);
+      chart.addChartEntryForSpan(entry, probs[i] * rootProb, spanStart, spanEnd,
           syntaxVarType);
     }
     chart.doneAddingChartEntriesForSpan(spanStart, spanEnd);
+  }
+  
+  public double scoreRootEntry(ChartEntry entry, CcgChart chart) {
+    Tensor rootSyntaxTensor = rootSyntaxDistribution.getWeights();
+    Tensor headedRootTensor = headedRootSyntaxDistribution.getWeights();
+    int[] currentPosTags = chart.getPosTagsInt();
+
+    double rootProb = rootSyntaxTensor.get(entry.getHeadedSyntax());
+
+    double headedRootProb = 1.0;
+    int headSyntax = entry.getHeadedSyntax();
+    int headVar = entry.getHeadVariable();
+    long[] assignments = entry.getAssignments();
+    for (int j = 0; j < assignments.length; j++) {
+      long assignment = assignments[j];
+      int varNum = (int) ((assignment >> ASSIGNMENT_VAR_NUM_OFFSET) & VAR_NUM_MASK); 
+      if (varNum == headVar) {
+        long predicate = (assignment >> ASSIGNMENT_PREDICATE_OFFSET) & PREDICATE_MASK;
+        int wordIndex = (int) ((assignment >> ASSIGNMENT_WORD_IND_OFFSET) & WORD_IND_MASK);
+        int posTag = currentPosTags[wordIndex];
+
+        long headedRootKeyNum = (headSyntax * headedRootSyntaxOffset)
+            + (predicate * headedRootPredicateOffset)
+            + (posTag * headedRootPosOffset);
+        headedRootProb *= headedRootTensor.get(headedRootKeyNum);
+      }
+    }
+
+    return rootProb * headedRootProb;
   }
 
   /**
@@ -1257,7 +1264,7 @@ public class CcgParser implements Serializable {
     // log.stopTimer("chart_entry/add_chart_entry");
   }
 
-  private void applyUnaryRules(CcgChart chart, ChartEntry result, double resultProb,
+  public final void applyUnaryRules(CcgChart chart, ChartEntry result, double resultProb,
       int spanStart, int spanEnd) {
     int headedSyntax = result.getHeadedSyntax();
     long keyNumPrefix = unaryRuleTensor.dimKeyPrefixToKeyNum(new int[] { headedSyntax });

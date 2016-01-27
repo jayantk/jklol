@@ -1,7 +1,9 @@
 package com.jayantkrish.jklol.ccg;
 
+import java.util.Collections;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgLeftToRightChart;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
@@ -46,6 +48,10 @@ public class CcgShiftReduceInference implements CcgInference {
     // Working heap for queuing parses to process next.
     KbestHeap<ShiftReduceStack> heap = new KbestHeap<ShiftReduceStack>(beamSize, new ShiftReduceStack[0]);
     heap.offer(ShiftReduceStack.empty(), 1.0);
+    
+    // Heap for finished parses.
+    KbestHeap<ShiftReduceStack> finishedHeap = new KbestHeap<ShiftReduceStack>(beamSize,
+        new ShiftReduceStack[0]);
 
     // Array of elements in the current beam.
     ShiftReduceStack[] currentBeam = new ShiftReduceStack[beamSize + 1];
@@ -70,13 +76,52 @@ public class CcgShiftReduceInference implements CcgInference {
         // System.out.println("Processing " + stack);
         shift(stack, chart, heap);
         reduce(stack, chart, heap, parser, log);
+        root(stack, chart, finishedHeap, parser);
       }
     }
-
-    parser.reweightRootEntries(chart);
-    // System.out.println("NUM ROOT: " + chart.getNumChartEntriesForSpan(0, chart.size() - 1));
     
-    return chart.decodeBestParsesForSpan(0, chart.size() - 1, beamSize, parser);
+    List<CcgParse> parses = Lists.newArrayList();
+    while (finishedHeap.size() > 0) {
+      ShiftReduceStack stack = finishedHeap.removeMin();
+      parses.add(chart.decodeParseFromSpan(stack.spanStart, stack.spanEnd, stack.chartEntryIndex, parser));
+    }
+    Collections.reverse(parses);
+    
+    return parses;
+  }
+  
+  public static final void root(ShiftReduceStack stack, CcgChart chart, KbestHeap<ShiftReduceStack> finishedHeap,
+      CcgParser parser) { 
+    if (stack.size == 1 && stack.spanEnd == chart.getWords().size() - 1) {
+      // This parse spans all of the input words and has no remaining
+      // reduce operations.
+      
+      // Try applying unary rules to the root.
+      int startNumEntries = chart.getNumChartEntriesForSpan(stack.spanStart, stack.spanEnd);
+      chart.addChartEntryForSpan(stack.entry, stack.totalProb, stack.spanStart, stack.spanEnd,
+            parser.getSyntaxVarType());
+      parser.applyUnaryRules(chart, stack.entry, stack.totalProb, stack.spanStart, stack.spanEnd);
+      int midNumEntries = chart.getNumChartEntriesForSpan(stack.spanStart, stack.spanEnd);
+      
+      ChartEntry[] entries = chart.getChartEntriesForSpan(stack.spanStart, stack.spanEnd);
+      double[] probs = chart.getChartEntryProbsForSpan(stack.spanStart, stack.spanEnd);
+      for (int j = startNumEntries; j < midNumEntries; j++) {
+        double rootProb = parser.scoreRootEntry(entries[j], chart);
+        
+        chart.addChartEntryForSpan(entries[j], probs[j] * rootProb, stack.spanStart, stack.spanEnd,
+            parser.getSyntaxVarType());
+      }
+      
+      int endNumEntries = chart.getNumChartEntriesForSpan(stack.spanStart, stack.spanEnd);
+      entries = chart.getChartEntriesForSpan(stack.spanStart, stack.spanEnd);
+      probs = chart.getChartEntryProbsForSpan(stack.spanStart, stack.spanEnd);
+      for (int j = midNumEntries; j < endNumEntries; j++) {
+        ShiftReduceStack nextStack = stack.previous.push(stack.spanStart, stack.spanEnd, j,
+            entries[j], probs[j], true);
+        
+        finishedHeap.offer(nextStack, nextStack.totalProb);
+      }
+    }
   }
   
   public static final void shift(ShiftReduceStack stack, CcgChart chart, KbestHeap<ShiftReduceStack> heap) {
@@ -101,7 +146,7 @@ public class CcgShiftReduceInference implements CcgInference {
           // System.out.println("SHIFT: " + curToken + "," + spanEnd);
 
           // Queue the shift action by adding it to the heap.
-          ShiftReduceStack nextStack = stack.push(curToken, spanEnd, j, entries[j], probs[j]);
+          ShiftReduceStack nextStack = stack.push(curToken, spanEnd, j, entries[j], probs[j], false);
           heap.offer(nextStack, nextStack.totalProb);
         }
       }
@@ -134,7 +179,8 @@ public class CcgShiftReduceInference implements CcgInference {
       double[] chartProbs = chart.getChartEntryProbsForSpan(prev.spanStart, stack.spanEnd);
       for (int j = startNumEntries; j < endNumEntries; j++) {
         // System.out.println("REDUCE: " + stack + " --> " + parser.getSyntaxVarType().getValue(chartEntries[j].getHeadedSyntax()));
-        ShiftReduceStack toQueue = prev.previous.push(prev.spanStart, stack.spanEnd, j, chartEntries[j], chartProbs[j]);
+        ShiftReduceStack toQueue = prev.previous.push(prev.spanStart, stack.spanEnd, j,
+            chartEntries[j], chartProbs[j], false);
         heap.offer(toQueue, toQueue.totalProb);
       }
     }

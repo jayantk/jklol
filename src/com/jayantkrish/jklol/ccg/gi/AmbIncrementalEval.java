@@ -5,7 +5,9 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.gi.GroundedParser.State;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -20,7 +22,7 @@ import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.util.KbestHeap;
 
-public class DefaultIncrementalEval implements IncrementalEval {
+public class AmbIncrementalEval implements IncrementalEval {
   
   private final AmbEval eval;
   private final Environment env;
@@ -28,7 +30,7 @@ public class DefaultIncrementalEval implements IncrementalEval {
   
   private final ExpressionParser<SExpression> sexpParser;
   
-  public DefaultIncrementalEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier) {
+  public AmbIncrementalEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier) {
     this.eval = Preconditions.checkNotNull(eval);
     this.env = Preconditions.checkNotNull(env);
     this.simplifier = Preconditions.checkNotNull(simplifier);
@@ -37,13 +39,15 @@ public class DefaultIncrementalEval implements IncrementalEval {
   }
 
   @Override
-  public void evaluateContinuation(State state, KbestHeap<State> heap) {
+  public void evaluateContinuation(State state, KbestHeap<State> heap, CcgChart chart,
+      CcgParser parser) {
     Object continuation = state.continuation;
+    Environment continuationEnv = state.continuationEnv;
     Preconditions.checkArgument(continuation instanceof Expression2);
     
     SExpression sexp = sexpParser.parse(continuation.toString());
     ParametricBfgBuilder builder = new ParametricBfgBuilder(true);
-    EvalResult evalResult = eval.eval(sexp, env, builder);
+    EvalResult evalResult = eval.eval(sexp, continuationEnv, builder);
     Object value = evalResult.getValue();
     
     List<Object> values = Lists.newArrayList();
@@ -66,20 +70,21 @@ public class DefaultIncrementalEval implements IncrementalEval {
     System.out.println("evaluated: " + continuation + " -> ");
     for (int i = 0; i < values.size(); i++) {
       System.out.println("   " + probs.get(i) + " " + values.get(i));
-      State next = new State(state.stack, null, null, null, probs.get(i));
-      heap.offer(next, next.totalProb);
+      IncrementalEval.queueState(values.get(i), probs.get(i), state, heap, chart, parser);
     }
   }
 
   @Override
-  public Object lfToContinuation(Expression2 lf) {
-    System.out.println("lfToContinuation: " + lf);
-    return simplifier.apply(lf);
+  public Environment getEnvironment(State currentState) {
+    return Environment.extend(env);
   }
 
   @Override
-  public Environment getEnvironment(State currentState) {
-    return env;
+  public Object parseToContinuation(GroundedCcgParse parse, Environment env) {
+    Expression2 lf = parse.getUnevaluatedLogicalForm(env, eval.getSymbolTable());
+    
+    System.out.println("lfToContinuation: " + lf);
+    return simplifier.apply(lf);
   }
 
   @Override

@@ -13,6 +13,7 @@ public class ShiftReduceStack {
   public final int chartEntryIndex;
   public final ChartEntry entry;
   public final double entryProb;
+  public boolean includesRootProb;
 
   public final ShiftReduceStack previous;
 
@@ -20,12 +21,13 @@ public class ShiftReduceStack {
   public final double totalProb;
 
   public ShiftReduceStack(int spanStart, int spanEnd, int chartEntryIndex, ChartEntry entry,
-      double entryProb, ShiftReduceStack previous) {
+      double entryProb, boolean includesRootProb, ShiftReduceStack previous) {
     this.spanStart = spanStart;
     this.spanEnd = spanEnd;
     this.chartEntryIndex = chartEntryIndex;
     this.entry = entry;
     this.entryProb = entryProb;
+    this.includesRootProb = includesRootProb;
 
     if (previous == null) {
       this.size = 0;
@@ -39,11 +41,13 @@ public class ShiftReduceStack {
   }
 
   public static ShiftReduceStack empty() {
-    return new ShiftReduceStack(-1, -1, -1, null, 1.0, null);
+    return new ShiftReduceStack(-1, -1, -1, null, 1.0, false, null);
   }
 
-  public ShiftReduceStack push(int spanStart, int spanEnd, int chartEntryIndex, ChartEntry entry, double prob) {
-    return new ShiftReduceStack(spanStart, spanEnd, chartEntryIndex, entry, prob, this);
+  public ShiftReduceStack push(int spanStart, int spanEnd, int chartEntryIndex, ChartEntry entry,
+      double prob, boolean includesRootProb) {
+    return new ShiftReduceStack(spanStart, spanEnd, chartEntryIndex, entry, prob,
+        includesRootProb, this);
   }
 
   @Override

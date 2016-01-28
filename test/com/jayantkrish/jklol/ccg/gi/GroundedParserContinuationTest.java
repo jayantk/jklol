@@ -26,19 +26,31 @@ public class GroundedParserContinuationTest extends TestCase {
     "3,N{0},3,0 num",
     "4,N{0},4,0 num",
     "+,((N{1}\\N{1}){0}/N{2}){0},(lambda (x y) (+-k x y)),0 +",
-    "1_or_2,N{0},(queue-k (list-k 1 2)),0 num",
+    "1_or_2,N{0},(amb-k (list-k 1 2)),0 num",
+    "x,N{0},(cput-k ~\"x~\" (amb-k (list-k 1 2)))",
 //    "1_or_2,N{0},1,0 num",
 //    "1_or_2,N{0},2,0 num",
   };
   
   private static final String[] predicateDefs = {
-    "(define list-k (k . args) (lambda (world) ((k args) world)))",
-    "(define +-k (k x y) (lambda (world) ((k (+ x y)) world)))"
+    "(define list-k (k . args) (k args))",
+    "(define +-k (k x y) (k (+ x y)))",
+    "(define map (f l) (if (nil? l) l (cons (f (car l)) (map f (cdr l)))))",
+    "(define alist-put (name value l) (if (nil? l) (list (list name value)) (if (= name (car (car l))) (cons (list name value) (cdr l)) (cons (car l) (alist-put name value (cdr l))))))",
+    "(define alist-get (name l) (if (nil? l) l (if (= name (car (car l))) (car (cdr (car l))) (alist-get name (cdr l)))))",
+    "(define alist-cput (name value l) (let ((old (alist-get name l))) (if (nil? old) (alist-put name value l) l)))",
+    
+    "(define get-k (k name) (lambda (world) ((k (alist-get name world)) world)))",
+    "(define put-k (k name value) (lambda (world) ((k value) (alist-put name value world))))",
+    "(define cput-k (k name value) (lambda (world) (let ((next-world (alist-cput name value world))) ((k (alist-get name next-world)) next-world))))"
   };
 
   private static final String[] ruleArray = {"DUMMY{0} BLAH{0}"};
 
   private GroundedParser parser;
+  private ExpressionParser<SExpression> sexpParser;
+  private Environment env;
+  private AmbEval ambEval;
   
   private static final double TOLERANCE = 1e-6;
   
@@ -49,9 +61,9 @@ public class GroundedParserContinuationTest extends TestCase {
     CcgParser ccgParser = family.getModelFromParameters(family.getNewSufficientStatistics());
     
     IndexedList<String> symbolTable = AmbEval.getInitialSymbolTable();
-    AmbEval ambEval = new AmbEval(symbolTable);
-    Environment env = AmbEval.getDefaultEnvironment(symbolTable);
-    ExpressionParser<SExpression> sexpParser = ExpressionParser.sExpression(symbolTable);
+    ambEval = new AmbEval(symbolTable);
+    env = AmbEval.getDefaultEnvironment(symbolTable);
+    sexpParser = ExpressionParser.sExpression(symbolTable);
     SExpression predicateProgram = sexpParser.parse("(begin " + Joiner.on("\n").join(predicateDefs) + ")");
     ambEval.eval(predicateProgram, env, null);
     
@@ -62,10 +74,12 @@ public class GroundedParserContinuationTest extends TestCase {
   }
 
   public void testParse() {
-    List<GroundedCcgParse> parses = beamSearch(parser, Arrays.asList("1_or_2", "+", "2"));
+    List<GroundedCcgParse> parses = beamSearch(parser,
+        Arrays.asList("x", "+", "x"), "(list )");
 
     for (GroundedCcgParse parse : parses) {
-      System.out.println(parse.getSubtreeProbability() + " " + parse.getLogicalForm() + " " + parse.getDenotation());
+      System.out.println(parse.getSubtreeProbability() + " " + parse.getLogicalForm()
+          + " " + parse.getDenotation() + " " + parse.getDiagram());
     }
     
     assertEquals(2, parses.size());
@@ -75,15 +89,17 @@ public class GroundedParserContinuationTest extends TestCase {
     assertEquals(3, parses.get(1).getDenotation());
   }
 
-  public List<GroundedCcgParse> beamSearch(GroundedParser parser, List<String> words) {
+  public List<GroundedCcgParse> beamSearch(GroundedParser parser, List<String> words,
+      String initialDiagramExpression) {
     AnnotatedSentence sentence = new AnnotatedSentence(words,
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG));
-    Object initialDiagram = new Object();
+
+    Object initialDiagram = ambEval.eval(sexpParser.parse(initialDiagramExpression), env, null).getValue();
     return parser.beamSearch(sentence, initialDiagram, 10);
   }
   
-  public GroundedCcgParse parse(GroundedParser parser, List<String> words) {
-    List<GroundedCcgParse> parses = beamSearch(parser, words);
+  public GroundedCcgParse parse(GroundedParser parser, List<String> words, String initialDiagramExpression) {
+    List<GroundedCcgParse> parses = beamSearch(parser, words, initialDiagramExpression);
 
     if (parses.size() > 0) {
       return parses.get(0);

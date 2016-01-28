@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.ccg;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -130,6 +131,7 @@ public class CcgCategory implements Serializable {
     Expression2 logicalForm = null;
     if (categoryParts[1].trim().length() > 0) {
       logicalForm = ExpressionParser.expression2().parse(categoryParts[1]);
+      System.out.println(Arrays.toString(categoryParts));
     }
 
     // Create an empty assignment to each variable in the syntactic

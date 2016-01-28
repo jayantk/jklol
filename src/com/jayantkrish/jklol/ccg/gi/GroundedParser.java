@@ -131,7 +131,8 @@ public class GroundedParser {
     while (finishedHeap.size() > 0) {
       State state = finishedHeap.removeMin();
       ShiftReduceStack stack = state.stack;
-      parses.add(decodeParseFromSpan(stack.spanStart, stack.spanEnd, stack.chartEntryIndex, chart, parser));
+      GroundedCcgParse parse = decodeParseFromSpan(stack.spanStart, stack.spanEnd, stack.chartEntryIndex, chart, parser);
+      parses.add(parse.addDiagram(state.diagram));
     }
     Collections.reverse(parses);
 

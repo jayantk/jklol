@@ -31,9 +31,13 @@ public class ContinuationIncrementalEval implements IncrementalEval {
   private final ExpressionSimplifier simplifier;
   
   private final ExpressionParser<SExpression> sexpParser;
+  private final SExpression defs;
 
   private static final String FINAL_CONTINUATION="final-continuation";
   private static final String QUEUE_CONTINUATIONS="queue-k";
+  
+  private static final String DEFS="(define amb-k (k l) (lambda (world) ((queue-k k l) (map (lambda (x) world) l)) ))";
+//      + "(define amb-set-k! (k name value) (lambda (world) ((k (list)) (alist-put name value world))))";
   
   public ContinuationIncrementalEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier) {
     this.eval = Preconditions.checkNotNull(eval);
@@ -41,8 +45,9 @@ public class ContinuationIncrementalEval implements IncrementalEval {
     this.simplifier = Preconditions.checkNotNull(simplifier);
 
     this.sexpParser = ExpressionParser.sExpression(eval.getSymbolTable());
+    this.defs = sexpParser.parse(DEFS);
   }
-  
+
   public void evaluateContinuation(State state, KbestHeap<State> heap, CcgChart chart,
       CcgParser parser) {
     Environment env = state.continuationEnv;
@@ -53,6 +58,7 @@ public class ContinuationIncrementalEval implements IncrementalEval {
     AmbFunctionValue continuation = (AmbFunctionValue) state.continuation;
     
     System.out.println("evaluating: " + continuation);
+    System.out.println("evaluating: " + state.diagram);
     
     int finalNumValues = finalContinuation.denotations.size();
     int queueNumValues = queueContinuations.getContinuations().size();
@@ -62,42 +68,49 @@ public class ContinuationIncrementalEval implements IncrementalEval {
     
     for (int i = finalNumValues; i < finalContinuation.denotations.size(); i++) {
       Object denotation = finalContinuation.denotations.get(i);
+      Object diagram = finalContinuation.diagrams.get(i);
       // TODO
       double prob = 1.0;
-      IncrementalEval.queueState(denotation, prob, state, heap, chart, parser);
+      IncrementalEval.queueState(denotation, diagram, prob, state.stack, heap, chart, parser);
     }
     
+    System.out.println("num queued: " + queueContinuations.getContinuations().size());
+    
     List<Object> continuations = queueContinuations.getContinuations();
+    List<Object> denotations = queueContinuations.getDenotations();
     List<Object> diagrams = queueContinuations.getDiagrams();
     for (int i = queueNumValues; i < continuations.size(); i++) {
       // TODO
       double prob = 1.0;
       
-      State next = new State(state.stack, diagrams.get(i), continuations.get(i), null,
-          env, prob);
+      State next = new State(state.stack, diagrams.get(i), continuations.get(i),
+          denotations.get(i), env, prob);
       heap.offer(next, next.totalProb);
     }
   }
 
   public Environment getEnvironment(State currentState) {
     Environment continuationEnv = Environment.extend(env);
+    continuationEnv.bindName(FINAL_CONTINUATION, new WrappedBuiltinFunction(new FinalContinuation()),
+        eval.getSymbolTable());
+    continuationEnv.bindName(QUEUE_CONTINUATIONS, new WrappedBuiltinFunction(new QueueContinuations()),
+        eval.getSymbolTable());
+
+    eval.eval(defs, continuationEnv, null);
+    
     return continuationEnv;
   }
   
   public AmbFunctionValue parseToContinuation(GroundedCcgParse parse, Environment env) {
     Expression2 lf = parse.getUnevaluatedLogicalForm(env, eval.getSymbolTable());
     lf = simplifier.apply(lf);
+    System.out.println(lf);
     Expression2 cpsLf = simplifier.apply(CpsTransform.apply(lf, Expression2.constant(FINAL_CONTINUATION)));
-
-    env.bindName(FINAL_CONTINUATION, new WrappedBuiltinFunction(new FinalContinuation()),
-        eval.getSymbolTable());
-    env.bindName(QUEUE_CONTINUATIONS, new WrappedBuiltinFunction(new QueueContinuations()),
-        eval.getSymbolTable());
-
     System.out.println(cpsLf);
     
     SExpression cpsSexp = sexpParser.parse(cpsLf.toString());
     EvalResult evalResult = eval.eval(cpsSexp, env, null);
+    System.out.println(evalResult.getValue());
 
     Preconditions.checkState(evalResult.getValue() instanceof AmbFunctionValue,
         "Expected AmbFunctionValue, Got: %s", evalResult.getValue());
@@ -110,10 +123,12 @@ public class ContinuationIncrementalEval implements IncrementalEval {
 
   private static class QueueContinuations implements FunctionValue {
     private final List<Object> continuations;
+    private final List<Object> denotations;
     private final List<Object> diagrams;
 
     public QueueContinuations() {
       this.continuations = Lists.newArrayList();
+      this.denotations = Lists.newArrayList();
       this.diagrams = Lists.newArrayList();
     }
 
@@ -121,25 +136,36 @@ public class ContinuationIncrementalEval implements IncrementalEval {
     public Object apply(List<Object> args, Environment env) {
       LispUtil.checkArgument(args.size() == 2);
       AmbFunctionValue continuation = (AmbFunctionValue) args.get(0);
-      
-      List<Object> nextDiagrams = ConsValue.consListToList(args.get(1));
-      System.out.println("queue: " + continuation + " " + nextDiagrams);
-      for (Object diagram : nextDiagrams) {
-        continuations.add(continuation.apply(Arrays.asList(diagram), env, null));
-        diagrams.add(diagram);
-      }
+      List<Object> nextDenotations = ConsValue.consListToList(args.get(1));
       
       return new WrappedBuiltinFunction(new FunctionValue() {
         public Object apply(List<Object> args2, Environment env2) {
+          LispUtil.checkArgument(args2.size() == 1, "Expected 1 argument, got: %s", args2);
+          List<Object> nextDiagrams = ConsValue.consListToList(args2.get(0));
+          LispUtil.checkState(nextDiagrams.size() == nextDenotations.size());
+          
+          for (int i = 0; i < nextDiagrams.size(); i++) {
+            Object denotation = nextDenotations.get(i);
+            Object diagram = nextDiagrams.get(i);
+            System.out.println("queue: " + continuation + " " + denotation + " " + diagram);
+          
+            continuations.add(continuation.apply(Arrays.asList(denotation), env, null));
+            denotations.add(denotation);
+            diagrams.add(diagram);
+          }
           return ConstantValue.NIL;
         }
       });
     }
-    
+
     public List<Object> getContinuations() {
       return continuations;
     }
-    
+
+    public List<Object> getDenotations() {
+      return denotations;
+    }
+
     public List<Object> getDiagrams() {
       return diagrams;
     }

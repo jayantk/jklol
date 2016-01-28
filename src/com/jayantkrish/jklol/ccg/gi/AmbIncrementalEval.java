@@ -70,7 +70,7 @@ public class AmbIncrementalEval implements IncrementalEval {
     System.out.println("evaluated: " + continuation + " -> ");
     for (int i = 0; i < values.size(); i++) {
       System.out.println("   " + probs.get(i) + " " + values.get(i));
-      IncrementalEval.queueState(values.get(i), probs.get(i), state, heap, chart, parser);
+      IncrementalEval.queueState(values.get(i), null, probs.get(i), state.stack, heap, chart, parser);
     }
   }
 

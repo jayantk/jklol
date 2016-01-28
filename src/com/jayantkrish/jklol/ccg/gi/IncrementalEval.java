@@ -20,24 +20,23 @@ public interface IncrementalEval {
   
   public boolean isEvaluatable(HeadedSyntacticCategory syntax);
   
-  public static void queueState(Object denotation, double prob, State state,
+  public static void queueState(Object denotation, Object diagram, double prob, ShiftReduceStack cur,
       KbestHeap<State> heap, CcgChart chart, CcgParser parser) {
-    int spanStart = state.stack.spanStart;
-    int spanEnd = state.stack.spanEnd;
+    int spanStart = cur.spanStart;
+    int spanEnd = cur.spanEnd;
 
     // Create a new chart entry storing the new denotation.
-    ChartEntry entry = state.stack.entry.addAdditionalInfo(
+    ChartEntry entry = cur.entry.addAdditionalInfo(
         new DenotationValue(denotation, prob));
-    double entryProb = state.stack.entryProb * prob;
+    double entryProb = cur.entryProb * prob;
 
     int entryIndex = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
     chart.addChartEntryForSpan(entry, entryProb, spanStart, spanEnd, parser.getSyntaxVarType());
 
-    ShiftReduceStack cur = state.stack;
     ShiftReduceStack newStack = cur.previous.push(cur.spanStart, cur.spanEnd, entryIndex,
         entry, entryProb, cur.includesRootProb);
 
-    State next = new State(newStack, state.diagram, null, denotation, null, 1.0);
+    State next = new State(newStack, diagram, null, denotation, null, 1.0);
     heap.offer(next, next.totalProb);
   }
 }

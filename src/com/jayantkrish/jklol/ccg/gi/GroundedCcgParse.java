@@ -21,16 +21,19 @@ public class GroundedCcgParse extends CcgParse {
   private final GroundedCcgParse myRight;
   
   private final Object denotation;
+  private final Object diagram;
 
   protected GroundedCcgParse(HeadedSyntacticCategory syntax, LexiconEntryInfo lexiconEntry,
       List<String> spannedWords, List<String> posTags, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double probability, GroundedCcgParse left, GroundedCcgParse right,
-      Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd, Object denotation) {
+      Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd, Object denotation,
+      Object diagram) {
     super(syntax, lexiconEntry, spannedWords, posTags, heads, dependencies, probability, left, right,
         combinator, unaryRule, spanStart, spanEnd);
     this.myLeft = left;
     this.myRight = right;
     this.denotation = denotation;
+    this.diagram = diagram;
   }
 
   public static GroundedCcgParse forTerminal(HeadedSyntacticCategory syntax, LexiconEntryInfo lexiconEntry,
@@ -38,7 +41,7 @@ public class GroundedCcgParse extends CcgParse {
       List<String> spannedWords, double probability, UnaryCombinator unaryRule,
       int spanStart, int spanEnd, Object denotation) {
     return new GroundedCcgParse(syntax, lexiconEntry, spannedWords, posTags, heads, deps, probability,
-        null, null, null, unaryRule, spanStart, spanEnd, denotation);
+        null, null, null, unaryRule, spanStart, spanEnd, denotation, null);
   }
 
   public static GroundedCcgParse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
@@ -46,7 +49,7 @@ public class GroundedCcgParse extends CcgParse {
       GroundedCcgParse right, Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd,
       Object denotation) {
     return new GroundedCcgParse(syntax, null, null, null, heads, dependencies, probability, left,
-        right, combinator, unaryRule, spanStart, spanEnd, denotation);
+        right, combinator, unaryRule, spanStart, spanEnd, denotation, null);
   }
 
   public GroundedCcgParse getParseForSpan(int spanStart, int spanEnd) {
@@ -84,11 +87,21 @@ public class GroundedCcgParse extends CcgParse {
   public GroundedCcgParse addUnaryRule(UnaryCombinator rule, HeadedSyntacticCategory newSyntax) {
     return new GroundedCcgParse(newSyntax, getLexiconEntry(), getWords(), getPosTags(), getSemanticHeads(),
         getNodeDependencies(), getNodeProbability(), getLeft(), getRight(), getCombinator(), rule,
-        getSpanStart(), getSpanEnd(), denotation);
+        getSpanStart(), getSpanEnd(), denotation, diagram);
   }
 
   public Object getDenotation() {
     return denotation;
+  }
+  
+  public Object getDiagram() {
+    return diagram;
+  }
+
+  public GroundedCcgParse addDiagram(Object diagram) {
+    return new GroundedCcgParse(getHeadedSyntacticCategory(), getLexiconEntry(), getWords(), getPosTags(), getSemanticHeads(),
+        getNodeDependencies(), getNodeProbability(), getLeft(), getRight(), getCombinator(), getUnaryRule(),
+        getSpanStart(), getSpanEnd(), denotation, diagram);
   }
 
   /**

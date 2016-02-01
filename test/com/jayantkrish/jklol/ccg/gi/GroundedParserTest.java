@@ -31,7 +31,6 @@ public class GroundedParserTest extends TestCase {
   private static final String[] ruleArray = {"DUMMY{0} BLAH{0}"};
 
   private GroundedParser parser;
-  private GroundedParser kParser;
   
   private static final double TOLERANCE = 1e-6;
   
@@ -48,9 +47,6 @@ public class GroundedParserTest extends TestCase {
     
     IncrementalEval eval = new AmbIncrementalEval(ambEval, env, simplifier);
     parser = new GroundedParser(ccgParser, eval);
-    
-    ContinuationIncrementalEval kEval = new ContinuationIncrementalEval(ambEval, env, simplifier);
-    kParser = new GroundedParser(ccgParser, kEval);
   }
 
   public void testParse() {
@@ -68,7 +64,7 @@ public class GroundedParserTest extends TestCase {
   }
   
   public void testContinuationParse() {
-    List<GroundedCcgParse> parses = beamSearch(kParser, Arrays.asList("1"));
+    List<GroundedCcgParse> parses = beamSearch(parser, Arrays.asList("1"));
 
     for (GroundedCcgParse parse : parses) {
       System.out.println(parse.getSubtreeProbability() + " " + parse.getLogicalForm() + " " + parse.getDenotation());

@@ -36,16 +36,14 @@ public class ContinuationIncrementalEval implements IncrementalEval {
   private static final String FINAL_CONTINUATION="final-continuation";
   private static final String QUEUE_CONTINUATIONS="queue-k";
   
-  private static final String DEFS="(define amb-k (k l) (lambda (world) ((queue-k k l) (map (lambda (x) world) l)) ))";
-//      + "(define amb-set-k! (k name value) (lambda (world) ((k (list)) (alist-put name value world))))";
-  
-  public ContinuationIncrementalEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier) {
+  public ContinuationIncrementalEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier,
+      SExpression defs) {
     this.eval = Preconditions.checkNotNull(eval);
     this.env = Preconditions.checkNotNull(env);
     this.simplifier = Preconditions.checkNotNull(simplifier);
 
     this.sexpParser = ExpressionParser.sExpression(eval.getSymbolTable());
-    this.defs = sexpParser.parse(DEFS);
+    this.defs = defs;
   }
 
   public void evaluateContinuation(State state, KbestHeap<State> heap, CcgChart chart,
@@ -96,8 +94,10 @@ public class ContinuationIncrementalEval implements IncrementalEval {
     continuationEnv.bindName(QUEUE_CONTINUATIONS, new WrappedBuiltinFunction(new QueueContinuations()),
         eval.getSymbolTable());
 
-    eval.eval(defs, continuationEnv, null);
-    
+    if (defs != null) {
+      eval.eval(defs, continuationEnv, null);
+    }
+
     return continuationEnv;
   }
   

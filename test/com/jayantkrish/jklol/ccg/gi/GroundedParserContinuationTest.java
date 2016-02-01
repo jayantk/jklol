@@ -27,7 +27,7 @@ public class GroundedParserContinuationTest extends TestCase {
     "4,N{0},4,0 num",
     "+,((N{1}\\N{1}){0}/N{2}){0},(lambda (x y) (+-k x y)),0 +",
     "1_or_2,N{0},(amb-k (list-k 1 2)),0 num",
-    "x,N{0},(cput-k ~\"x~\" (amb-k (list-k 1 2)))",
+    "x,N{0},(resolve-k ~\"x~\")",
 //    "1_or_2,N{0},1,0 num",
 //    "1_or_2,N{0},2,0 num",
   };
@@ -42,7 +42,13 @@ public class GroundedParserContinuationTest extends TestCase {
     
     "(define get-k (k name) (lambda (world) ((k (alist-get name world)) world)))",
     "(define put-k (k name value) (lambda (world) ((k value) (alist-put name value world))))",
-    "(define cput-k (k name value) (lambda (world) (let ((next-world (alist-cput name value world))) ((k (alist-get name next-world)) next-world))))"
+    "(define cput-k (k name value) (lambda (world) (let ((next-world (alist-cput name value world))) ((k (alist-get name next-world)) next-world))))",
+    "(define possible-values (list (list \"x\" (list 1 2)) (list \"y\" (list 3 4))))",
+  };
+  
+  private static final String[] evalDefs = {
+    "(define amb-k (k l) (lambda (world) ((queue-k k l) (map (lambda (x) world) l)) ))",
+    "(define resolve-k (k name) (lambda (world) (let ((v (alist-get name world))) (if (not (nil? v)) ((k v) world) ((amb-k (lambda (v) (cput-k k name v)) (alist-get name possible-values)) world)))))",
   };
 
   private static final String[] ruleArray = {"DUMMY{0} BLAH{0}"};
@@ -69,7 +75,9 @@ public class GroundedParserContinuationTest extends TestCase {
     
     ExpressionSimplifier simplifier = ExpressionSimplifier.lambdaCalculus();
     
-    ContinuationIncrementalEval eval = new ContinuationIncrementalEval(ambEval, env, simplifier);
+    String evalDefString = "(begin " + Joiner.on(" ").join(evalDefs) + ")";
+    SExpression defs = sexpParser.parse(evalDefString);
+    ContinuationIncrementalEval eval = new ContinuationIncrementalEval(ambEval, env, simplifier, defs);
     parser = new GroundedParser(ccgParser, eval);
   }
 

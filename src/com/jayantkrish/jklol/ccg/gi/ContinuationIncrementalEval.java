@@ -25,6 +25,17 @@ import com.jayantkrish.jklol.lisp.LispUtil;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.util.KbestHeap;
 
+/**
+ * Incremental evaluation oracle for a nondeterministic lambda
+ * calculus that represents nondeterminism using continuations. 
+ * A program in this lambda calculus can have many possible futures
+ * (each of which is represented by a continuation); these continuations
+ * are queued on to the {@code GroundedParser} stack and searched
+ * jointly with parses of the sentence.
+ * 
+ * @author jayantk
+ *
+ */
 public class ContinuationIncrementalEval implements IncrementalEval {
   protected final AmbEval eval;
   protected final Environment env;
@@ -33,8 +44,8 @@ public class ContinuationIncrementalEval implements IncrementalEval {
   protected final ExpressionParser<SExpression> sexpParser;
   protected final SExpression defs;
 
-  public static final String FINAL_CONTINUATION="final-continuation";
-  public static final String QUEUE_CONTINUATIONS="queue-k";
+  public static final String FINAL_CONTINUATION = "final-continuation";
+  public static final String QUEUE_CONTINUATIONS = "queue-k";
   
   public ContinuationIncrementalEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier,
       SExpression defs) {

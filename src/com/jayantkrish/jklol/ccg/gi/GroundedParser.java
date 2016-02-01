@@ -25,7 +25,7 @@ public class GroundedParser {
   private final CcgParser parser;
   private final IncrementalEval incrEval;
 
-  private final int TEMP_HEAP_MAX_SIZE=1000;
+  private final int TEMP_HEAP_MAX_SIZE=100000;
   
   public GroundedParser(CcgParser parser, IncrementalEval incrEval) {
     this.parser = Preconditions.checkNotNull(parser);
@@ -81,7 +81,6 @@ public class GroundedParser {
           // and evaluation has finished.
           finishedHeap.offer(state, state.totalProb);
         } else {
-          // System.out.println("Processing " + stack);
           tempHeap.clear();
           
           CcgShiftReduceInference.shift(state.stack, chart, tempHeap);
@@ -98,20 +97,18 @@ public class GroundedParser {
           for (int j = 0; j < tempHeap.size(); j++) {
             ShiftReduceStack result = tempHeapKeys[j];
             
-            double prob = chart.getChartEntryProbsForSpan(result.spanStart, result.spanEnd)[result.chartEntryIndex];
-            
             Object continuation = null;
             Environment continuationEnv = null;
             HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) parser.getSyntaxVarType()
                 .getValue(result.entry.getHeadedSyntax());
             
-            System.out.println("shift/reduce: " + syntax + " " + prob);
+            // System.out.println("shift/reduce: " + syntax + " " + prob);
 
             if (incrEval.isEvaluatable(syntax)) {
               GroundedCcgParse parse = decodeParseFromSpan(result.spanStart, result.spanEnd,
                   result.chartEntryIndex, chart, parser);
               
-              continuationEnv = incrEval.getEnvironment(state);
+              continuationEnv = incrEval.getEnvironment();
               continuation = incrEval.parseToContinuation(parse, continuationEnv);
 
               if (continuation == null) {

@@ -143,7 +143,7 @@ public class CcgShiftReduceInference implements CcgInference {
         // by other parses in the beam that have processed more
         // tokens than this parse.
         if (entries[j].isTerminal()) {
-          // System.out.println("SHIFT: " + curToken + "," + spanEnd);
+          // System.out.println("SHIFT: " + curToken + "," + spanEnd + " " + entries[j].getHeadedSyntax());
 
           // Queue the shift action by adding it to the heap.
           ShiftReduceStack nextStack = stack.push(curToken, spanEnd, j, entries[j], probs[j], false);

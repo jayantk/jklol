@@ -123,7 +123,7 @@ public class GroundedCcgParse extends CcgParse {
   private Expression2 getUnevaluatedLogicalForm(Environment env,
       IndexedList<String> symbolTable, List<String> newBindings) {
     if (denotation != null) {
-      String varName = "denotation:" + newBindings.size();
+      String varName = "denotation" + newBindings.size();
       env.bindName(varName, denotation, symbolTable);
       newBindings.add(varName);
       return Expression2.constant(varName);

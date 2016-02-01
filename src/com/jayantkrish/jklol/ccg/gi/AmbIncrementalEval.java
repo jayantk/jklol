@@ -67,23 +67,21 @@ public class AmbIncrementalEval implements IncrementalEval {
       probs.add(1.0);
     }
     
-    System.out.println("evaluated: " + continuation + " -> ");
+    // System.out.println("evaluated: " + continuation + " -> ");
     for (int i = 0; i < values.size(); i++) {
-      System.out.println("   " + probs.get(i) + " " + values.get(i));
+      // System.out.println("   " + probs.get(i) + " " + values.get(i));
       IncrementalEval.queueState(values.get(i), null, probs.get(i), state.stack, heap, chart, parser);
     }
   }
 
   @Override
-  public Environment getEnvironment(State currentState) {
+  public Environment getEnvironment() {
     return Environment.extend(env);
   }
 
   @Override
   public Object parseToContinuation(GroundedCcgParse parse, Environment env) {
     Expression2 lf = parse.getUnevaluatedLogicalForm(env, eval.getSymbolTable());
-    
-    System.out.println("lfToContinuation: " + lf);
     return simplifier.apply(lf);
   }
 

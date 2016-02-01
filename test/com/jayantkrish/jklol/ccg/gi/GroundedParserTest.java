@@ -62,14 +62,6 @@ public class GroundedParserTest extends TestCase {
     assertEquals(2.0, parses.get(1).getSubtreeProbability(), TOLERANCE);
     assertEquals(3, parses.get(1).getDenotation());
   }
-  
-  public void testContinuationParse() {
-    List<GroundedCcgParse> parses = beamSearch(parser, Arrays.asList("1"));
-
-    for (GroundedCcgParse parse : parses) {
-      System.out.println(parse.getSubtreeProbability() + " " + parse.getLogicalForm() + " " + parse.getDenotation());
-    }
-  }
 
   public List<GroundedCcgParse> beamSearch(GroundedParser parser, List<String> words) {
     AnnotatedSentence sentence = new AnnotatedSentence(words,

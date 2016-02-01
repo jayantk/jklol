@@ -3,10 +3,12 @@ package com.jayantkrish.jklol.ccg.gi;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import junit.framework.TestCase;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
@@ -91,10 +93,12 @@ public class GroundedParserContinuationTest extends TestCase {
     }
     
     assertEquals(2, parses.size());
-    assertEquals(3.0, parses.get(0).getSubtreeProbability(), TOLERANCE);
-    assertEquals(4, parses.get(0).getDenotation());
-    assertEquals(2.0, parses.get(1).getSubtreeProbability(), TOLERANCE);
-    assertEquals(3, parses.get(1).getDenotation());
+    assertEquals(1.0, parses.get(0).getSubtreeProbability(), TOLERANCE);
+    assertEquals(1.0, parses.get(1).getSubtreeProbability(), TOLERANCE);
+
+    Set<Object> actual = Sets.newHashSet(parses.get(0).getDenotation(), parses.get(1).getDenotation());
+    Set<Object> expected = Sets.newHashSet(4, 2);
+    assertEquals(expected, actual);
   }
 
   public List<GroundedCcgParse> beamSearch(GroundedParser parser, List<String> words,

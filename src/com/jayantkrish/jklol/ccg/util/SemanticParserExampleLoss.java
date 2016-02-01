@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.util;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -57,7 +58,18 @@ public class SemanticParserExampleLoss {
    * 
    * @param filename
    * @param losses
+   * @param annotations
    */
+  public static void writeJsonToFile(String filename,
+      List<SemanticParserExampleLoss> losses, List<Map<String, Object>> annotations) {
+    Preconditions.checkArgument(annotations.size() == losses.size());
+    List<String> lines = Lists.newArrayList();
+    for (int i = 0; i < losses.size(); i++) {
+      lines.add(losses.get(i).toJson(annotations.get(i)));
+    }
+    IoUtils.writeLines(filename, lines);
+  }
+
   public static void writeJsonToFile(String filename, List<SemanticParserExampleLoss> losses) {
     List<String> lines = Lists.newArrayList();
     for (SemanticParserExampleLoss loss : losses) {
@@ -98,7 +110,9 @@ public class SemanticParserExampleLoss {
     return correctLfPossible;
   }
 
-  public String toJson() {
+  public String toJson() { return toJson(Collections.<String, Object>emptyMap()); }
+
+  public String toJson(Map<String, Object> annotations) {
     Map<String, Object> jsonDict = Maps.newHashMap();
     jsonDict.put("sentence", Joiner.on(" ").join(example.getSentence().getWords()));
     jsonDict.put("pos", Joiner.on(" ").join(example.getSentence().getPosTags()));
@@ -129,6 +143,8 @@ public class SemanticParserExampleLoss {
     jsonDict.put("parsable", parsable ? 1 : 0);
     jsonDict.put("correct", correct ? 1 : 0);
     jsonDict.put("correct_lf_possible", correctLfPossible ? 1 : 0);
+
+    jsonDict.putAll(annotations);
 
     ObjectMapper mapper = new ObjectMapper();
     String s = null;

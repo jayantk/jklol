@@ -2,11 +2,16 @@ package com.jayantkrish.jklol.util;
 
 import java.io.Serializable;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.base.Functions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 
 /**
@@ -129,6 +134,18 @@ public class CountAccumulator<T> implements Serializable {
    */
   public Set<T> keySet() {
     return counts.keySet();
+  }
+  
+  /**
+   * Gets the keys in this sorted order, from 
+   * the highest count to the lowest count.
+   * 
+   * @return
+   */
+  public List<T> getSortedKeys() {
+    List<T> l = Lists.newArrayList(counts.keySet());
+    Collections.sort(l, Ordering.natural().reverse().onResultOf(Functions.forMap(counts.getBaseMap())));
+    return l;
   }
 
   /**

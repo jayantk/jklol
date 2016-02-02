@@ -32,6 +32,14 @@ public class GroundedParser {
     this.incrEval = Preconditions.checkNotNull(incrEval);
   }
   
+  public CcgParser getCcgParser() {
+    return parser;
+  }
+  
+  public IncrementalEval getEval() {
+    return incrEval;
+  }
+  
   public List<GroundedCcgParse> beamSearch(AnnotatedSentence sentence, Object initialDiagram, int beamSize) {
     return beamSearch(sentence, initialDiagram, beamSize, null, null);
   }
@@ -65,7 +73,7 @@ public class GroundedParser {
       }
       
       // System.out.println();
-      // System.out.println("LOOP: " + heapSize);
+      // System.out.println("LOOP: " + heap.size());
 
       // Empty the heap.
       currentBeamSize = heap.size();
@@ -74,9 +82,18 @@ public class GroundedParser {
       for (int i = 0; i < currentBeamSize; i++) {
         State state = currentBeam[i];
         
+        String curSyntax = "START";
+        if (state.stack.size > 0) {
+          curSyntax = parser.getSyntaxVarType().getValue(state.stack.entry.getHeadedSyntax()).toString();
+        }
+        int curSpanStart = state.stack.spanStart;
+        int curSpanEnd = state.stack.spanEnd;
+        
         if (state.continuation != null) {
+          // System.out.println("eval: " + curSyntax + " " + curSpanStart + "," + curSpanEnd);
           incrEval.evaluateContinuation(state, heap, chart, parser);
         } else if (state.stack.includesRootProb) {
+          // System.out.println("root: " + curSyntax + " " + curSpanStart + "," + curSpanEnd);
           // This state is a finished state: it spans the entire sentence
           // and evaluation has finished.
           finishedHeap.offer(state, state.totalProb);
@@ -93,6 +110,8 @@ public class GroundedParser {
           // capped temporary heap size.
           Preconditions.checkState(tempHeap.size() < TEMP_HEAP_MAX_SIZE);
           
+          // System.out.println("shift/reducing: " + curSyntax + " " + curSpanStart + "," + curSpanEnd);
+
           ShiftReduceStack[] tempHeapKeys = tempHeap.getKeys();
           for (int j = 0; j < tempHeap.size(); j++) {
             ShiftReduceStack result = tempHeapKeys[j];
@@ -102,7 +121,7 @@ public class GroundedParser {
             HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) parser.getSyntaxVarType()
                 .getValue(result.entry.getHeadedSyntax());
             
-            // System.out.println("shift/reduce: " + syntax + " " + prob);
+            // System.out.println("  : " + result.spanStart + "," + result.spanEnd + " " + syntax);
 
             if (incrEval.isEvaluatable(syntax)) {
               GroundedCcgParse parse = decodeParseFromSpan(result.spanStart, result.spanEnd,

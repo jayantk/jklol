@@ -92,7 +92,7 @@ public class CcgShiftReduceInference implements CcgInference {
   
   public static final void root(ShiftReduceStack stack, CcgChart chart, KbestHeap<ShiftReduceStack> finishedHeap,
       CcgParser parser) { 
-    if (stack.size == 1 && stack.spanEnd == chart.getWords().size() - 1) {
+    if (stack.size == 1 && stack.spanEnd == chart.getWords().size() - 1 && !stack.includesRootProb) {
       // This parse spans all of the input words and has no remaining
       // reduce operations.
       
@@ -142,7 +142,7 @@ public class CcgShiftReduceInference implements CcgInference {
         // Some nonterminal entries may have been added to chart
         // by other parses in the beam that have processed more
         // tokens than this parse.
-        if (entries[j].isTerminal()) {
+        if (entries[j].isTerminal() && entries[j].getAdditionalInfo() == null) {
           // System.out.println("SHIFT: " + curToken + "," + spanEnd + " " + entries[j].getHeadedSyntax());
 
           // Queue the shift action by adding it to the heap.

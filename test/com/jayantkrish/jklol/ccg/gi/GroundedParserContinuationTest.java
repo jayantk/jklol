@@ -89,7 +89,7 @@ public class GroundedParserContinuationTest extends TestCase {
 
     for (GroundedCcgParse parse : parses) {
       System.out.println(parse.getSubtreeProbability() + " " + parse.getLogicalForm()
-          + " " + parse.getDenotation() + " " + parse.getDiagram());
+          + " " + parse.getDenotation() + " " + parse.getSyntacticParse() + " " + parse.getDiagram());
     }
     
     assertEquals(2, parses.size());
@@ -107,7 +107,7 @@ public class GroundedParserContinuationTest extends TestCase {
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG));
 
     Object initialDiagram = ambEval.eval(sexpParser.parse(initialDiagramExpression), env, null).getValue();
-    return parser.beamSearch(sentence, initialDiagram, 10);
+    return parser.beamSearch(sentence, initialDiagram, 100);
   }
   
   public GroundedCcgParse parse(GroundedParser parser, List<String> words, String initialDiagramExpression) {

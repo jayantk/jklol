@@ -5,10 +5,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.chart.CcgChart;
-import com.jayantkrish.jklol.ccg.gi.GroundedParser.State;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.CpsTransform;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -23,7 +20,6 @@ import com.jayantkrish.jklol.lisp.FunctionValue;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.LispUtil;
 import com.jayantkrish.jklol.lisp.SExpression;
-import com.jayantkrish.jklol.util.KbestHeap;
 
 /**
  * Incremental evaluation oracle for a nondeterministic lambda
@@ -36,7 +32,7 @@ import com.jayantkrish.jklol.util.KbestHeap;
  * @author jayantk
  *
  */
-public class ContinuationIncrementalEval implements IncrementalEval {
+public class ContinuationIncrementalEval extends AbstractIncrementalEval {
   protected final AmbEval eval;
   protected final Environment env;
   protected final ExpressionSimplifier simplifier;
@@ -57,43 +53,53 @@ public class ContinuationIncrementalEval implements IncrementalEval {
     this.defs = defs;
   }
 
-  public void evaluateContinuation(State state, KbestHeap<State> heap, CcgChart chart,
-      CcgParser parser) {
-    Environment env = state.continuationEnv;
+  @Override
+  public void evaluateContinuation(IncrementalEvalState state, List<IncrementalEvalState> resultQueue) {
+    Environment env = state.getEnvironment();
     FinalContinuation finalContinuation = (FinalContinuation) ((WrappedBuiltinFunction)
         env.getValue(FINAL_CONTINUATION, eval.getSymbolTable())).getBaseFunction();
     QueueContinuations queueContinuations = (QueueContinuations) ((WrappedBuiltinFunction)
         env.getValue(QUEUE_CONTINUATIONS, eval.getSymbolTable())).getBaseFunction();
-    AmbFunctionValue continuation = (AmbFunctionValue) state.continuation;
+    AmbFunctionValue currentContinuation = (AmbFunctionValue) state.getContinuation();
     
     // System.out.println("evaluating: " + continuation);
     // System.out.println("evaluating: " + state.diagram);
     
     int finalNumValues = finalContinuation.denotations.size();
     int queueNumValues = queueContinuations.getContinuations().size();
-    continuation.apply(Arrays.asList(state.diagram), env, null);
+    currentContinuation.apply(Arrays.asList(state.getDiagram()), env, null);
     
     for (int i = finalNumValues; i < finalContinuation.denotations.size(); i++) {
       Object denotation = finalContinuation.denotations.get(i);
       Object diagram = finalContinuation.diagrams.get(i);
-      // TODO
-      double prob = 1.0;
-      IncrementalEval.queueState(denotation, diagram, prob, state.stack, heap, chart, parser);
+      double prob = scoreState(null, env, denotation, diagram);
+      IncrementalEvalState result = new IncrementalEvalState(null, null, denotation, diagram, prob);
+      resultQueue.add(result);
     }
-    
+
     List<Object> continuations = queueContinuations.getContinuations();
     List<Object> denotations = queueContinuations.getDenotations();
     List<Object> diagrams = queueContinuations.getDiagrams();
     for (int i = queueNumValues; i < continuations.size(); i++) {
-      // TODO
-      double prob = 1.0;
-      
-      State next = new State(state.stack, diagrams.get(i), continuations.get(i),
-          denotations.get(i), env, prob);
-      heap.offer(next, next.totalProb);
+      Object continuation = continuations.get(i);
+      Object denotation = denotations.get(i);
+      Object diagram = diagrams.get(i);
+      double prob = scoreState(continuation, env, denotation, diagram);
+
+      IncrementalEvalState result = new IncrementalEvalState(continuation, env, denotation, diagram, prob);
+      resultQueue.add(result);
     }
   }
+  
+  /**
+   * Override this method in subclasses to implement scoring of search states.
+   * @return
+   */
+  protected double scoreState(Object continuation, Environment env, Object denotation, Object diagram) {
+    return 1.0;
+  }
 
+  @Override
   public Environment getEnvironment() {
     Environment continuationEnv = Environment.extend(env);
     continuationEnv.bindName(FINAL_CONTINUATION, new WrappedBuiltinFunction(new FinalContinuation()),
@@ -108,8 +114,14 @@ public class ContinuationIncrementalEval implements IncrementalEval {
     return continuationEnv;
   }
   
+  @Override
   public AmbFunctionValue parseToContinuation(GroundedCcgParse parse, Environment env) {
     Expression2 lf = parse.getUnevaluatedLogicalForm(env, eval.getSymbolTable());
+    return lfToContinuation(lf, env);
+  }
+  
+  @Override
+  public AmbFunctionValue lfToContinuation(Expression2 lf, Environment env) {
     lf = simplifier.apply(lf);
     // System.out.println(lf);
     Expression2 cpsLf = simplifier.apply(CpsTransform.apply(lf, Expression2.constant(FINAL_CONTINUATION)));
@@ -124,11 +136,12 @@ public class ContinuationIncrementalEval implements IncrementalEval {
     return (AmbFunctionValue) evalResult.getValue();
   }
   
+  @Override
   public boolean isEvaluatable(HeadedSyntacticCategory syntax) {
     return syntax.isAtomic();
   }
 
-  private static class QueueContinuations implements FunctionValue {
+  public static class QueueContinuations implements FunctionValue {
     private final List<Object> continuations;
     private final List<Object> denotations;
     private final List<Object> diagrams;
@@ -178,7 +191,7 @@ public class ContinuationIncrementalEval implements IncrementalEval {
     }
   }
 
-  private static class FinalContinuation implements FunctionValue {
+  public static class FinalContinuation implements FunctionValue {
     public final List<Object> denotations;
     public final List<Object> diagrams;
     

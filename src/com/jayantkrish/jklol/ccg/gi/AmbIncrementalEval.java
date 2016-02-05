@@ -5,10 +5,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.chart.CcgChart;
-import com.jayantkrish.jklol.ccg.gi.GroundedParser.State;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
@@ -20,9 +17,8 @@ import com.jayantkrish.jklol.lisp.ParametricBfgBuilder;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
-import com.jayantkrish.jklol.util.KbestHeap;
 
-public class AmbIncrementalEval implements IncrementalEval {
+public class AmbIncrementalEval extends AbstractIncrementalEval {
   
   private final AmbEval eval;
   private final Environment env;
@@ -39,10 +35,9 @@ public class AmbIncrementalEval implements IncrementalEval {
   }
 
   @Override
-  public void evaluateContinuation(State state, KbestHeap<State> heap, CcgChart chart,
-      CcgParser parser) {
-    Object continuation = state.continuation;
-    Environment continuationEnv = state.continuationEnv;
+  public void evaluateContinuation(IncrementalEvalState state, List<IncrementalEvalState> resultQueue) {
+    Object continuation = state.getContinuation();
+    Environment continuationEnv = state.getEnvironment();
     Preconditions.checkArgument(continuation instanceof Expression2);
     
     SExpression sexp = sexpParser.parse(continuation.toString());
@@ -70,7 +65,7 @@ public class AmbIncrementalEval implements IncrementalEval {
     // System.out.println("evaluated: " + continuation + " -> ");
     for (int i = 0; i < values.size(); i++) {
       // System.out.println("   " + probs.get(i) + " " + values.get(i));
-      IncrementalEval.queueState(values.get(i), null, probs.get(i), state.stack, heap, chart, parser);
+      resultQueue.add(new IncrementalEvalState(null, null, values.get(i), null, probs.get(i)));
     }
   }
 
@@ -82,6 +77,11 @@ public class AmbIncrementalEval implements IncrementalEval {
   @Override
   public Object parseToContinuation(GroundedCcgParse parse, Environment env) {
     Expression2 lf = parse.getUnevaluatedLogicalForm(env, eval.getSymbolTable());
+    return lfToContinuation(lf, env);
+  }
+  
+  @Override
+  public Object lfToContinuation(Expression2 lf, Environment env) {
     return simplifier.apply(lf);
   }
 

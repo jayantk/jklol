@@ -15,6 +15,7 @@ import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgLeftToRightChart;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
+import com.jayantkrish.jklol.ccg.gi.IncrementalEval.IncrementalEvalState;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
@@ -52,7 +53,7 @@ public class GroundedParser {
 
     // Working heap for queuing parses to process next.
     KbestHeap<State> heap = new KbestHeap<State>(beamSize, new State[0]);
-    heap.offer(new State(ShiftReduceStack.empty(), initialDiagram, null, null, null, 1.0), 1.0);
+    heap.offer(new State(ShiftReduceStack.empty(), initialDiagram, null), 1.0);
     
     // Heap for finished parses.
     KbestHeap<State> finishedHeap = new KbestHeap<State>(beamSize, new State[0]);
@@ -60,6 +61,9 @@ public class GroundedParser {
     // Temporary heap for interfacing with CcgShiftReduceInference.
     KbestHeap<ShiftReduceStack> tempHeap = new KbestHeap<ShiftReduceStack>(TEMP_HEAP_MAX_SIZE,
         new ShiftReduceStack[0]);
+    
+    // Temporary list of evaluation results for interfacing with IncrementalEval
+    List<IncrementalEvalState> tempEvalResults = Lists.newArrayList();
     
     // Array of elements in the current beam.
     State[] currentBeam = new State[beamSize + 1];
@@ -71,9 +75,6 @@ public class GroundedParser {
       for (int i = 0; i < heap.size(); i++) {
         currentBeam[i] = keys[i];
       }
-      
-      // System.out.println();
-      // System.out.println("LOOP: " + heap.size());
 
       // Empty the heap.
       currentBeamSize = heap.size();
@@ -82,16 +83,25 @@ public class GroundedParser {
       for (int i = 0; i < currentBeamSize; i++) {
         State state = currentBeam[i];
         
+        // Debugging code.
+        /*
         String curSyntax = "START";
         if (state.stack.size > 0) {
           curSyntax = parser.getSyntaxVarType().getValue(state.stack.entry.getHeadedSyntax()).toString();
         }
         int curSpanStart = state.stack.spanStart;
         int curSpanEnd = state.stack.spanEnd;
+        */
         
-        if (state.continuation != null) {
+        if (state.evalResult != null) {
           // System.out.println("eval: " + curSyntax + " " + curSpanStart + "," + curSpanEnd);
-          incrEval.evaluateContinuation(state, heap, chart, parser);
+          tempEvalResults.clear();
+          incrEval.evaluateContinuation(state.evalResult, tempEvalResults);
+          
+          for (IncrementalEvalState result : tempEvalResults) {
+            queueEvalState(result, state.stack, heap, chart);
+          }
+
         } else if (state.stack.includesRootProb) {
           // System.out.println("root: " + curSyntax + " " + curSpanStart + "," + curSpanEnd);
           // This state is a finished state: it spans the entire sentence
@@ -129,13 +139,17 @@ public class GroundedParser {
               
               continuationEnv = incrEval.getEnvironment();
               continuation = incrEval.parseToContinuation(parse, continuationEnv);
-
-              if (continuation == null) {
-                continuationEnv = null;
-              }
             }
 
-            State next = new State(result, state.diagram, continuation, null, continuationEnv, state.evalProb);
+            State next;
+            if (continuation != null) {
+              IncrementalEvalState r = new IncrementalEvalState(continuation, continuationEnv,
+                  null, state.diagram, 1.0);
+              next = new State(result, state.diagram, r);
+            } else {
+              next = new State(result, state.diagram, null);
+            }
+
             // TODO: do we need to score this?
             heap.offer(next, next.totalProb);
           }
@@ -153,6 +167,43 @@ public class GroundedParser {
     Collections.reverse(parses);
 
     return parses;
+  }
+  
+  /**
+   * Queues a search state containing the result of an evaluation. 
+   * 
+   * @param evalResult
+   * @param cur
+   * @param heap
+   * @param chart
+   */
+  private void queueEvalState(IncrementalEvalState evalResult, ShiftReduceStack cur,
+      KbestHeap<State> heap, CcgChart chart) {
+    if (evalResult.getContinuation() == null) {
+      // Evaluation has finished (for now) and the search must switch back
+      // to parsing. Create a new entry on the CCG chart representing the
+      // the post-evaluation parser state; this entry is required in order
+      // to reference the result of evaluation in the future.
+      int spanStart = cur.spanStart;
+      int spanEnd = cur.spanEnd;
+      
+      ChartEntry entry = cur.entry.addAdditionalInfo(
+          new DenotationValue(evalResult.getDenotation(), evalResult.getProb()));
+      double entryProb = cur.entryProb * evalResult.getProb();
+
+      int entryIndex = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
+      chart.addChartEntryForSpan(entry, entryProb, spanStart, spanEnd, parser.getSyntaxVarType());
+
+      ShiftReduceStack newStack = cur.previous.push(cur.spanStart, cur.spanEnd, entryIndex,
+          entry, entryProb, cur.includesRootProb);
+
+      State next = new State(newStack, evalResult.getDiagram(), null);
+      heap.offer(next, next.totalProb);
+    } else {
+      // Evaluation is still in progress. 
+      State next = new State(cur, evalResult.getDiagram(), evalResult);
+      heap.offer(next, next.totalProb);
+    }
   }
   
   private GroundedCcgParse decodeParseFromSpan(int spanStart, int spanEnd,
@@ -207,30 +258,37 @@ public class GroundedParser {
     }
   }
 
+  /**
+   * A search state for joint CCG parsing and incremental evaluation.
+   * 
+   * @author jayantk
+   */
   public static class State {
+    /**
+     * Current state of the shift reduce CCG parser.
+     */
     public final ShiftReduceStack stack;
-    
     public final Object diagram;
-    public final Object continuation;
-    public final Object denotation;
-    public final Environment continuationEnv;
-    public final double evalProb;
+    
+    /**
+     * Current state of incremental evaluation. If {@code null},
+     * the next search actions are parser actions; otherwise,
+     * the next actions are evaluation actions. 
+     */
+    public final IncrementalEvalState evalResult;
     
     public final double totalProb;
     
-    public State(ShiftReduceStack stack, Object diagram, Object continuation,
-        Object denotation, Environment continuationEnv, double evalProb) {
+    public State(ShiftReduceStack stack, Object diagram, IncrementalEvalState evalResult) {
       this.stack = Preconditions.checkNotNull(stack);
       this.diagram = diagram;
-      this.continuation = continuation;
-      this.denotation = denotation;
-      this.continuationEnv = continuationEnv;
-      this.evalProb = evalProb;
+      this.evalResult = evalResult;
       
-      this.totalProb = stack.totalProb * evalProb;
-      
-      // Both continuation and continuationEnv must be null or not-null.
-      Preconditions.checkArgument(!(continuation == null ^ continuationEnv == null));
+      if (evalResult != null) {
+        this.totalProb = stack.totalProb * evalResult.getProb();
+      } else {
+        this.totalProb = stack.totalProb;
+      }
     }
   }
 }

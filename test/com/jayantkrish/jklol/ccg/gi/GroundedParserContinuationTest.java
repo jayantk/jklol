@@ -12,7 +12,9 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
+import com.jayantkrish.jklol.ccg.gi.IncrementalEval.IncrementalEvalState;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.Environment;
@@ -57,8 +59,10 @@ public class GroundedParserContinuationTest extends TestCase {
 
   private GroundedParser parser;
   private ExpressionParser<SExpression> sexpParser;
+  private ExpressionParser<Expression2> exp2Parser;
   private Environment env;
   private AmbEval ambEval;
+  private ContinuationIncrementalEval eval;
   
   private static final double TOLERANCE = 1e-6;
   
@@ -72,6 +76,7 @@ public class GroundedParserContinuationTest extends TestCase {
     ambEval = new AmbEval(symbolTable);
     env = AmbEval.getDefaultEnvironment(symbolTable);
     sexpParser = ExpressionParser.sExpression(symbolTable);
+    exp2Parser = ExpressionParser.expression2();
     SExpression predicateProgram = sexpParser.parse("(begin " + Joiner.on("\n").join(predicateDefs) + ")");
     ambEval.eval(predicateProgram, env, null);
     
@@ -79,7 +84,7 @@ public class GroundedParserContinuationTest extends TestCase {
     
     String evalDefString = "(begin " + Joiner.on(" ").join(evalDefs) + ")";
     SExpression defs = sexpParser.parse(evalDefString);
-    ContinuationIncrementalEval eval = new ContinuationIncrementalEval(ambEval, env, simplifier, defs);
+    eval = new ContinuationIncrementalEval(ambEval, env, simplifier, defs);
     parser = new GroundedParser(ccgParser, eval);
   }
 
@@ -99,6 +104,29 @@ public class GroundedParserContinuationTest extends TestCase {
     Set<Object> actual = Sets.newHashSet(parses.get(0).getDenotation(), parses.get(1).getDenotation());
     Set<Object> expected = Sets.newHashSet(4, 2);
     assertEquals(expected, actual);
+  }
+  
+  public void testEval() {
+    List<IncrementalEvalState> states = evalBeam(eval, "(+-k (resolve-k \"x\") (resolve-k \"x\"))", "(list)");
+    
+    for (IncrementalEvalState state : states) {
+      System.out.println(state);
+    }
+    
+    assertEquals(2, states.size());
+    assertEquals(1.0, states.get(0).getProb(), TOLERANCE);
+    assertEquals(1.0, states.get(1).getProb(), TOLERANCE);
+    
+    Set<Object> actual = Sets.newHashSet(states.get(0).getDenotation(), states.get(1).getDenotation());
+    Set<Object> expected = Sets.newHashSet(4, 2);
+    assertEquals(expected, actual);
+  }
+
+  public List<IncrementalEvalState> evalBeam(IncrementalEval eval, String expression,
+      String initialDiagramExpression) {
+    Expression2 lf = exp2Parser.parse(expression);
+    Object initialDiagram = ambEval.eval(sexpParser.parse(initialDiagramExpression), env, null).getValue();
+    return eval.evaluateBeam(lf, initialDiagram, 100);
   }
 
   public List<GroundedCcgParse> beamSearch(GroundedParser parser, List<String> words,

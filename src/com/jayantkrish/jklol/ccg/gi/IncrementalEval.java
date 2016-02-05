@@ -1,13 +1,11 @@
 package com.jayantkrish.jklol.ccg.gi;
 
-import com.jayantkrish.jklol.ccg.CcgParser;
+import java.util.List;
+
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.ShiftReduceStack;
-import com.jayantkrish.jklol.ccg.chart.CcgChart;
-import com.jayantkrish.jklol.ccg.chart.ChartEntry;
-import com.jayantkrish.jklol.ccg.gi.GroundedParser.State;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
-import com.jayantkrish.jklol.util.KbestHeap;
 
 /**
  * Oracle for evaluating logical forms during CCG parsing. 
@@ -18,16 +16,13 @@ import com.jayantkrish.jklol.util.KbestHeap;
 public interface IncrementalEval {
 
   /**
-   * Evaluates the continuation stored in {@code state} queuing
-   * new search states on {@code heap} for the resulting value(s). 
+   * Evaluates the continuation in {@code state}, producing zero or
+   * more future continuations that are stored in {@code resultQueue}.
    * 
    * @param state
-   * @param heap
-   * @param chart
-   * @param parser
+   * @param resultQueue
    */
-  public void evaluateContinuation(State state, KbestHeap<State> heap, CcgChart chart,
-      CcgParser parser);
+  public void evaluateContinuation(IncrementalEvalState state, List<IncrementalEvalState> resultQueue);
   
   /**
    * Gets the environment in which logical forms are evaluated.
@@ -40,13 +35,24 @@ public interface IncrementalEval {
   /**
    * Produces a continuation from a parse. The continuation represents
    * an evaluatable object (in the simplest case, the evaluatable expression
-   * itself) that can be used in {@code evaluateContinuation}.
+   * itself) that can be used in {@code evaluateContinuation}. The returned
+   * continuation should use any previous evaluation results from {@code parse}
+   * instead of re-evaluating these expressions.
    * 
    * @param parse
    * @param env
    * @return
    */
   public Object parseToContinuation(GroundedCcgParse parse, Environment env);
+  
+  /**
+   * Produces a continuation from an expression. This method 
+   * 
+   * @param lf
+   * @param env
+   * @return
+   */
+  public Object lfToContinuation(Expression2 lf, Environment env);
   
   /**
    * Returns {@code true} if a CCG parse with root {@code syntax}
@@ -56,24 +62,61 @@ public interface IncrementalEval {
    * @return
    */
   public boolean isEvaluatable(HeadedSyntacticCategory syntax);
+
+  /**
+   * Evaluates {@code lf} to completion using a beam search and 
+   * {@code initialDiagram}.
+   * 
+   * @param lf
+   * @param initialDiagram
+   * @param beamSize
+   * @return
+   */
+  public List<IncrementalEvalState> evaluateBeam(Expression2 lf, Object initialDiagram, int beamSize);
   
-  public static void queueState(Object denotation, Object diagram, double prob, ShiftReduceStack cur,
-      KbestHeap<State> heap, CcgChart chart, CcgParser parser) {
-    int spanStart = cur.spanStart;
-    int spanEnd = cur.spanEnd;
+  public static class IncrementalEvalState {
+    private final Object continuation;
+    private final Environment environment;
 
-    // Create a new chart entry storing the new denotation.
-    ChartEntry entry = cur.entry.addAdditionalInfo(
-        new DenotationValue(denotation, prob));
-    double entryProb = cur.entryProb * prob;
+    private final Object denotation;
+    private final Object diagram;
+    private final double prob;
 
-    int entryIndex = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
-    chart.addChartEntryForSpan(entry, entryProb, spanStart, spanEnd, parser.getSyntaxVarType());
+    public IncrementalEvalState(Object continuation, Environment environment,
+        Object denotation, Object diagram, double prob) {
+      this.continuation = continuation;
+      this.environment = environment;
+      this.denotation = denotation;
+      this.diagram = diagram;
+      this.prob = prob;
 
-    ShiftReduceStack newStack = cur.previous.push(cur.spanStart, cur.spanEnd, entryIndex,
-        entry, entryProb, cur.includesRootProb);
+      // Both continuation and continuationEnv must be null or not-null.
+      Preconditions.checkArgument(!(continuation == null ^ environment == null));
+    }
 
-    State next = new State(newStack, diagram, null, denotation, null, 1.0);
-    heap.offer(next, next.totalProb);
+    public final Object getContinuation() {
+      return continuation;
+    }
+    
+    public final Environment getEnvironment() {
+      return environment;
+    }
+
+    public final Object getDenotation() {
+      return denotation;
+    }
+
+    public final Object getDiagram() {
+      return diagram;
+    }
+
+    public final double getProb() {
+      return prob;
+    }
+    
+    @Override
+    public String toString() {
+      return continuation + " " + denotation + " " + diagram + " " + prob;
+    }
   }
 }

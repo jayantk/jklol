@@ -3,15 +3,29 @@ package com.jayantkrish.jklol.ccg.gi;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.util.KbestHeap;
 
+/**
+ * Common implementations of {@code IncrementalEval} methods.
+ * 
+ * @author jayantk
+ *
+ */
 public abstract class AbstractIncrementalEval implements IncrementalEval {
 
   @Override
-  public List<IncrementalEvalState> evaluateBeam(Expression2 lf, Object initialDiagram, int beamSize) {
+  public List<IncrementalEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      int beamSize) {
+    return evaluateBeam(lf, initialDiagram, null, beamSize);
+  }
+
+  @Override
+  public List<IncrementalEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      Predicate<IncrementalEvalState> filter, int beamSize) {
     // Working heap for queuing parses to process next.
     KbestHeap<IncrementalEvalState> heap = new KbestHeap<IncrementalEvalState>(beamSize,
         new IncrementalEvalState[0]);
@@ -35,7 +49,7 @@ public abstract class AbstractIncrementalEval implements IncrementalEval {
     Object continuation = lfToContinuation(lf, env);
     IncrementalEvalState initialState = new IncrementalEvalState(continuation, env, null,
         initialDiagram, 1.0);
-    heap.offer(initialState, 1.0);
+    offer(heap, initialState, filter);
 
     while (heap.size() > 0) {
       // Copy the heap to the current beam.
@@ -56,11 +70,11 @@ public abstract class AbstractIncrementalEval implements IncrementalEval {
           evaluateContinuation(state, resultQueue);
           
           for (IncrementalEvalState next : resultQueue) {
-            heap.offer(next, next.getProb());
+            offer(heap, next, filter);
           }
         } else {
           // Evaluation is finished.
-          finishedHeap.offer(state, state.getProb());
+          offer(finishedHeap, state, filter);
         }
       }
     }
@@ -71,5 +85,12 @@ public abstract class AbstractIncrementalEval implements IncrementalEval {
     }
     Collections.reverse(finalStates);
     return finalStates;
+  }
+
+  private static void offer(KbestHeap<IncrementalEvalState> heap, IncrementalEvalState state,
+      Predicate<IncrementalEvalState> filter) {
+    if (filter == null || filter.apply(state)) {
+      heap.offer(state, state.getProb());
+    }
   }
 }

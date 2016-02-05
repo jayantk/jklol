@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.ccg.gi;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
@@ -72,7 +73,22 @@ public interface IncrementalEval {
    * @param beamSize
    * @return
    */
-  public List<IncrementalEvalState> evaluateBeam(Expression2 lf, Object initialDiagram, int beamSize);
+  public List<IncrementalEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      int beamSize);
+
+  /**
+   * Evaluates {@code lf} to completion using a beam search and 
+   * {@code initialDiagram}. The search prunes any states for which 
+   * {@code filter} returns {@code false}.
+   * 
+   * @param lf
+   * @param initialDiagram
+   * @param filter
+   * @param beamSize
+   * @return
+   */
+  public List<IncrementalEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      Predicate<IncrementalEvalState> filter, int beamSize);
   
   public static class IncrementalEvalState {
     private final Object continuation;

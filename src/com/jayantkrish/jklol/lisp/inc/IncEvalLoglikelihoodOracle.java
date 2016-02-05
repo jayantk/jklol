@@ -1,23 +1,23 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.lisp.inc;
 
 import java.util.Collection;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.jayantkrish.jklol.ccg.gi.IncrementalEval.IncrementalEvalState;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
+import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LogFunction;
 
-public class IncrementalEvalLoglikelihoodOracle implements
-  GradientOracle<IncrementalEval, IncrementalEvalExample> {
+public class IncEvalLoglikelihoodOracle implements
+  GradientOracle<IncEval, IncEvalExample> {
 
-  private final ParametricIncrementalEval family;
+  private final ParametricIncEval family;
   private final int beamSize;
 
-  public IncrementalEvalLoglikelihoodOracle(ParametricIncrementalEval family, int beamSize) {
+  public IncEvalLoglikelihoodOracle(ParametricIncEval family, int beamSize) {
     this.family = Preconditions.checkNotNull(family);
     this.beamSize = beamSize;
   }
@@ -28,17 +28,17 @@ public class IncrementalEvalLoglikelihoodOracle implements
   }
   
   @Override
-  public IncrementalEval instantiateModel(SufficientStatistics parameters) {
+  public IncEval instantiateModel(SufficientStatistics parameters) {
     return family.getModelFromParameters(parameters);
   }
   
   @Override
   public double accumulateGradient(SufficientStatistics gradient, SufficientStatistics currentParameters,
-      IncrementalEval model, IncrementalEvalExample example, LogFunction log) {
+      IncEval model, IncEvalExample example, LogFunction log) {
 
     // Get a distribution over unconditional executions.
     log.startTimer("update_gradient/input_marginal");
-    List<IncrementalEvalState> unconditionalStates = model.evaluateBeam(example.getLogicalForm(),
+    List<IncEvalState> unconditionalStates = model.evaluateBeam(example.getLogicalForm(),
         example.getDiagram(), beamSize);
     
     if (unconditionalStates.size() == 0) {
@@ -48,8 +48,8 @@ public class IncrementalEvalLoglikelihoodOracle implements
     
     // Get a distribution on executions conditioned on the label of the example.
     log.startTimer("update_gradient/output_marginal");
-    Predicate<IncrementalEvalState> filter = example.getLabelFilter();
-    List<IncrementalEvalState> conditionalStates = model.evaluateBeam(example.getLogicalForm(),
+    Predicate<IncEvalState> filter = example.getLabelFilter();
+    List<IncEvalState> conditionalStates = model.evaluateBeam(example.getLogicalForm(),
         example.getDiagram(), filter, beamSize);
     
     if (conditionalStates.size() == 0) {
@@ -58,13 +58,13 @@ public class IncrementalEvalLoglikelihoodOracle implements
     log.stopTimer("update_gradient/output_marginal");
     
     double unconditionalPartitionFunction = getPartitionFunction(unconditionalStates);
-    for (IncrementalEvalState state : unconditionalStates) {
+    for (IncEvalState state : unconditionalStates) {
       family.incrementSufficientStatistics(gradient, currentParameters, example.getLogicalForm(),
           state, -1.0 * state.getProb() / unconditionalPartitionFunction);
     }
     
     double conditionalPartitionFunction = getPartitionFunction(conditionalStates);
-    for (IncrementalEvalState state : conditionalStates) {
+    for (IncEvalState state : conditionalStates) {
       family.incrementSufficientStatistics(gradient, currentParameters, example.getLogicalForm(),
           state, state.getProb() / conditionalPartitionFunction);
     }
@@ -74,9 +74,9 @@ public class IncrementalEvalLoglikelihoodOracle implements
     return Math.log(conditionalPartitionFunction) - Math.log(unconditionalPartitionFunction);
   }
   
-  public double getPartitionFunction(Collection<IncrementalEvalState> states) {
+  public double getPartitionFunction(Collection<IncEvalState> states) {
     double partitionFunction = 0.0;
-    for (IncrementalEvalState state : states) {
+    for (IncEvalState state : states) {
       partitionFunction += state.getProb();
     }
     return partitionFunction;

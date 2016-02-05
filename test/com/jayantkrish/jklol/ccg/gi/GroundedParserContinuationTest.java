@@ -12,13 +12,15 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
-import com.jayantkrish.jklol.ccg.gi.IncrementalEval.IncrementalEvalState;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.SExpression;
+import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval;
+import com.jayantkrish.jklol.lisp.inc.IncEval;
+import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -62,7 +64,7 @@ public class GroundedParserContinuationTest extends TestCase {
   private ExpressionParser<Expression2> exp2Parser;
   private Environment env;
   private AmbEval ambEval;
-  private ContinuationIncrementalEval eval;
+  private ContinuationIncEval eval;
   
   private static final double TOLERANCE = 1e-6;
   
@@ -84,7 +86,7 @@ public class GroundedParserContinuationTest extends TestCase {
     
     String evalDefString = "(begin " + Joiner.on(" ").join(evalDefs) + ")";
     SExpression defs = sexpParser.parse(evalDefString);
-    eval = new ContinuationIncrementalEval(ambEval, env, simplifier, defs);
+    eval = new ContinuationIncEval(ambEval, env, simplifier, defs);
     parser = new GroundedParser(ccgParser, eval);
   }
 
@@ -107,9 +109,9 @@ public class GroundedParserContinuationTest extends TestCase {
   }
   
   public void testEval() {
-    List<IncrementalEvalState> states = evalBeam(eval, "(+-k (resolve-k \"x\") (resolve-k \"x\"))", "(list)");
+    List<IncEvalState> states = evalBeam(eval, "(+-k (resolve-k \"x\") (resolve-k \"x\"))", "(list)");
     
-    for (IncrementalEvalState state : states) {
+    for (IncEvalState state : states) {
       System.out.println(state);
     }
     
@@ -122,7 +124,7 @@ public class GroundedParserContinuationTest extends TestCase {
     assertEquals(expected, actual);
   }
 
-  public List<IncrementalEvalState> evalBeam(IncrementalEval eval, String expression,
+  public List<IncEvalState> evalBeam(IncEval eval, String expression,
       String initialDiagramExpression) {
     Expression2 lf = exp2Parser.parse(expression);
     Object initialDiagram = ambEval.eval(sexpParser.parse(initialDiagramExpression), env, null).getValue();

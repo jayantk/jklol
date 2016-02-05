@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.lisp.inc;
 
 import java.util.Collections;
 import java.util.List;
@@ -15,31 +15,31 @@ import com.jayantkrish.jklol.util.KbestHeap;
  * @author jayantk
  *
  */
-public abstract class AbstractIncrementalEval implements IncrementalEval {
+public abstract class AbstractIncEval implements IncEval {
 
   @Override
-  public List<IncrementalEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       int beamSize) {
     return evaluateBeam(lf, initialDiagram, null, beamSize);
   }
 
   @Override
-  public List<IncrementalEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
-      Predicate<IncrementalEvalState> filter, int beamSize) {
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      Predicate<IncEvalState> filter, int beamSize) {
     // Working heap for queuing parses to process next.
-    KbestHeap<IncrementalEvalState> heap = new KbestHeap<IncrementalEvalState>(beamSize,
-        new IncrementalEvalState[0]);
+    KbestHeap<IncEvalState> heap = new KbestHeap<IncEvalState>(beamSize,
+        new IncEvalState[0]);
     
     // Heap for finished parses.
-    KbestHeap<IncrementalEvalState> finishedHeap = new KbestHeap<IncrementalEvalState>(beamSize,
-        new IncrementalEvalState[0]);
+    KbestHeap<IncEvalState> finishedHeap = new KbestHeap<IncEvalState>(beamSize,
+        new IncEvalState[0]);
 
     // Array of elements in the current beam.
-    IncrementalEvalState[] currentBeam = new IncrementalEvalState[beamSize + 1];
+    IncEvalState[] currentBeam = new IncEvalState[beamSize + 1];
     int currentBeamSize = 0;
 
     // Accumulator for storing future continuations.
-    List<IncrementalEvalState> resultQueue = Lists.newArrayList();
+    List<IncEvalState> resultQueue = Lists.newArrayList();
 
     // Construct and queue the start state. 
     Environment env = getEnvironment();
@@ -47,13 +47,13 @@ public abstract class AbstractIncrementalEval implements IncrementalEval {
     // be evaluated by this class. If this is the case, this method
     // will return the initialState as the only result.
     Object continuation = lfToContinuation(lf, env);
-    IncrementalEvalState initialState = new IncrementalEvalState(continuation, env, null,
+    IncEvalState initialState = new IncEvalState(continuation, env, null,
         initialDiagram, 1.0);
     offer(heap, initialState, filter);
 
     while (heap.size() > 0) {
       // Copy the heap to the current beam.
-      IncrementalEvalState[] keys = heap.getKeys();
+      IncEvalState[] keys = heap.getKeys();
       for (int i = 0; i < heap.size(); i++) {
         currentBeam[i] = keys[i];
       }
@@ -63,13 +63,13 @@ public abstract class AbstractIncrementalEval implements IncrementalEval {
       heap.clear();
 
       for (int i = 0; i < currentBeamSize; i++) {
-        IncrementalEvalState state = currentBeam[i];
+        IncEvalState state = currentBeam[i];
         
         if (state.getContinuation() != null) {
           resultQueue.clear();
           evaluateContinuation(state, resultQueue);
           
-          for (IncrementalEvalState next : resultQueue) {
+          for (IncEvalState next : resultQueue) {
             offer(heap, next, filter);
           }
         } else {
@@ -79,7 +79,7 @@ public abstract class AbstractIncrementalEval implements IncrementalEval {
       }
     }
     
-    List<IncrementalEvalState> finalStates = Lists.newArrayList();
+    List<IncEvalState> finalStates = Lists.newArrayList();
     while (finishedHeap.size() > 0) {
       finalStates.add(finishedHeap.removeMin());
     }
@@ -87,8 +87,8 @@ public abstract class AbstractIncrementalEval implements IncrementalEval {
     return finalStates;
   }
 
-  private static void offer(KbestHeap<IncrementalEvalState> heap, IncrementalEvalState state,
-      Predicate<IncrementalEvalState> filter) {
+  private static void offer(KbestHeap<IncEvalState> heap, IncEvalState state,
+      Predicate<IncEvalState> filter) {
     if (filter == null || filter.apply(state)) {
       heap.offer(state, state.getProb());
     }

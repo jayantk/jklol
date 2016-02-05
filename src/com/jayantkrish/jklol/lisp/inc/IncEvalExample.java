@@ -1,10 +1,10 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.lisp.inc;
 
 import com.google.common.base.Predicate;
-import com.jayantkrish.jklol.ccg.gi.IncrementalEval.IncrementalEvalState;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 
-public interface IncrementalEvalExample {
+public interface IncEvalExample {
   
   public Expression2 getLogicalForm();
   
@@ -18,5 +18,5 @@ public interface IncrementalEvalExample {
    * 
    * @return
    */
-  public Predicate<IncrementalEvalState> getLabelFilter();
+  public Predicate<IncEvalState> getLabelFilter();
 }

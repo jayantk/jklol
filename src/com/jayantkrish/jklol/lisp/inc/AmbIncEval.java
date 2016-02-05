@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.lisp.inc;
 
 import java.util.Iterator;
 import java.util.List;
@@ -6,6 +6,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.gi.GroundedCcgParse;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
@@ -18,7 +19,7 @@ import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 
-public class AmbIncrementalEval extends AbstractIncrementalEval {
+public class AmbIncEval extends AbstractIncEval {
   
   private final AmbEval eval;
   private final Environment env;
@@ -26,7 +27,7 @@ public class AmbIncrementalEval extends AbstractIncrementalEval {
   
   private final ExpressionParser<SExpression> sexpParser;
   
-  public AmbIncrementalEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier) {
+  public AmbIncEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier) {
     this.eval = Preconditions.checkNotNull(eval);
     this.env = Preconditions.checkNotNull(env);
     this.simplifier = Preconditions.checkNotNull(simplifier);
@@ -35,7 +36,7 @@ public class AmbIncrementalEval extends AbstractIncrementalEval {
   }
 
   @Override
-  public void evaluateContinuation(IncrementalEvalState state, List<IncrementalEvalState> resultQueue) {
+  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue) {
     Object continuation = state.getContinuation();
     Environment continuationEnv = state.getEnvironment();
     Preconditions.checkArgument(continuation instanceof Expression2);
@@ -65,7 +66,7 @@ public class AmbIncrementalEval extends AbstractIncrementalEval {
     // System.out.println("evaluated: " + continuation + " -> ");
     for (int i = 0; i < values.size(); i++) {
       // System.out.println("   " + probs.get(i) + " " + values.get(i));
-      resultQueue.add(new IncrementalEvalState(null, null, values.get(i), null, probs.get(i)));
+      resultQueue.add(new IncEvalState(null, null, values.get(i), null, probs.get(i)));
     }
   }
 

@@ -15,8 +15,9 @@ import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgLeftToRightChart;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
-import com.jayantkrish.jklol.ccg.gi.IncrementalEval.IncrementalEvalState;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.lisp.inc.IncEval;
+import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
@@ -24,11 +25,11 @@ import com.jayantkrish.jklol.util.KbestHeap;
 
 public class GroundedParser {
   private final CcgParser parser;
-  private final IncrementalEval incrEval;
+  private final IncEval incrEval;
 
   private final int TEMP_HEAP_MAX_SIZE=100000;
   
-  public GroundedParser(CcgParser parser, IncrementalEval incrEval) {
+  public GroundedParser(CcgParser parser, IncEval incrEval) {
     this.parser = Preconditions.checkNotNull(parser);
     this.incrEval = Preconditions.checkNotNull(incrEval);
   }
@@ -37,7 +38,7 @@ public class GroundedParser {
     return parser;
   }
   
-  public IncrementalEval getEval() {
+  public IncEval getEval() {
     return incrEval;
   }
   
@@ -63,7 +64,7 @@ public class GroundedParser {
         new ShiftReduceStack[0]);
     
     // Temporary list of evaluation results for interfacing with IncrementalEval
-    List<IncrementalEvalState> tempEvalResults = Lists.newArrayList();
+    List<IncEvalState> tempEvalResults = Lists.newArrayList();
     
     // Array of elements in the current beam.
     State[] currentBeam = new State[beamSize + 1];
@@ -98,7 +99,7 @@ public class GroundedParser {
           tempEvalResults.clear();
           incrEval.evaluateContinuation(state.evalResult, tempEvalResults);
           
-          for (IncrementalEvalState result : tempEvalResults) {
+          for (IncEvalState result : tempEvalResults) {
             queueEvalState(result, state.stack, heap, chart);
           }
 
@@ -143,7 +144,7 @@ public class GroundedParser {
 
             State next;
             if (continuation != null) {
-              IncrementalEvalState r = new IncrementalEvalState(continuation, continuationEnv,
+              IncEvalState r = new IncEvalState(continuation, continuationEnv,
                   null, state.diagram, 1.0);
               next = new State(result, state.diagram, r);
             } else {
@@ -177,7 +178,7 @@ public class GroundedParser {
    * @param heap
    * @param chart
    */
-  private void queueEvalState(IncrementalEvalState evalResult, ShiftReduceStack cur,
+  private void queueEvalState(IncEvalState evalResult, ShiftReduceStack cur,
       KbestHeap<State> heap, CcgChart chart) {
     if (evalResult.getContinuation() == null) {
       // Evaluation has finished (for now) and the search must switch back
@@ -275,11 +276,11 @@ public class GroundedParser {
      * the next search actions are parser actions; otherwise,
      * the next actions are evaluation actions. 
      */
-    public final IncrementalEvalState evalResult;
+    public final IncEvalState evalResult;
     
     public final double totalProb;
     
-    public State(ShiftReduceStack stack, Object diagram, IncrementalEvalState evalResult) {
+    public State(ShiftReduceStack stack, Object diagram, IncEvalState evalResult) {
       this.stack = Preconditions.checkNotNull(stack);
       this.diagram = diagram;
       this.evalResult = evalResult;

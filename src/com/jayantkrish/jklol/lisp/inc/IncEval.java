@@ -1,10 +1,11 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.lisp.inc;
 
 import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.gi.GroundedCcgParse;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
 
@@ -14,7 +15,7 @@ import com.jayantkrish.jklol.lisp.Environment;
  * @author jayantk
  *
  */
-public interface IncrementalEval {
+public interface IncEval {
 
   /**
    * Evaluates the continuation in {@code state}, producing zero or
@@ -23,7 +24,7 @@ public interface IncrementalEval {
    * @param state
    * @param resultQueue
    */
-  public void evaluateContinuation(IncrementalEvalState state, List<IncrementalEvalState> resultQueue);
+  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue);
   
   /**
    * Gets the environment in which logical forms are evaluated.
@@ -47,7 +48,7 @@ public interface IncrementalEval {
   public Object parseToContinuation(GroundedCcgParse parse, Environment env);
   
   /**
-   * Produces a continuation from an expression. This method 
+   * Produces a continuation from an expression. 
    * 
    * @param lf
    * @param env
@@ -73,7 +74,7 @@ public interface IncrementalEval {
    * @param beamSize
    * @return
    */
-  public List<IncrementalEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       int beamSize);
 
   /**
@@ -87,10 +88,10 @@ public interface IncrementalEval {
    * @param beamSize
    * @return
    */
-  public List<IncrementalEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
-      Predicate<IncrementalEvalState> filter, int beamSize);
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      Predicate<IncEvalState> filter, int beamSize);
   
-  public static class IncrementalEvalState {
+  public static class IncEvalState {
     private final Object continuation;
     private final Environment environment;
 
@@ -98,7 +99,7 @@ public interface IncrementalEval {
     private final Object diagram;
     private final double prob;
 
-    public IncrementalEvalState(Object continuation, Environment environment,
+    public IncEvalState(Object continuation, Environment environment,
         Object denotation, Object diagram, double prob) {
       this.continuation = continuation;
       this.environment = environment;

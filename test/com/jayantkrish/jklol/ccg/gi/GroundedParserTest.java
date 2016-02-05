@@ -12,6 +12,8 @@ import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.lisp.inc.AmbIncEval;
+import com.jayantkrish.jklol.lisp.inc.IncEval;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -45,7 +47,7 @@ public class GroundedParserTest extends TestCase {
     Environment env = AmbEval.getDefaultEnvironment(symbolTable);
     ExpressionSimplifier simplifier = ExpressionSimplifier.lambdaCalculus();
     
-    IncrementalEval eval = new AmbIncrementalEval(ambEval, env, simplifier);
+    IncEval eval = new AmbIncEval(ambEval, env, simplifier);
     parser = new GroundedParser(ccgParser, eval);
   }
 

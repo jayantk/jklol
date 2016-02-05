@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.lisp.inc;
 
 import java.util.Arrays;
 import java.util.List;
@@ -6,6 +6,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
+import com.jayantkrish.jklol.ccg.gi.GroundedCcgParse;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.CpsTransform;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -32,7 +33,7 @@ import com.jayantkrish.jklol.lisp.SExpression;
  * @author jayantk
  *
  */
-public class ContinuationIncrementalEval extends AbstractIncrementalEval {
+public class ContinuationIncEval extends AbstractIncEval {
   protected final AmbEval eval;
   protected final Environment env;
   protected final ExpressionSimplifier simplifier;
@@ -43,7 +44,7 @@ public class ContinuationIncrementalEval extends AbstractIncrementalEval {
   public static final String FINAL_CONTINUATION = "final-continuation";
   public static final String QUEUE_CONTINUATIONS = "queue-k";
   
-  public ContinuationIncrementalEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier,
+  public ContinuationIncEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier,
       SExpression defs) {
     this.eval = Preconditions.checkNotNull(eval);
     this.env = Preconditions.checkNotNull(env);
@@ -54,7 +55,7 @@ public class ContinuationIncrementalEval extends AbstractIncrementalEval {
   }
 
   @Override
-  public void evaluateContinuation(IncrementalEvalState state, List<IncrementalEvalState> resultQueue) {
+  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue) {
     Environment env = state.getEnvironment();
     FinalContinuation finalContinuation = (FinalContinuation) ((WrappedBuiltinFunction)
         env.getValue(FINAL_CONTINUATION, eval.getSymbolTable())).getBaseFunction();
@@ -73,7 +74,7 @@ public class ContinuationIncrementalEval extends AbstractIncrementalEval {
       Object denotation = finalContinuation.denotations.get(i);
       Object diagram = finalContinuation.diagrams.get(i);
       double prob = scoreState(null, env, denotation, diagram);
-      IncrementalEvalState result = new IncrementalEvalState(null, null, denotation, diagram, prob);
+      IncEvalState result = new IncEvalState(null, null, denotation, diagram, prob);
       resultQueue.add(result);
     }
 
@@ -86,7 +87,7 @@ public class ContinuationIncrementalEval extends AbstractIncrementalEval {
       Object diagram = diagrams.get(i);
       double prob = scoreState(continuation, env, denotation, diagram);
 
-      IncrementalEvalState result = new IncrementalEvalState(continuation, env, denotation, diagram, prob);
+      IncEvalState result = new IncEvalState(continuation, env, denotation, diagram, prob);
       resultQueue.add(result);
     }
   }

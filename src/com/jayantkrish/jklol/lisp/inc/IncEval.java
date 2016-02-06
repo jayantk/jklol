@@ -8,6 +8,7 @@ import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.gi.GroundedCcgParse;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.tensor.Tensor;
 
 /**
  * Oracle for evaluating logical forms during CCG parsing. 
@@ -98,14 +99,18 @@ public interface IncEval {
     private final Object denotation;
     private final Object diagram;
     private final double prob;
+    
+    private final Tensor features;
 
     public IncEvalState(Object continuation, Environment environment,
-        Object denotation, Object diagram, double prob) {
+        Object denotation, Object diagram, double prob, Tensor features) {
       this.continuation = continuation;
       this.environment = environment;
       this.denotation = denotation;
       this.diagram = diagram;
       this.prob = prob;
+      
+      this.features = features;
 
       // Both continuation and continuationEnv must be null or not-null.
       Preconditions.checkArgument(!(continuation == null ^ environment == null));
@@ -130,7 +135,11 @@ public interface IncEval {
     public final double getProb() {
       return prob;
     }
-    
+
+    public final Tensor getFeatures() {
+      return features;
+    }
+
     @Override
     public String toString() {
       return continuation + " " + denotation + " " + diagram + " " + prob;

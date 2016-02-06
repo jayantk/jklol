@@ -48,7 +48,7 @@ public abstract class AbstractIncEval implements IncEval {
     // will return the initialState as the only result.
     Object continuation = lfToContinuation(lf, env);
     IncEvalState initialState = new IncEvalState(continuation, env, null,
-        initialDiagram, 1.0);
+        initialDiagram, 1.0, null);
     offer(heap, initialState, filter);
 
     while (heap.size() > 0) {

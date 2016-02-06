@@ -56,19 +56,21 @@ public class IncEvalLoglikelihoodOracle implements
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/output_marginal");
-    
+
+    log.startTimer("update_gradient/increment_gradient");
     double unconditionalPartitionFunction = getPartitionFunction(unconditionalStates);
     for (IncEvalState state : unconditionalStates) {
       family.incrementSufficientStatistics(gradient, currentParameters, example.getLogicalForm(),
           state, -1.0 * state.getProb() / unconditionalPartitionFunction);
     }
-    
+
     double conditionalPartitionFunction = getPartitionFunction(conditionalStates);
     for (IncEvalState state : conditionalStates) {
       family.incrementSufficientStatistics(gradient, currentParameters, example.getLogicalForm(),
           state, state.getProb() / conditionalPartitionFunction);
     }
-    
+    log.stopTimer("update_gradient/increment_gradient");
+
     // Note that the returned loglikelihood is an approximation because
     // inference is approximate.
     return Math.log(conditionalPartitionFunction) - Math.log(unconditionalPartitionFunction);

@@ -307,7 +307,7 @@ public class CcgTrainingTest extends TestCase {
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, comparator,
         inferenceAlg, maxMargin ? 1.0 : 0.0);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(100,
-        1, 1, false, true, 0.0, new DefaultLogFunction());
+        1, 1, true, true, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);

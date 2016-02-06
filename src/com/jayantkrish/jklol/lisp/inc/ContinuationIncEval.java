@@ -63,8 +63,8 @@ public class ContinuationIncEval extends AbstractIncEval {
         env.getValue(QUEUE_CONTINUATIONS, eval.getSymbolTable())).getBaseFunction();
     AmbFunctionValue currentContinuation = (AmbFunctionValue) state.getContinuation();
     
-    // System.out.println("evaluating: " + continuation);
-    // System.out.println("evaluating: " + state.diagram);
+    // System.out.println("evaluating: " + state.getContinuation());
+    // System.out.println("diagram: " + state.getDiagram());
     
     int finalNumValues = finalContinuation.denotations.size();
     int queueNumValues = queueContinuations.getContinuations().size();
@@ -73,9 +73,8 @@ public class ContinuationIncEval extends AbstractIncEval {
     for (int i = finalNumValues; i < finalContinuation.denotations.size(); i++) {
       Object denotation = finalContinuation.denotations.get(i);
       Object diagram = finalContinuation.diagrams.get(i);
-      double prob = scoreState(null, env, denotation, diagram);
-      IncEvalState result = new IncEvalState(null, null, denotation, diagram, prob);
-      resultQueue.add(result);
+      IncEvalState next = nextState(state, null, null, denotation, diagram);
+      resultQueue.add(next);
     }
 
     List<Object> continuations = queueContinuations.getContinuations();
@@ -85,19 +84,20 @@ public class ContinuationIncEval extends AbstractIncEval {
       Object continuation = continuations.get(i);
       Object denotation = denotations.get(i);
       Object diagram = diagrams.get(i);
-      double prob = scoreState(continuation, env, denotation, diagram);
-
-      IncEvalState result = new IncEvalState(continuation, env, denotation, diagram, prob);
-      resultQueue.add(result);
+      IncEvalState next = nextState(state, continuation, env, denotation, diagram);
+      resultQueue.add(next);
     }
   }
-  
+
   /**
-   * Override this method in subclasses to implement scoring of search states.
+   * Override this method in subclasses to implement scoring of search states
+   * and accumulating features.
+   * 
    * @return
    */
-  protected double scoreState(Object continuation, Environment env, Object denotation, Object diagram) {
-    return 1.0;
+  protected IncEvalState nextState(IncEvalState prev, Object continuation, Environment env, Object denotation,
+      Object diagram) {
+    return new IncEvalState(continuation, env, denotation, diagram, 1.0 * prev.getProb(), null);
   }
 
   @Override

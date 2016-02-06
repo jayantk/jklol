@@ -144,8 +144,9 @@ public class GroundedParser {
 
             State next;
             if (continuation != null) {
+              // TODO: track features.
               IncEvalState r = new IncEvalState(continuation, continuationEnv,
-                  null, state.diagram, 1.0);
+                  null, state.diagram, 1.0, null);
               next = new State(result, state.diagram, r);
             } else {
               next = new State(result, state.diagram, null);

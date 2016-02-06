@@ -66,7 +66,7 @@ public class AmbIncEval extends AbstractIncEval {
     // System.out.println("evaluated: " + continuation + " -> ");
     for (int i = 0; i < values.size(); i++) {
       // System.out.println("   " + probs.get(i) + " " + values.get(i));
-      resultQueue.add(new IncEvalState(null, null, values.get(i), null, probs.get(i)));
+      resultQueue.add(new IncEvalState(null, null, values.get(i), null, probs.get(i), null));
     }
   }
 

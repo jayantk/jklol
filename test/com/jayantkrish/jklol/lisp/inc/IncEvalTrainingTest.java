@@ -65,6 +65,8 @@ public class IncEvalTrainingTest extends TestCase {
     "(resolve-k \"x\")",
     "(resolve-k \"x\")",
     "(resolve-k \"x\")",
+    // This last example adds no information because each value of x
+    // has one correct execution.
     "(+-k (amb-k (list-k 0 1)) (resolve-k \"x\"))", 
   };
 
@@ -112,17 +114,10 @@ public class IncEvalTrainingTest extends TestCase {
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);
     IncEval trainedEval = family.getModelFromParameters(parameters);
     
-    for (ValueIncEvalExample example : examples) {
-      System.out.println(example.getLogicalForm());
-      List<IncEvalState> states = trainedEval.evaluateBeam(example.getLogicalForm(), example.getDiagram(), 100);
-      for (IncEvalState state : states) {
-        System.out.println("   " + state);
-        System.out.println("   " + state.getFeatures());
-      }
-    }
-
     assertDistributionEquals(trainedEval, "(resolve-k \"x\")", initialDiagram,
         new Object[] {1, 2}, new double[] {0.25, 0.75});
+    assertDistributionEquals(trainedEval, "(resolve-k \"y\")", initialDiagram,
+        new Object[] {3, 4}, new double[] {0.5, 0.5});
   }
 
   private List<ValueIncEvalExample> parseExamples(String[] expressions, Object[] labels) {

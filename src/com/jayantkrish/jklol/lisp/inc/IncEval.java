@@ -9,6 +9,7 @@ import com.jayantkrish.jklol.ccg.gi.GroundedCcgParse;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.LogFunction;
 
 /**
  * Oracle for evaluating logical forms during CCG parsing. 
@@ -91,6 +92,9 @@ public interface IncEval {
    */
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       Predicate<IncEvalState> filter, int beamSize);
+  
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      Predicate<IncEvalState> filter, LogFunction log, int beamSize);
   
   public static class IncEvalState {
     private final Object continuation;

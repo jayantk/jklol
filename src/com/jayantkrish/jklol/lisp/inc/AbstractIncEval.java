@@ -7,6 +7,8 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.KbestHeap;
 
 /**
@@ -26,6 +28,12 @@ public abstract class AbstractIncEval implements IncEval {
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       Predicate<IncEvalState> filter, int beamSize) {
+    return evaluateBeam(lf, initialDiagram, filter, new NullLogFunction(), beamSize);
+  }
+
+  @Override
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      Predicate<IncEvalState> filter, LogFunction log, int beamSize) {
     // Working heap for queuing parses to process next.
     KbestHeap<IncEvalState> heap = new KbestHeap<IncEvalState>(beamSize,
         new IncEvalState[0]);
@@ -67,7 +75,9 @@ public abstract class AbstractIncEval implements IncEval {
         
         if (state.getContinuation() != null) {
           resultQueue.clear();
+          log.startTimer("evaluate_continuation");
           evaluateContinuation(state, resultQueue);
+          log.stopTimer("evaluate_continuation");
           
           for (IncEvalState next : resultQueue) {
             offer(heap, next, filter);

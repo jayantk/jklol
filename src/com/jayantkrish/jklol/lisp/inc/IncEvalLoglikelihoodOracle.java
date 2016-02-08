@@ -50,7 +50,7 @@ public class IncEvalLoglikelihoodOracle implements
     log.startTimer("update_gradient/output_marginal");
     Predicate<IncEvalState> filter = example.getLabelFilter();
     List<IncEvalState> conditionalStates = model.evaluateBeam(example.getLogicalForm(),
-        example.getDiagram(), filter, beamSize);
+        example.getDiagram(), filter, log, beamSize);
     
     if (conditionalStates.size() == 0) {
       throw new ZeroProbabilityError();

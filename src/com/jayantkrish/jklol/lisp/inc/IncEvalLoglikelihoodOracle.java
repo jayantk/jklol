@@ -39,7 +39,7 @@ public class IncEvalLoglikelihoodOracle implements
     // Get a distribution over unconditional executions.
     log.startTimer("update_gradient/input_marginal");
     List<IncEvalState> unconditionalStates = model.evaluateBeam(example.getLogicalForm(),
-        example.getDiagram(), beamSize);
+        example.getDiagram(), null, log, beamSize);
     
     if (unconditionalStates.size() == 0) {
       throw new ZeroProbabilityError();      

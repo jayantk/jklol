@@ -37,7 +37,7 @@ public class MaxVote implements VotingStrategy {
     System.out.println("new lexemes: " + newLexemes);
     */
     
-    PairCountAccumulator<List<String>, Lexeme> votes = VotingStrategy.aggregateVotes(exampleLexemes);
+    PairCountAccumulator<List<String>, Lexeme> votes = VoteAggregator.aggregateVotes(exampleLexemes);
     
     /*
     for (List<String> tokens : votes.keySet()) {

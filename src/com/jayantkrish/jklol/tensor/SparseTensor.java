@@ -244,7 +244,9 @@ public class SparseTensor extends AbstractTensor implements Serializable {
       if (dimensionNums[myInd] < otherDimensions[otherInd]) {
         myInd++;
       } else if (dimensionNums[myInd] == otherDimensions[otherInd]) {
-        Preconditions.checkArgument(dimensionSizes[myInd] == otherSizes[otherInd]);
+        Preconditions.checkArgument(dimensionSizes[myInd] == otherSizes[otherInd],
+                                    "dimensionSizes[myInd]: %s\notherSizes[otherInd]: %s",
+                                    dimensionSizes[myInd], otherSizes[otherInd]);
         myInd++;
         otherInd++;
       } else {

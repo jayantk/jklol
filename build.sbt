@@ -27,8 +27,6 @@ libraryDependencies ++= Seq(
   "com.fasterxml.jackson.core" % "jackson-core" % "2.2.3",
   "com.fasterxml.jackson.core" % "jackson-annotations" % "2.2.3",
   "junit" % "junit" % "3.8" % "test",
-  "edu.cmu.ml.rtw" %% "pra" % "3.2.1-SNAPSHOT",
-  "org.scalatest" %% "scalatest" % "2.2.1" % "test",
   "com.novocode" % "junit-interface" % "0.11" % "test"
 )
 

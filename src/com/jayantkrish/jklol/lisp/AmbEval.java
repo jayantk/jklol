@@ -131,7 +131,12 @@ public class AmbEval {
         case NEW_FG_SCOPE_INDEX: return doNewFgScope(subexpressions, environment, builder);
         }
       }
-      return doFunctionApplication(subexpressions, environment, builder);
+      try {
+        return doFunctionApplication(subexpressions, environment, builder);
+      } catch (Exception e) {
+        System.out.println("Function: " + expression);
+        throw e;
+      }
     }
   }
 

@@ -42,6 +42,7 @@ public class IncEvalLoglikelihoodOracle implements
         example.getDiagram(), null, log, beamSize);
     
     if (unconditionalStates.size() == 0) {
+      System.out.println("unconditional search failure");
       throw new ZeroProbabilityError();      
     }
     log.stopTimer("update_gradient/input_marginal");
@@ -53,6 +54,7 @@ public class IncEvalLoglikelihoodOracle implements
         example.getDiagram(), filter, log, beamSize);
     
     if (conditionalStates.size() == 0) {
+      System.out.println("conditional search failure");
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/output_marginal");

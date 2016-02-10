@@ -72,6 +72,22 @@ public class IntMultimap implements Multimap<Integer, Integer> {
     
     rebuildKeySet();
   }
+  
+  /**
+   * Copy constructor.
+   * 
+   * @param other
+   */
+  public IntMultimap(IntMultimap other) {
+    this.sortedKeys = Arrays.copyOf(other.sortedKeys, other.sortedKeys.length);
+    this.sortedValues = Arrays.copyOf(other.sortedValues, other.sortedValues.length);
+    
+    this.keySet = Arrays.copyOf(other.keySet, other.keySet.length);
+    
+    this.numUnsortedItems = other.numUnsortedItems;
+    this.unsortedKeys = Arrays.copyOf(other.unsortedKeys, other.unsortedKeys.length);
+    this.unsortedValues = Arrays.copyOf(other.unsortedValues, other.unsortedValues.length);
+  }
 
 
   /**

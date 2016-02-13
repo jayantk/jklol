@@ -361,7 +361,12 @@ public class AmbEval {
     Object value = eval(subexpressions.get(1), environment, builder).getValue();
 
     if (value instanceof AmbValue) {
-      DiscreteFactor varMarginal = ambToMarginals((AmbValue) value, builder, true);
+      DiscreteFactor varMarginal;
+      try {
+        varMarginal = ambToMarginals((AmbValue) value, builder, true);
+      } catch (Exception e) {
+        throw new RuntimeException("illegal factor graph", e);
+      }
       
       Iterator<Outcome> iter = varMarginal.outcomeIterator();
       List<Object> outcomes = Lists.newArrayList();

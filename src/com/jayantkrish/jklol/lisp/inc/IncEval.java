@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.lisp.inc;
 
 import java.util.List;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.gi.GroundedCcgParse;
@@ -78,6 +77,9 @@ public interface IncEval {
    */
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       int beamSize);
+  
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      Environment initialEnv, int beamSize);
 
   /**
    * Evaluates {@code lf} to completion using a beam search and 
@@ -92,9 +94,10 @@ public interface IncEval {
    */
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       Predicate<IncEvalState> filter, int beamSize);
-  
+
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
-      Predicate<IncEvalState> filter, LogFunction log, int beamSize);
+      Predicate<IncEvalState> filter, Environment initialEnv, LogFunction log,
+      int beamSize);
   
   public static class IncEvalState {
     private final Object continuation;
@@ -115,9 +118,6 @@ public interface IncEval {
       this.prob = prob;
       
       this.features = features;
-
-      // Both continuation and continuationEnv must be null or not-null.
-      Preconditions.checkArgument(!(continuation == null ^ environment == null));
     }
 
     public final Object getContinuation() {

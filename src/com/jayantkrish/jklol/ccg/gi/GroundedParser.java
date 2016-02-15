@@ -54,7 +54,7 @@ public class GroundedParser {
 
     // Working heap for queuing parses to process next.
     KbestHeap<State> heap = new KbestHeap<State>(beamSize, new State[0]);
-    heap.offer(new State(ShiftReduceStack.empty(), initialDiagram, null), 1.0);
+    heap.offer(new State(ShiftReduceStack.empty(), initialDiagram, incrEval.getEnvironment(), null), 1.0);
     
     // Heap for finished parses.
     KbestHeap<State> finishedHeap = new KbestHeap<State>(beamSize, new State[0]);
@@ -138,7 +138,7 @@ public class GroundedParser {
               GroundedCcgParse parse = decodeParseFromSpan(result.spanStart, result.spanEnd,
                   result.chartEntryIndex, chart, parser);
               
-              continuationEnv = incrEval.getEnvironment();
+              continuationEnv = Environment.extend(state.env);
               continuation = incrEval.parseToContinuation(parse, continuationEnv);
             }
 
@@ -147,9 +147,9 @@ public class GroundedParser {
               // TODO: track features.
               IncEvalState r = new IncEvalState(continuation, continuationEnv,
                   null, state.diagram, 1.0, null);
-              next = new State(result, state.diagram, r);
+              next = new State(result, state.diagram, null, r);
             } else {
-              next = new State(result, state.diagram, null);
+              next = new State(result, state.diagram, state.env, null);
             }
 
             // TODO: do we need to score this?
@@ -199,11 +199,11 @@ public class GroundedParser {
       ShiftReduceStack newStack = cur.previous.push(cur.spanStart, cur.spanEnd, entryIndex,
           entry, entryProb, cur.includesRootProb);
 
-      State next = new State(newStack, evalResult.getDiagram(), null);
+      State next = new State(newStack, evalResult.getDiagram(), evalResult.getEnvironment(), null);
       heap.offer(next, next.totalProb);
     } else {
       // Evaluation is still in progress. 
-      State next = new State(cur, evalResult.getDiagram(), evalResult);
+      State next = new State(cur, evalResult.getDiagram(), null, evalResult);
       heap.offer(next, next.totalProb);
     }
   }
@@ -271,6 +271,7 @@ public class GroundedParser {
      */
     public final ShiftReduceStack stack;
     public final Object diagram;
+    public final Environment env;
     
     /**
      * Current state of incremental evaluation. If {@code null},
@@ -281,9 +282,10 @@ public class GroundedParser {
     
     public final double totalProb;
     
-    public State(ShiftReduceStack stack, Object diagram, IncEvalState evalResult) {
+    public State(ShiftReduceStack stack, Object diagram, Environment env, IncEvalState evalResult) {
       this.stack = Preconditions.checkNotNull(stack);
       this.diagram = diagram;
+      this.env = env;
       this.evalResult = evalResult;
       
       if (evalResult != null) {

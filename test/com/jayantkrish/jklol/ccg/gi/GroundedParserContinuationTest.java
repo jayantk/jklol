@@ -55,6 +55,7 @@ public class GroundedParserContinuationTest extends TestCase {
   private static final String[] evalDefs = {
     "(define amb-k (k l) (lambda (world) ((queue-k k l) (map (lambda (x) world) l)) ))",
     "(define resolve-k (k name) (lambda (world) (let ((v (alist-get name world))) (if (not (nil? v)) ((k v) world) ((amb-k (lambda (v) (cput-k k name v)) (alist-get name possible-values)) world)))))",
+    "(define let-foo-k (k v) (begin (define foo v) (k foo-k)))"
   };
 
   private static final String[] ruleArray = {"DUMMY{0} BLAH{0}"};
@@ -110,6 +111,22 @@ public class GroundedParserContinuationTest extends TestCase {
   
   public void testEval() {
     List<IncEvalState> states = evalBeam(eval, "(+-k (resolve-k \"x\") (resolve-k \"x\"))", "(list)");
+    
+    for (IncEvalState state : states) {
+      System.out.println(state);
+    }
+    
+    assertEquals(2, states.size());
+    assertEquals(1.0, states.get(0).getProb(), TOLERANCE);
+    assertEquals(1.0, states.get(1).getProb(), TOLERANCE);
+    
+    Set<Object> actual = Sets.newHashSet(states.get(0).getDenotation(), states.get(1).getDenotation());
+    Set<Object> expected = Sets.newHashSet(4, 2);
+    assertEquals(expected, actual);
+  }
+  
+  public void testEvalDefinitions() {
+    List<IncEvalState> states = evalBeam(eval, "(+-k (let-foo-k (amb-k (list-k 2 1))) foo-k)", "(list)");
     
     for (IncEvalState state : states) {
       System.out.println(state);

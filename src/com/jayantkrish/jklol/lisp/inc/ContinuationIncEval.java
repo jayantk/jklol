@@ -96,7 +96,7 @@ public class ContinuationIncEval extends AbstractIncEval {
     for (int i = finalNumValues; i < finalContinuation.denotations.size(); i++) {
       Object denotation = finalContinuation.denotations.get(i);
       Object diagram = finalContinuation.diagrams.get(i);
-      IncEvalState next = nextState(state, null, null, denotation, diagram);
+      IncEvalState next = nextState(state, null, Environment.extend(env), denotation, diagram);
       resultQueue.add(next);
     }
 
@@ -107,7 +107,7 @@ public class ContinuationIncEval extends AbstractIncEval {
       Object continuation = continuations.get(i);
       Object denotation = denotations.get(i);
       Object diagram = diagrams.get(i);
-      IncEvalState next = nextState(state, continuation, env, denotation, diagram);
+      IncEvalState next = nextState(state, continuation, Environment.extend(env), denotation, diagram);
       resultQueue.add(next);
     }
   }

@@ -22,18 +22,28 @@ public abstract class AbstractIncEval implements IncEval {
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       int beamSize) {
-    return evaluateBeam(lf, initialDiagram, null, beamSize);
+    return evaluateBeam(lf, initialDiagram, null, getEnvironment(),
+        new NullLogFunction(), beamSize);
   }
 
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       Predicate<IncEvalState> filter, int beamSize) {
-    return evaluateBeam(lf, initialDiagram, filter, new NullLogFunction(), beamSize);
+    return evaluateBeam(lf, initialDiagram, filter, getEnvironment(),
+        new NullLogFunction(), beamSize);
+  }
+  
+  @Override
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      Environment initialEnv, int beamSize) {
+    return evaluateBeam(lf, initialDiagram, null, initialEnv,
+        new NullLogFunction(), beamSize);
   }
 
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
-      Predicate<IncEvalState> filter, LogFunction log, int beamSize) {
+      Predicate<IncEvalState> filter, Environment startEnv,
+      LogFunction log, int beamSize) {
     // Working heap for queuing parses to process next.
     KbestHeap<IncEvalState> heap = new KbestHeap<IncEvalState>(beamSize,
         new IncEvalState[0]);
@@ -50,12 +60,11 @@ public abstract class AbstractIncEval implements IncEval {
     List<IncEvalState> resultQueue = Lists.newArrayList();
 
     // Construct and queue the start state. 
-    Environment env = getEnvironment();
     // Note that continuation may be null, meaning that lf cannot
     // be evaluated by this class. If this is the case, this method
     // will return the initialState as the only result.
-    Object continuation = lfToContinuation(lf, env);
-    IncEvalState initialState = new IncEvalState(continuation, env, null,
+    Object continuation = lfToContinuation(lf, startEnv);
+    IncEvalState initialState = new IncEvalState(continuation, startEnv, null,
         initialDiagram, 1.0, null);
     offer(heap, initialState, filter);
 

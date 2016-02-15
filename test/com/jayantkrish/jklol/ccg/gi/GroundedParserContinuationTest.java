@@ -125,22 +125,6 @@ public class GroundedParserContinuationTest extends TestCase {
     assertEquals(expected, actual);
   }
   
-  public void testEvalDefinitions() {
-    List<IncEvalState> states = evalBeam(eval, "(+-k (let-foo-k (amb-k (list-k 2 1))) foo-k)", "(list)");
-    
-    for (IncEvalState state : states) {
-      System.out.println(state);
-    }
-    
-    assertEquals(2, states.size());
-    assertEquals(1.0, states.get(0).getProb(), TOLERANCE);
-    assertEquals(1.0, states.get(1).getProb(), TOLERANCE);
-    
-    Set<Object> actual = Sets.newHashSet(states.get(0).getDenotation(), states.get(1).getDenotation());
-    Set<Object> expected = Sets.newHashSet(4, 2);
-    assertEquals(expected, actual);
-  }
-
   public List<IncEvalState> evalBeam(IncEval eval, String expression,
       String initialDiagramExpression) {
     Expression2 lf = exp2Parser.parse(expression);

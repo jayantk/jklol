@@ -163,7 +163,7 @@ public class ExpressionParser<T> {
 
   public T parse(List<String> tokenizedExpressionString) {
     List<T> expressions = parseAll(tokenizedExpressionString);
-    Preconditions.checkState(expressions.size() == 1, "Illegal input string: %s, %s",
+    Preconditions.checkState(expressions.size() == 1, "Input string is not a single expression: %s, %s",
         tokenizedExpressionString, expressions);
     return expressions.get(0);
   }

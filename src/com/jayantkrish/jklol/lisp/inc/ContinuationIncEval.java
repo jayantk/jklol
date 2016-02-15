@@ -53,6 +53,29 @@ public class ContinuationIncEval extends AbstractIncEval {
     this.sexpParser = ExpressionParser.sExpression(eval.getSymbolTable());
     this.defs = defs;
   }
+  
+  public AmbEval getEval() {
+    return eval;
+  }
+  
+  /**
+   * Gets the initial environment for evaluation. Note that
+   * this environment does not include bindings for
+   * {@code FINAL_CONTINUATION} or {@code QUEUE_CONTINUATIONS}. 
+   * 
+   * @return
+   */
+  public Environment getEnv() {
+    return env;
+  }
+  
+  public ExpressionSimplifier getSimplifier() {
+    return simplifier;
+  }
+  
+  public SExpression getDefs() {
+    return defs;
+  }
 
   @Override
   public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue) {
@@ -73,7 +96,7 @@ public class ContinuationIncEval extends AbstractIncEval {
     for (int i = finalNumValues; i < finalContinuation.denotations.size(); i++) {
       Object denotation = finalContinuation.denotations.get(i);
       Object diagram = finalContinuation.diagrams.get(i);
-      IncEvalState next = nextState(state, null, null, denotation, diagram);
+      IncEvalState next = nextState(state, null, Environment.extend(env), denotation, diagram);
       resultQueue.add(next);
     }
 
@@ -84,7 +107,7 @@ public class ContinuationIncEval extends AbstractIncEval {
       Object continuation = continuations.get(i);
       Object denotation = denotations.get(i);
       Object diagram = diagrams.get(i);
-      IncEvalState next = nextState(state, continuation, env, denotation, diagram);
+      IncEvalState next = nextState(state, continuation, Environment.extend(env), denotation, diagram);
       resultQueue.add(next);
     }
   }

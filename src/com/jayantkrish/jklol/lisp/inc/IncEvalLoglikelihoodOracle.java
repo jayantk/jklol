@@ -39,7 +39,7 @@ public class IncEvalLoglikelihoodOracle implements
     // Get a distribution over unconditional executions.
     log.startTimer("update_gradient/input_marginal");
     List<IncEvalState> unconditionalStates = model.evaluateBeam(example.getLogicalForm(),
-        example.getDiagram(), null, log, beamSize);
+        example.getDiagram(), null, model.getEnvironment(), log, beamSize);
     
     if (unconditionalStates.size() == 0) {
       System.out.println("unconditional search failure");
@@ -51,7 +51,7 @@ public class IncEvalLoglikelihoodOracle implements
     log.startTimer("update_gradient/output_marginal");
     Predicate<IncEvalState> filter = example.getLabelFilter();
     List<IncEvalState> conditionalStates = model.evaluateBeam(example.getLogicalForm(),
-        example.getDiagram(), filter, log, beamSize);
+        example.getDiagram(), filter, model.getEnvironment(), log, beamSize);
     
     if (conditionalStates.size() == 0) {
       System.out.println("conditional search failure");

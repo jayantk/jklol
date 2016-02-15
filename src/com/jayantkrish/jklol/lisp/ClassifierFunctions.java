@@ -151,7 +151,9 @@ public class ClassifierFunctions {
       DiscreteVariable featureDictionary = ((ParametricLinearClassifierFactor)
           ((FactorParameterSpec) parameters.getParameterSpec()).getFactor()).getFeatureDictionary();
       Preconditions.checkArgument(featureDictionary.numValues() == featureVector.getDimensionSizes()[0],
-                                  "feature vector and classifier dimension don't match");
+                                  "feature vector and classifier dimension don't match (" +
+                                  featureVector.getDimensionSizes()[0] + " vs. " +
+                                  featureDictionary.numValues() +")");
       ParametricFactor pf = new ParametricLinearClassifierFactor(relabeledFeatureVectorVar,
           relabeledVars, VariableNumMap.EMPTY, featureDictionary, null, false);
 

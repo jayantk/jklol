@@ -28,6 +28,17 @@ public interface IncEval {
   public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue);
   
   /**
+   * Evaluates the continuation in {@code state}, producing zero or
+   * more future continuations that are stored in {@code resultQueue}.
+   * 
+   * @param state
+   * @param resultQueue
+   * @param log
+   */
+  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue,
+      LogFunction log);
+  
+  /**
    * Gets the environment in which logical forms are evaluated.
    * The returned environment may be mutated by the calling code.
    * 

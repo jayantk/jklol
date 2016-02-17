@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.lisp.ParametricBfgBuilder;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
+import com.jayantkrish.jklol.training.LogFunction;
 
 public class AmbIncEval extends AbstractIncEval {
   
@@ -36,7 +37,8 @@ public class AmbIncEval extends AbstractIncEval {
   }
 
   @Override
-  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue) {
+  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue,
+      LogFunction log) {
     Object continuation = state.getContinuation();
     Environment continuationEnv = state.getEnvironment();
     Preconditions.checkArgument(continuation instanceof Expression2);

@@ -18,6 +18,11 @@ import com.jayantkrish.jklol.util.KbestHeap;
  *
  */
 public abstract class AbstractIncEval implements IncEval {
+  
+  @Override
+  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue) {
+    evaluateContinuation(state, resultQueue, new NullLogFunction());
+  }
 
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
@@ -85,7 +90,7 @@ public abstract class AbstractIncEval implements IncEval {
         if (state.getContinuation() != null) {
           resultQueue.clear();
           log.startTimer("evaluate_continuation");
-          evaluateContinuation(state, resultQueue);
+          evaluateContinuation(state, resultQueue, log);
           log.stopTimer("evaluate_continuation");
           
           for (IncEvalState next : resultQueue) {

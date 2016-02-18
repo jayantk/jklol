@@ -63,9 +63,6 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
       CcgExample example, LogFunction log) {
     AnnotatedSentence sentence = example.getSentence();
     
-    System.out.println(sentence.getWords().size() + " " + sentence.getWords());
-    System.out.println(sentence.getPosTags().size() + " " + sentence.getPosTags());
-
     // Gradient is the feature expectations of all correct CCG parses, minus all
     // CCG parses.
     log.startTimer("update_gradient/input_marginal");

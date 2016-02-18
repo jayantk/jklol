@@ -60,6 +60,7 @@ public class CcgParser implements Serializable {
   private static final long ARG_NUM_MASK = ~(-1L << ARG_NUM_BITS);
   private static final int WORD_IND_BITS = 7;
   private static final long WORD_IND_MASK = ~(-1L << WORD_IND_BITS);
+  private static final int MAX_WORDS = 1 << WORD_IND_BITS;
   // The largest possible argument number.
   // This plays a dual role of the largest argument number possible in
   // a dependency structure, as well as the maximum number in a
@@ -565,6 +566,9 @@ public class CcgParser implements Serializable {
     if (log == null) {
       log = new NullLogFunction();
     }
+    
+    Preconditions.checkState(input.getWords().size() <= MAX_WORDS,
+        "Maximum sentence length is %s", MAX_WORDS);
 
     log.startTimer("ccg_parse/initialize_chart");
     initializeChart(chart, input, beamFilter);

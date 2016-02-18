@@ -61,6 +61,9 @@ public class CcgParser implements Serializable {
   private static final int WORD_IND_BITS = 8;
   private static final long WORD_IND_MASK = ~(-1L << WORD_IND_BITS);
   // The largest possible argument number.
+  // This plays a dual role of the largest argument number possible in
+  // a dependency structure, as well as the maximum number in a
+  // syntactic categories head passing markup.
   private static final int MAX_ARG_NUM = 1 << ARG_NUM_BITS;
   // These are the locations of each field within the number. The
   // layout within the number is:
@@ -258,6 +261,13 @@ public class CcgParser implements Serializable {
     for (int i = 0; i < dependencyArgNumType.numValues(); i++) {
       Preconditions.checkArgument((int) ((Integer) dependencyArgNumType.getValue(i)) == i);
     }
+    
+    // Check that the encoding used for dependencies has enough capacity
+    // to represent all possible dependencies.
+    Preconditions.checkArgument(dependencyHeadType.numValues() + MAX_ARG_NUM < MAX_PREDICATES);
+    Preconditions.checkArgument(dependencyArgNumType.numValues() < MAX_ARG_NUM);
+    Preconditions.checkArgument(dependencySyntaxType.numValues() < MAX_SYNTACTIC_CATEGORIES);
+
 
     DiscreteVariable dependencyArgType = dependencyArgVar.getDiscreteVariables().get(0);
     Preconditions.checkArgument(dependencyHeadType.equals(dependencyArgType));
@@ -366,11 +376,6 @@ public class CcgParser implements Serializable {
     }
 
     this.normalFormOnly = normalFormOnly;
-
-    // Check that the encoding used for dependencies has enough capacity
-    // to represent all possible dependencies.
-    Preconditions.checkArgument(dependencyHeadType.numValues() + MAX_ARG_NUM < MAX_PREDICATES);
-    Preconditions.checkArgument(dependencySyntaxType.numValues() < MAX_SYNTACTIC_CATEGORIES);
   }
 
   public List<CcgLexicon> getLexicons() {

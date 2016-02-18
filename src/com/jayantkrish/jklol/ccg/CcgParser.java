@@ -58,7 +58,7 @@ public class CcgParser implements Serializable {
   private static final int MAX_SYNTACTIC_CATEGORIES = 1 << SYNTACTIC_CATEGORY_BITS;
   private static final int ARG_NUM_BITS = 4;
   private static final long ARG_NUM_MASK = ~(-1L << ARG_NUM_BITS);
-  private static final int WORD_IND_BITS = 8;
+  private static final int WORD_IND_BITS = 7;
   private static final long WORD_IND_MASK = ~(-1L << WORD_IND_BITS);
   // The largest possible argument number.
   // This plays a dual role of the largest argument number possible in

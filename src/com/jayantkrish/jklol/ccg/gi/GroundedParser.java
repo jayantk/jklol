@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgShiftReduceInference;
@@ -43,11 +44,12 @@ public class GroundedParser {
   }
   
   public List<GroundedCcgParse> beamSearch(AnnotatedSentence sentence, Object initialDiagram, int beamSize) {
-    return beamSearch(sentence, initialDiagram, beamSize, null, null);
+    return beamSearch(sentence, initialDiagram, beamSize, null, null, null);
   }
 
   public List<GroundedCcgParse> beamSearch(AnnotatedSentence sentence,
-      Object initialDiagram, int beamSize, ChartCost chartFilter, LogFunction log) {
+      Object initialDiagram, int beamSize, ChartCost chartFilter, 
+      Predicate<State> evalFilter, LogFunction log) {
     CcgLeftToRightChart chart = new CcgLeftToRightChart(sentence, Integer.MAX_VALUE);
     parser.initializeChart(chart, sentence, chartFilter);
     parser.initializeChartTerminals(chart, sentence);
@@ -100,14 +102,14 @@ public class GroundedParser {
           incrEval.evaluateContinuation(state.evalResult, tempEvalResults);
           
           for (IncEvalState result : tempEvalResults) {
-            queueEvalState(result, state.stack, heap, chart);
+            queueEvalState(result, state.stack, heap, chart, evalFilter);
           }
 
         } else if (state.stack.includesRootProb) {
           // System.out.println("root: " + curSyntax + " " + curSpanStart + "," + curSpanEnd);
           // This state is a finished state: it spans the entire sentence
           // and evaluation has finished.
-          finishedHeap.offer(state, state.totalProb);
+          offer(finishedHeap, state, evalFilter);
         } else {
           tempHeap.clear();
           
@@ -144,7 +146,6 @@ public class GroundedParser {
 
             State next;
             if (continuation != null) {
-              // TODO: track features.
               IncEvalState r = new IncEvalState(continuation, continuationEnv,
                   null, state.diagram, 1.0, null);
               next = new State(result, state.diagram, null, r);
@@ -152,8 +153,7 @@ public class GroundedParser {
               next = new State(result, state.diagram, state.env, null);
             }
 
-            // TODO: do we need to score this?
-            heap.offer(next, next.totalProb);
+            offer(heap, next, evalFilter);
           }
         }
       }
@@ -178,9 +178,10 @@ public class GroundedParser {
    * @param cur
    * @param heap
    * @param chart
+   * @param evalFilter
    */
   private void queueEvalState(IncEvalState evalResult, ShiftReduceStack cur,
-      KbestHeap<State> heap, CcgChart chart) {
+      KbestHeap<State> heap, CcgChart chart, Predicate<State> evalFilter) {
     if (evalResult.getContinuation() == null) {
       // Evaluation has finished (for now) and the search must switch back
       // to parsing. Create a new entry on the CCG chart representing the
@@ -189,8 +190,7 @@ public class GroundedParser {
       int spanStart = cur.spanStart;
       int spanEnd = cur.spanEnd;
       
-      ChartEntry entry = cur.entry.addAdditionalInfo(
-          new DenotationValue(evalResult.getDenotation(), evalResult.getProb()));
+      ChartEntry entry = cur.entry.addAdditionalInfo(evalResult);
       double entryProb = cur.entryProb * evalResult.getProb();
 
       int entryIndex = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
@@ -200,25 +200,31 @@ public class GroundedParser {
           entry, entryProb, cur.includesRootProb);
 
       State next = new State(newStack, evalResult.getDiagram(), evalResult.getEnvironment(), null);
-      heap.offer(next, next.totalProb);
+      offer(heap, next, evalFilter);
     } else {
       // Evaluation is still in progress. 
-      State next = new State(cur, evalResult.getDiagram(), null, evalResult);
-      heap.offer(next, next.totalProb);
+      State next = new State(cur, null, null, evalResult);
+      offer(heap, next, evalFilter);
+    }
+  }
+  
+  private static final void offer(KbestHeap<State> heap, State state,
+      Predicate<State> filter) {
+    if (filter == null || filter.apply(state)) {
+      heap.offer(state, state.totalProb);
     }
   }
   
   private GroundedCcgParse decodeParseFromSpan(int spanStart, int spanEnd,
       int beamIndex, CcgChart chart, CcgParser parser) {
-        DiscreteVariable syntaxVarType = parser.getSyntaxVarType();
+    DiscreteVariable syntaxVarType = parser.getSyntaxVarType();
     ChartEntry entry = chart.getChartEntriesForSpan(spanStart, spanEnd)[beamIndex];
     HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) syntaxVarType.getValue(
         entry.getHeadedSyntax());
     
-    Object denotationValue = entry.getAdditionalInfo();
-    Object denotation = null;
-    if (denotationValue != null) {
-      denotation = ((DenotationValue) denotationValue).getDenotation();
+    IncEvalState evalState = null; 
+    if (entry.getAdditionalInfo() != null) {
+      evalState = (IncEvalState) entry.getAdditionalInfo();
     }
 
     if (entry.isTerminal()) {
@@ -234,7 +240,7 @@ public class GroundedParser {
           parser.variableToIndexedPredicateArray(syntax.getHeadVariable(), entry.getAssignments()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
           terminals.subList(spanStart, spanEnd + 1), chart.getChartEntryProbsForSpan(spanStart, spanEnd)[beamIndex],
-          entry.getRootUnaryRule(), spanStart, spanEnd, denotation);
+          entry.getRootUnaryRule(), spanStart, spanEnd, evalState);
     } else {
       GroundedCcgParse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
           entry.getLeftChartIndex(), chart, parser);
@@ -256,7 +262,7 @@ public class GroundedParser {
       return GroundedCcgParse.forNonterminal(syntax,
           parser.variableToIndexedPredicateArray(syntax.getHeadVariable(), entry.getAssignments()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb,
-          left, right, entry.getCombinator(), entry.getRootUnaryRule(), spanStart, spanEnd, denotation);
+          left, right, entry.getCombinator(), entry.getRootUnaryRule(), spanStart, spanEnd, evalState);
     }
   }
 

@@ -55,7 +55,6 @@ public class GroundedParserContinuationTest extends TestCase {
   private static final String[] evalDefs = {
     "(define amb-k (k l) (lambda (world) ((queue-k k l) (map (lambda (x) world) l)) ))",
     "(define resolve-k (k name) (lambda (world) (let ((v (alist-get name world))) (if (not (nil? v)) ((k v) world) ((amb-k (lambda (v) (cput-k k name v)) (alist-get name possible-values)) world)))))",
-    "(define let-foo-k (k v) (begin (define foo v) (k foo-k)))"
   };
 
   private static final String[] ruleArray = {"DUMMY{0} BLAH{0}"};

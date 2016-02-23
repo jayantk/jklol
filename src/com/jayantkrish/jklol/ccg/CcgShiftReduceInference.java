@@ -59,7 +59,7 @@ public class CcgShiftReduceInference implements CcgInference {
     int currentBeamSize = 0;
 
     int numSteps = 0;
-    while (heap.size() > 0) {
+    while (heap.size() > 0 || numSteps < chart.getWords().size()) {
       // Copy the heap to the current beam.
       ShiftReduceStack[] keys = heap.getKeys();
       for (int i = 0; i < heap.size(); i++) {
@@ -240,6 +240,10 @@ public class CcgShiftReduceInference implements CcgInference {
         e.getLexiconEntry(), trigger, e.getLexiconIndex(), e.getRootUnaryRule(), e.getAssignmentVarIndex(),
         e.getAssignments(), e.getUnfilledDependencyVarIndex(), e.getUnfilledDependencies(), e.getDependencies(),
         newSpanStart, newSpanEnd, triggerSpanStart, triggerSpanEnd);
+    
+    if (e.getAdditionalInfo() != null) {
+      next = next.addAdditionalInfo(e.getAdditionalInfo());
+    }
 
     int initialNumEntries = chart.getNumChartEntriesForSpan(newSpanStart, newSpanEnd);
     chart.addChartEntryForSpan(next, entryProb, newSpanStart, newSpanEnd, parser.getSyntaxVarType());

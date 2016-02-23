@@ -53,11 +53,13 @@ public class GroundedParser {
       Predicate<State> evalFilter, LogFunction log) {
     CcgLeftToRightChart chart = new CcgLeftToRightChart(sentence, Integer.MAX_VALUE);
     parser.initializeChart(chart, sentence, chartFilter);
-    parser.initializeChartTerminals(chart, sentence, true);
+    parser.initializeChartTerminals(chart, sentence, false);
+    List<String> lowercaseWords = sentence.getWordsLowercase();
 
     // Working heap for queuing parses to process next.
+    State startState = new State(ShiftReduceStack.empty(), initialDiagram, incrEval.getEnvironment(), null);
     KbestHeap<State> heap = new KbestHeap<State>(beamSize, new State[0]);
-    heap.offer(new State(ShiftReduceStack.empty(), initialDiagram, incrEval.getEnvironment(), null), 1.0);
+    heap.offer(startState, 1.0);
     
     // Heap for finished parses.
     KbestHeap<State> finishedHeap = new KbestHeap<State>(beamSize, new State[0]);
@@ -73,7 +75,8 @@ public class GroundedParser {
     State[] currentBeam = new State[beamSize + 1];
     int currentBeamSize = 0;
 
-    while (heap.size() > 0) {
+    int numSteps = 0;
+    while (heap.size() > 0 || numSteps < chart.getWords().size()) {
       // Copy the heap to the current beam.
       State[] keys = heap.getKeys();
       for (int i = 0; i < heap.size(); i++) {
@@ -108,6 +111,7 @@ public class GroundedParser {
           tempHeap.clear();
           
           CcgShiftReduceInference.shift(state.stack, chart, tempHeap);
+          CcgShiftReduceInference.skip(state.stack, chart, tempHeap, parser, lowercaseWords);
           CcgShiftReduceInference.reduce(state.stack, chart, tempHeap, parser, log);
           // Applying unary rules at the root does not end parsing in this model,
           // as we may need to evaluate the logical form produced at the root.
@@ -116,48 +120,16 @@ public class GroundedParser {
           // Ensure that we didn't discard any candidate parses due to the
           // capped temporary heap size.
           Preconditions.checkState(tempHeap.size() < TEMP_HEAP_MAX_SIZE);
-          
+          offerParseStates(state, tempHeap, heap, finishedHeap, tempEvalResults, chart, evalFilter, log);
           // System.out.println("shift/reducing: " + curSyntax + " " + curSpanStart + "," + curSpanEnd);
-
-          ShiftReduceStack[] tempHeapKeys = tempHeap.getKeys();
-          for (int j = 0; j < tempHeap.size(); j++) {
-            ShiftReduceStack result = tempHeapKeys[j];
-            
-            Object continuation = null;
-            Environment continuationEnv = null;
-            HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) parser.getSyntaxVarType()
-                .getValue(result.entry.getHeadedSyntax());
-            
-            // System.out.println("  : " + result.spanStart + "," + result.spanEnd + " " + syntax);
-
-            if (incrEval.isEvaluatable(syntax)) {
-              log.startTimer("grounded_parser/shift_reduce/initialize_continuation");
-              GroundedCcgParse parse = decodeParseFromSpan(result.spanStart, result.spanEnd,
-                  result.chartEntryIndex, chart, parser);
-              
-              continuationEnv = Environment.extend(state.env);
-              continuation = incrEval.parseToContinuation(parse, continuationEnv);
-              log.stopTimer("grounded_parser/shift_reduce/initialize_continuation");
-            }
-
-            if (continuation != null) {
-              // Do one-step lookahead on continuation evaluation. This 
-              // should reduce the necessary size of the beam.
-              log.startTimer("grounded_parser/shift_reduce/evaluate_continuation");
-              IncEvalState r = new IncEvalState(continuation, continuationEnv,
-                  null, state.diagram, 1.0, null);
-              State next = new State(result, state.diagram, null, r);
-              evaluateContinuation(next, tempEvalResults, heap,
-                  finishedHeap, chart, evalFilter, log);
-              log.stopTimer("grounded_parser/shift_reduce/evaluate_continuation");
-            } else {
-              State next = new State(result, state.diagram, state.env, null);
-              offer(heap, finishedHeap, next, evalFilter);
-            }
-          }
           log.stopTimer("grounded_parser/shift_reduce");
         }
       }
+      
+      tempHeap.clear();
+      CcgShiftReduceInference.shiftSkipLeft(numSteps, chart, tempHeap, parser, lowercaseWords);
+      offerParseStates(startState, tempHeap, heap, finishedHeap, tempEvalResults, chart, evalFilter, log);
+      numSteps++;
     }
     
     List<GroundedCcgParse> parses = Lists.newArrayList();
@@ -170,6 +142,47 @@ public class GroundedParser {
     Collections.reverse(parses);
 
     return parses;
+  }
+  
+  private void offerParseStates(State state, KbestHeap<ShiftReduceStack> tempHeap, KbestHeap<State> heap,
+      KbestHeap<State> finishedHeap, List<IncEvalState> tempEvalResults, CcgChart chart, 
+      Predicate<State> evalFilter, LogFunction log) {
+    ShiftReduceStack[] tempHeapKeys = tempHeap.getKeys();
+    for (int j = 0; j < tempHeap.size(); j++) {
+      ShiftReduceStack result = tempHeapKeys[j];
+
+      Object continuation = null;
+      Environment continuationEnv = null;
+      HeadedSyntacticCategory syntax = (HeadedSyntacticCategory) parser.getSyntaxVarType()
+          .getValue(result.entry.getHeadedSyntax());
+
+      // System.out.println("  : " + result.spanStart + "," + result.spanEnd + " " + syntax);
+
+      if (incrEval.isEvaluatable(syntax)) {
+        log.startTimer("grounded_parser/shift_reduce/initialize_continuation");
+        GroundedCcgParse parse = decodeParseFromSpan(result.spanStart, result.spanEnd,
+            result.chartEntryIndex, chart, parser);
+
+        continuationEnv = Environment.extend(state.env);
+        continuation = incrEval.parseToContinuation(parse, continuationEnv);
+        log.stopTimer("grounded_parser/shift_reduce/initialize_continuation");
+      }
+
+      if (continuation != null) {
+        // Do one-step lookahead on continuation evaluation. This 
+        // should reduce the necessary size of the beam.
+        log.startTimer("grounded_parser/shift_reduce/evaluate_continuation");
+        IncEvalState r = new IncEvalState(continuation, continuationEnv,
+            null, state.diagram, 1.0, null);
+        State next = new State(result, state.diagram, null, r);
+        evaluateContinuation(next, tempEvalResults, heap,
+            finishedHeap, chart, evalFilter, log);
+        log.stopTimer("grounded_parser/shift_reduce/evaluate_continuation");
+      } else {
+        State next = new State(result, state.diagram, state.env, null);
+        offer(heap, finishedHeap, next, evalFilter);
+      }
+    }
   }
   
   private void evaluateContinuation(State state, List<IncEvalState> tempEvalResults,

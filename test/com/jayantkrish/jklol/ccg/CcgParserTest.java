@@ -557,6 +557,13 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(11, parses.size());
   }
+  
+  public void testParseWordSkip2() {
+    List<String> words = Arrays.asList("areugsntgh", "anstheunsb", "i");
+    List<CcgParse> parses = beamSearch(parserWordSkip, words, 10);
+
+    assertEquals(1, parses.size());
+  }
 
   public void testParseWordSkipExact() {
     List<String> words = Arrays.asList("green", "green", "i");
@@ -574,7 +581,7 @@ public class CcgParserTest extends TestCase {
     // TODO: test that dependencies are projected from the spans of the original
     // lexicon entries.
   }
-
+  
   public void testParseHeadedSyntaxWeights() {
     List<CcgParse> parses = beamSearch(parser, Arrays.asList("tasty", "apple"), 10);
     assertEquals(1, parses.size());

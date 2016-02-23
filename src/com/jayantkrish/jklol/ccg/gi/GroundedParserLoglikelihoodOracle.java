@@ -63,7 +63,8 @@ public class GroundedParserLoglikelihoodOracle implements
     
     List<GroundedCcgParse> conditionalParses = Lists.newArrayList();
     for (GroundedCcgParse parse : conditionalParsesInit) {
-      if (example.isCorrectDenotation(parse.getDenotation())) {
+      System.out.println(parse.getDenotation() + " " + parse.getLogicalForm() + " " + parse.getSyntacticParse());
+      if (example.isCorrectDenotation(parse.getDenotation(), parse.getDiagram())) {
         conditionalParses.add(parse);
       }
     }

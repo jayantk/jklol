@@ -11,7 +11,6 @@ import com.jayantkrish.jklol.ccg.lexicon.ConstantParametricLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricFeaturizedLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricLexiconScorer;
-import com.jayantkrish.jklol.ccg.lexicon.ParametricSkipLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricSyntaxLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricTableLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricUnknownWordLexicon;
@@ -203,13 +202,6 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
       lexicons.add(unknownLexicon);
     }
 
-    if (allowWordSkipping) {
-      List<ParametricCcgLexicon> newLexicons = Lists.newArrayList();
-      for (ParametricCcgLexicon lexicon : lexicons) {
-        newLexicons.add(new ParametricSkipLexicon(lexicon, new DenseIndicatorLogLinearFactor(terminalWordVar, false)));
-      }
-      lexicons = newLexicons;
-    }
     return lexicons;
   }
 
@@ -254,6 +246,15 @@ public class DefaultCcgFeatureFactory implements CcgFeatureFactory {
     }
 
     return scorers;
+  }
+
+  @Override
+  public ParametricFactor getWordSkipFactor(VariableNumMap terminalWordVar) {
+    if (allowWordSkipping) {
+      return new DenseIndicatorLogLinearFactor(terminalWordVar, false);
+    } else {
+      return null;
+    }
   }
 
   @Override

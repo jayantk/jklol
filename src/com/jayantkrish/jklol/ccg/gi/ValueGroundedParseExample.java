@@ -42,7 +42,7 @@ public class ValueGroundedParseExample implements GroundedParseExample {
   }
   
   @Override
-  public boolean isCorrectDenotation(Object denotation) {
+  public boolean isCorrectDenotation(Object denotation, Object diagram) {
     return denotationLabel.equals(denotation);
   }
 }

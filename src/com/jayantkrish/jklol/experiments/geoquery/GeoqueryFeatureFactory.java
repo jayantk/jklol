@@ -16,7 +16,6 @@ import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricFeaturizedLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricLexiconScorer;
-import com.jayantkrish.jklol.ccg.lexicon.ParametricSkipLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricTableLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricUnknownWordLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
@@ -175,9 +174,8 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
         Arrays.asList("indicators", "features"), Arrays.asList(terminalIndicatorFactor, additionalFeatures), false);
 
     List<ParametricCcgLexicon> lexicons = Lists.newArrayList();
-    lexicons.add(new ParametricSkipLexicon(new ParametricTableLexicon(
-        terminalWordVar, ccgCategoryVar, terminalParametricFactor),
-        new DenseIndicatorLogLinearFactor(terminalWordVar, false)));
+    lexicons.add(new ParametricTableLexicon(
+        terminalWordVar, ccgCategoryVar, terminalParametricFactor));
     
     if (unknownLexiconEntries.size() > 0) {
       ParametricFactor unknownTerminalFamily = new IndicatorLogLinearFactor(
@@ -185,8 +183,7 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
       ParametricCcgLexicon unknownLexicon = new ParametricUnknownWordLexicon(terminalWordVar,
           terminalPosVar, ccgCategoryVar, unknownTerminalFamily);
       
-      lexicons.add(new ParametricSkipLexicon(unknownLexicon,
-          new DenseIndicatorLogLinearFactor(terminalWordVar, false)));
+      lexicons.add(unknownLexicon);
     }
     return lexicons;
   }
@@ -209,6 +206,11 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
     } else {
       return Collections.emptyList();
     }
+  }
+  
+  @Override
+  public ParametricFactor getWordSkipFactor(VariableNumMap terminalWordVar) {
+    return new DenseIndicatorLogLinearFactor(terminalWordVar, false);
   }
 
   @Override

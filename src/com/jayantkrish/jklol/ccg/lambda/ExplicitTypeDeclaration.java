@@ -30,7 +30,7 @@ public class ExplicitTypeDeclaration extends AbstractTypeDeclaration {
     String[] parts = constant.split(":");
     if (parts.length > 1) {
       // The expression has a type declaration
-      String typeString = parts[1];
+      String typeString = parts[parts.length - 1];
       return doTypeReplacements(Type.parseFrom(typeString));
     }
     return TypeDeclaration.TOP;

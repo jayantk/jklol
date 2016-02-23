@@ -92,9 +92,13 @@ public class GroundedCcgParse extends CcgParse {
   }
 
   public Object getDenotation() {
-    return state.getDenotation();
+    if (state != null) {
+      return state.getDenotation();
+    } else {
+      return null;
+    }
   }
-  
+
   public Object getDiagram() {
     return diagram;
   }

@@ -106,6 +106,9 @@ public class CcgParser implements Serializable {
   // Weights on lexicon entries
   private final List<CcgLexicon> lexicons;
   private final List<LexiconScorer> lexiconScorers;
+  
+  private final VariableNumMap wordSkipWordVar;
+  private final DiscreteFactor wordSkipFactor;
 
   // Weights on dependency structures.
   private final VariableNumMap dependencyHeadVar;
@@ -217,6 +220,7 @@ public class CcgParser implements Serializable {
   private final boolean normalFormOnly;
 
   public CcgParser(List<CcgLexicon> lexicons, List<LexiconScorer> lexiconScorers,
+      VariableNumMap wordSkipWordVar, DiscreteFactor wordSkipFactor,
       VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
       VariableNumMap dependencyHeadPosVar, VariableNumMap dependencyArgPosVar,
@@ -234,6 +238,11 @@ public class CcgParser implements Serializable {
       boolean normalFormOnly) {
     this.lexicons = ImmutableList.copyOf(lexicons);
     this.lexiconScorers = ImmutableList.copyOf(lexiconScorers);
+    
+    this.wordSkipWordVar = wordSkipWordVar;
+    this.wordSkipFactor = wordSkipFactor;
+    // Both must be null or non null.
+    Preconditions.checkArgument(!(wordSkipFactor == null ^ wordSkipWordVar == null));
 
     Preconditions.checkArgument(dependencyDistribution.getVars().equals(VariableNumMap.unionAll(
         dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar,
@@ -395,15 +404,15 @@ public class CcgParser implements Serializable {
     List<CcgLexicon> newLexicons = Lists.newArrayList(lexicons);
     newLexicons.set(index, newLexicon);
 
-    return new CcgParser(newLexicons, lexiconScorers, dependencyHeadVar, dependencySyntaxVar,
-      dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar,
-      dependencyDistribution, wordDistanceVar, wordDistanceFactor, puncDistanceVar,
-      puncDistanceFactor, puncTagSet, verbDistanceVar, verbDistanceFactor, verbTagSet,
-      leftSyntaxVar, rightSyntaxVar, combinatorVar, binaryRuleDistribution, unaryRuleInputVar,
-      unaryRuleVar, unaryRuleFactor, headedBinaryPredicateVar, headedBinaryPosVar,
-      headedBinaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution,
-      rootSyntaxVar, rootPredicateVar, rootPosVar, rootSyntaxDistribution, headedRootSyntaxDistribution,
-      normalFormOnly);
+    return new CcgParser(newLexicons, lexiconScorers, wordSkipWordVar, wordSkipFactor,
+        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar,
+        dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution, wordDistanceVar,
+        wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet, verbDistanceVar,
+        verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, combinatorVar,
+        binaryRuleDistribution, unaryRuleInputVar, unaryRuleVar, unaryRuleFactor,
+        headedBinaryPredicateVar, headedBinaryPosVar, headedBinaryRuleDistribution,
+        searchMoveVar, compiledSyntaxDistribution, rootSyntaxVar, rootPredicateVar,
+        rootPosVar, rootSyntaxDistribution, headedRootSyntaxDistribution, normalFormOnly);
   }
 
   public boolean isPossibleDependencyStructure(DependencyStructure dependency, List<String> posTags) {
@@ -460,8 +469,9 @@ public class CcgParser implements Serializable {
   }
 
   public CcgParser replaceSyntaxDistribution(DiscreteFactor newCompiledSyntaxDistribution) {
-    return new CcgParser(lexicons, lexiconScorers, dependencyHeadVar, dependencySyntaxVar,
-        dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution,
+    return new CcgParser(lexicons, lexiconScorers, wordSkipWordVar, wordSkipFactor,
+        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar,
+        dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, combinatorVar,
         binaryRuleDistribution, unaryRuleInputVar, unaryRuleVar, unaryRuleFactor, 
@@ -626,7 +636,7 @@ public class CcgParser implements Serializable {
   public void initializeChartTerminals(CcgChart chart, AnnotatedSentence sentence) {
     for (int k = 0; k < lexicons.size(); k++) {
       CcgLexicon lexicon = lexicons.get(k);
-      lexicon.initializeChart(chart, sentence, this, k);
+      lexicon.initializeChart(chart, sentence, this, k, wordSkipWordVar, wordSkipFactor);
     }
   }
 

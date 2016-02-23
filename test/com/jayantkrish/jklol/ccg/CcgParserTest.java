@@ -27,10 +27,9 @@ import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
+import com.jayantkrish.jklol.ccg.lexicon.AbstractCcgLexicon.SkipTrigger;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.LexiconScorer;
-import com.jayantkrish.jklol.ccg.lexicon.SkipLexicon;
-import com.jayantkrish.jklol.ccg.lexicon.SkipLexicon.SkipTrigger;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon.CategorySpanConfig;
 import com.jayantkrish.jklol.ccg.lexicon.SyntaxLexiconScorer;
@@ -1282,13 +1281,15 @@ public class CcgParserTest extends TestCase {
         ccgCategoryVar, unknownTerminalBuilder.build());
 
     List<CcgLexicon> lexicons = Lists.newArrayList();
+    lexicons.add(lexiconFactor);
+    lexicons.add(unknownWordLexicon);
+    
+    VariableNumMap wordSkipWordVar = null;
+    DiscreteFactor wordSkipFactor = null;
     if (allowWordSkipping) {
-      lexicons.add(new SkipLexicon(lexiconFactor, TableFactor.unity(terminalVar)));
-      lexicons.add(new SkipLexicon(unknownWordLexicon, TableFactor.unity(terminalVar)));
-    } else {
-      lexicons.add(lexiconFactor);
-      lexicons.add(unknownWordLexicon);
-    }
+      wordSkipWordVar = terminalVar;
+      wordSkipFactor = TableFactor.unity(terminalVar);
+    } 
 
     if (useStringLexicon) {
       CcgCategory stringCategory = CcgCategory.parseFrom("String{0},(lambda ($0) $0),0 special:string");
@@ -1304,7 +1305,7 @@ public class CcgParserTest extends TestCase {
     scorers.add(new SyntaxLexiconScorer(terminalVar, posTagVar, terminalSyntaxVar, posDistribution,
         terminalSyntaxDistribution));
 
-    return new CcgParser(lexicons, scorers, semanticHeadVar, semanticSyntaxVar,
+    return new CcgParser(lexicons, scorers, wordSkipWordVar, wordSkipFactor, semanticHeadVar, semanticSyntaxVar,
         semanticArgNumVar, semanticArgVar, semanticHeadPosVar, semanticArgPosVar, dependencyFactor,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet,

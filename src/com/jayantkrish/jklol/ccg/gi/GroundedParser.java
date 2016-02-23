@@ -22,6 +22,7 @@ import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.KbestHeap;
 
 public class GroundedParser {
@@ -44,7 +45,7 @@ public class GroundedParser {
   }
   
   public List<GroundedCcgParse> beamSearch(AnnotatedSentence sentence, Object initialDiagram, int beamSize) {
-    return beamSearch(sentence, initialDiagram, beamSize, null, null, null);
+    return beamSearch(sentence, initialDiagram, beamSize, null, null, new NullLogFunction());
   }
 
   public List<GroundedCcgParse> beamSearch(AnnotatedSentence sentence,
@@ -81,6 +82,7 @@ public class GroundedParser {
 
       // Empty the heap.
       currentBeamSize = heap.size();
+      System.out.println(currentBeamSize);
       heap.clear();
       
       for (int i = 0; i < currentBeamSize; i++) {
@@ -97,20 +99,12 @@ public class GroundedParser {
         */
         
         if (state.evalResult != null) {
-          // System.out.println("eval: " + curSyntax + " " + curSpanStart + "," + curSpanEnd);
-          tempEvalResults.clear();
-          incrEval.evaluateContinuation(state.evalResult, tempEvalResults);
-          
-          for (IncEvalState result : tempEvalResults) {
-            queueEvalState(result, state.stack, heap, chart, evalFilter);
-          }
-
-        } else if (state.stack.includesRootProb) {
-          // System.out.println("root: " + curSyntax + " " + curSpanStart + "," + curSpanEnd);
-          // This state is a finished state: it spans the entire sentence
-          // and evaluation has finished.
-          offer(finishedHeap, state, evalFilter);
+          log.startTimer("grounded_parser/evaluate_continuation");
+          evaluateContinuation(state, tempEvalResults, heap,
+              finishedHeap, chart, evalFilter, log);
+          log.stopTimer("grounded_parser/evaluate_continuation");
         } else {
+          log.startTimer("grounded_parser/shift_reduce");
           tempHeap.clear();
           
           CcgShiftReduceInference.shift(state.stack, chart, tempHeap);
@@ -137,24 +131,31 @@ public class GroundedParser {
             // System.out.println("  : " + result.spanStart + "," + result.spanEnd + " " + syntax);
 
             if (incrEval.isEvaluatable(syntax)) {
+              log.startTimer("grounded_parser/shift_reduce/initialize_continuation");
               GroundedCcgParse parse = decodeParseFromSpan(result.spanStart, result.spanEnd,
                   result.chartEntryIndex, chart, parser);
               
               continuationEnv = Environment.extend(state.env);
               continuation = incrEval.parseToContinuation(parse, continuationEnv);
+              log.stopTimer("grounded_parser/shift_reduce/initialize_continuation");
             }
 
-            State next;
             if (continuation != null) {
+              // Do one-step lookahead on continuation evaluation. This 
+              // should reduce the necessary size of the beam.
+              log.startTimer("grounded_parser/shift_reduce/evaluate_continuation");
               IncEvalState r = new IncEvalState(continuation, continuationEnv,
                   null, state.diagram, 1.0, null);
-              next = new State(result, state.diagram, null, r);
+              State next = new State(result, state.diagram, null, r);
+              evaluateContinuation(next, tempEvalResults, heap,
+                  finishedHeap, chart, evalFilter, log);
+              log.stopTimer("grounded_parser/shift_reduce/evaluate_continuation");
             } else {
-              next = new State(result, state.diagram, state.env, null);
+              State next = new State(result, state.diagram, state.env, null);
+              offer(heap, finishedHeap, next, evalFilter);
             }
-
-            offer(heap, next, evalFilter);
           }
+          log.stopTimer("grounded_parser/shift_reduce");
         }
       }
     }
@@ -171,17 +172,46 @@ public class GroundedParser {
     return parses;
   }
   
+  private void evaluateContinuation(State state, List<IncEvalState> tempEvalResults,
+      KbestHeap<State> heap, KbestHeap<State> finishedHeap, CcgChart chart,
+      Predicate<State> evalFilter, LogFunction log) {
+    IncEvalState next = state.evalResult;
+    while (next != null) {
+      tempEvalResults.clear();
+      incrEval.evaluateContinuation(next, tempEvalResults, log);
+
+      // TODO: make the lookahead work with the filter as well.
+      // Do lookahead for any state that is deterministically evaluated.
+      if (tempEvalResults.size() == 1) {
+        IncEvalState nextInc = tempEvalResults.get(0);
+        if (nextInc.getContinuation() != null) {
+          next = nextInc;
+        } else {
+          next = null;
+          queueEvalState(nextInc, state.stack, heap, finishedHeap, chart, evalFilter);
+        }
+      } else {
+        for (IncEvalState result : tempEvalResults) {
+          queueEvalState(result, state.stack, heap, finishedHeap, chart, evalFilter);
+        }
+        next = null;
+      }
+    }
+  }
+  
   /**
    * Queues a search state containing the result of an evaluation. 
    * 
    * @param evalResult
    * @param cur
    * @param heap
+   * @param finishedHeap
    * @param chart
    * @param evalFilter
    */
   private void queueEvalState(IncEvalState evalResult, ShiftReduceStack cur,
-      KbestHeap<State> heap, CcgChart chart, Predicate<State> evalFilter) {
+      KbestHeap<State> heap, KbestHeap<State> finishedHeap,
+      CcgChart chart, Predicate<State> evalFilter) {
     if (evalResult.getContinuation() == null) {
       // Evaluation has finished (for now) and the search must switch back
       // to parsing. Create a new entry on the CCG chart representing the
@@ -200,18 +230,22 @@ public class GroundedParser {
           entry, entryProb, cur.includesRootProb);
 
       State next = new State(newStack, evalResult.getDiagram(), evalResult.getEnvironment(), null);
-      offer(heap, next, evalFilter);
+      offer(heap, finishedHeap, next, evalFilter);
     } else {
       // Evaluation is still in progress. 
       State next = new State(cur, null, null, evalResult);
-      offer(heap, next, evalFilter);
+      offer(heap, finishedHeap, next, evalFilter);
     }
   }
-  
-  private static final void offer(KbestHeap<State> heap, State state,
-      Predicate<State> filter) {
+
+  private static final void offer(KbestHeap<State> heap, KbestHeap<State> finishedHeap,
+      State state, Predicate<State> filter) {
     if (filter == null || filter.apply(state)) {
-      heap.offer(state, state.totalProb);
+      if (state.evalResult == null && state.stack.includesRootProb) {
+        finishedHeap.offer(state, state.totalProb);
+      } else {
+        heap.offer(state, state.totalProb);
+      }
     }
   }
   

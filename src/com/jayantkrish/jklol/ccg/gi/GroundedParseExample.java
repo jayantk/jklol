@@ -19,7 +19,8 @@ public interface GroundedParseExample {
    * Returns {@code true} for correct denotations  
    * 
    * @param denotation
+   * @param diagram
    * @return
    */
-  public boolean isCorrectDenotation(Object denotation);
+  public boolean isCorrectDenotation(Object denotation, Object diagram);
 }

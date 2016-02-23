@@ -275,6 +275,10 @@ public class ChartEntry {
   public int getHeadedSyntax() {
     return syntax;
   }
+  
+  public int[] getSyntaxUniqueVars() {
+    return syntaxUniqueVars;
+  }
 
   public int getHeadVariable() {
     return syntaxHeadVar;

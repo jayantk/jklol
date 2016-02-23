@@ -8,6 +8,7 @@ import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgLeftToRightChart;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
+import com.jayantkrish.jklol.ccg.lexicon.AbstractCcgLexicon.SkipTrigger;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.util.IntMultimap;
@@ -43,7 +44,8 @@ public class CcgShiftReduceInference implements CcgInference {
       ChartCost chartFilter, LogFunction log) {
     CcgLeftToRightChart chart = new CcgLeftToRightChart(sentence, Integer.MAX_VALUE);
     parser.initializeChart(chart, sentence, chartFilter);
-    parser.initializeChartTerminals(chart, sentence);
+    parser.initializeChartTerminals(chart, sentence, false);
+    List<String> lowercaseWords = sentence.getWordsLowercase();
 
     // Working heap for queuing parses to process next.
     KbestHeap<ShiftReduceStack> heap = new KbestHeap<ShiftReduceStack>(beamSize, new ShiftReduceStack[0]);
@@ -57,6 +59,7 @@ public class CcgShiftReduceInference implements CcgInference {
     ShiftReduceStack[] currentBeam = new ShiftReduceStack[beamSize + 1];
     int currentBeamSize = 0;
 
+    int numSteps = 0;
     while (heap.size() > 0) {
       // Copy the heap to the current beam.
       ShiftReduceStack[] keys = heap.getKeys();
@@ -75,9 +78,13 @@ public class CcgShiftReduceInference implements CcgInference {
         ShiftReduceStack stack = currentBeam[i];
         // System.out.println("Processing " + stack);
         shift(stack, chart, heap);
+        skip(stack, chart, heap, parser, lowercaseWords);
         reduce(stack, chart, heap, parser, log);
         root(stack, chart, finishedHeap, parser);
       }
+      
+      shiftSkipLeft(numSteps, chart, heap, parser, lowercaseWords);
+      numSteps++;
     }
     
     List<CcgParse> parses = Lists.newArrayList();
@@ -141,8 +148,11 @@ public class CcgShiftReduceInference implements CcgInference {
       for (int j = 0; j < numEntries; j++) {
         // Some nonterminal entries may have been added to chart
         // by other parses in the beam that have processed more
-        // tokens than this parse.
-        if (entries[j].isTerminal() && entries[j].getAdditionalInfo() == null) {
+        // tokens than this parse. (The second set of conditions
+        // verifies that the chart entry doesn't skip any words.)
+        ChartEntry e = entries[j];
+        if (e.isTerminal() && e.getAdditionalInfo() == null &&
+            e.getLeftSpanStart() == e.getRightSpanStart() && e.getLeftSpanEnd() == e.getRightSpanEnd()) {
           // System.out.println("SHIFT: " + curToken + "," + spanEnd + " " + entries[j].getHeadedSyntax());
 
           // Queue the shift action by adding it to the heap.
@@ -150,6 +160,102 @@ public class CcgShiftReduceInference implements CcgInference {
           heap.offer(nextStack, nextStack.totalProb);
         }
       }
+    }
+  }
+  
+  public static final void shiftSkipLeft(int numTokensToSkip, CcgChart chart, KbestHeap<ShiftReduceStack> heap,
+      CcgParser parser, List<String> lowercaseWords) {
+    if (numTokensToSkip == 0 || numTokensToSkip >= chart.getWords().size() || !parser.canSkipWords()) {
+      return;
+    }
+    
+    double skipProb = 1.0;
+    for (int i = 0; i < numTokensToSkip; i++) {
+      skipProb *= parser.getWordSkipProbability(lowercaseWords.get(i));
+    }
+
+    ShiftReduceStack stack = ShiftReduceStack.empty();
+    int spanStart = numTokensToSkip;
+    int inputLength = chart.getWords().size();
+    for (int spanEnd = spanStart; spanEnd < inputLength; spanEnd++) {
+      ChartEntry[] entries = chart.getChartEntriesForSpan(spanStart, spanEnd);
+      double[] probs = chart.getChartEntryProbsForSpan(spanStart, spanEnd);
+      int numEntries = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
+
+      for (int j = 0; j < numEntries; j++) {
+        // Some nonterminal entries may have been added to chart
+        // by other parses in the beam that have processed more
+        // tokens than this parse. (The second set of conditions
+        // verifies that the chart entry doesn't skip any words.)
+        ChartEntry e = entries[j];
+        if (e.isTerminal() && e.getAdditionalInfo() == null &&
+            e.getLeftSpanStart() == e.getRightSpanStart() && e.getLeftSpanEnd() == e.getRightSpanEnd()) {
+          // System.out.println("SHIFT: " + curToken + "," + spanEnd + " " + entries[j].getHeadedSyntax());
+
+          double prob = probs[j] * skipProb;
+          int entryIndex = createSkipEntry(e, 0, spanEnd, prob, chart, parser);
+          if (entryIndex != -1) {
+            ChartEntry next = chart.getChartEntriesForSpan(0, spanEnd)[entryIndex];
+          
+            // Queue the shift action by adding it to the heap.
+            ShiftReduceStack nextStack = stack.push(0, spanEnd, entryIndex, next, prob, false);
+            heap.offer(nextStack, nextStack.totalProb);
+          }
+        }
+      }
+    }
+  }
+  
+  public static final void skip(ShiftReduceStack stack, CcgChart chart, KbestHeap<ShiftReduceStack> heap,
+      CcgParser parser, List<String> lowercaseWords) {
+    // Perform word skipping action, if allowed by the parser.
+    if (parser.canSkipWords() && stack.entry != null && stack.entry.isTerminal() &&
+        stack.spanEnd < chart.getWords().size() - 1) {
+      int nextToken = stack.spanEnd + 1;
+      double skipProb = parser.getWordSkipProbability(lowercaseWords.get(nextToken));
+    
+      ChartEntry e = stack.entry;
+      int spanStart = e.getLeftSpanStart();
+      int spanEnd = nextToken;
+      double nextProb = stack.entryProb * skipProb;
+      
+      int nextEntryIndex = createSkipEntry(e, spanStart, spanEnd, nextProb, chart, parser);
+      if (nextEntryIndex != -1) {
+        ChartEntry next = chart.getChartEntriesForSpan(spanStart, spanEnd)[nextEntryIndex];
+
+        ShiftReduceStack nextStack = new ShiftReduceStack(spanStart, spanEnd, nextEntryIndex, next,
+            nextProb, false, stack.previous);
+        heap.offer(nextStack, nextStack.totalProb);
+      }
+    }
+  }
+  
+  private static final int createSkipEntry(ChartEntry e, int newSpanStart, int newSpanEnd, double entryProb,
+      CcgChart chart, CcgParser parser) {
+    int triggerSpanStart = e.getRightSpanStart();
+    int triggerSpanEnd = e.getRightSpanEnd();
+    Object oldTrigger = e.getLexiconTrigger();
+    Object trigger = null;
+    if (oldTrigger instanceof SkipTrigger) {
+      trigger = oldTrigger;
+    } else {
+      trigger = new SkipTrigger(trigger, triggerSpanStart, triggerSpanEnd);
+    }
+
+    // TODO: handle the additionalInfo for GroundedParser
+    ChartEntry next = new ChartEntry(e.getHeadedSyntax(), e.getSyntaxUniqueVars(), e.getHeadVariable(),
+        e.getLexiconEntry(), trigger, e.getLexiconIndex(), e.getRootUnaryRule(), e.getAssignmentVarIndex(),
+        e.getAssignments(), e.getUnfilledDependencyVarIndex(), e.getUnfilledDependencies(), e.getDependencies(),
+        newSpanStart, newSpanEnd, triggerSpanStart, triggerSpanEnd);
+
+    int initialNumEntries = chart.getNumChartEntriesForSpan(newSpanStart, newSpanEnd);
+    chart.addChartEntryForSpan(next, entryProb, newSpanStart, newSpanEnd, parser.getSyntaxVarType());
+    int finalNumEntries = chart.getNumChartEntriesForSpan(newSpanStart, newSpanEnd);
+    
+    if (finalNumEntries > initialNumEntries) {
+      return finalNumEntries - 1;
+    } else {
+      return -1;
     }
   }
   

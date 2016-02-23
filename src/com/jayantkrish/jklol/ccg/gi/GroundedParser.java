@@ -53,7 +53,7 @@ public class GroundedParser {
       Predicate<State> evalFilter, LogFunction log) {
     CcgLeftToRightChart chart = new CcgLeftToRightChart(sentence, Integer.MAX_VALUE);
     parser.initializeChart(chart, sentence, chartFilter);
-    parser.initializeChartTerminals(chart, sentence);
+    parser.initializeChartTerminals(chart, sentence, true);
 
     // Working heap for queuing parses to process next.
     KbestHeap<State> heap = new KbestHeap<State>(beamSize, new State[0]);

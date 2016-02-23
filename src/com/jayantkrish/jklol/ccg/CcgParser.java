@@ -414,6 +414,23 @@ public class CcgParser implements Serializable {
         searchMoveVar, compiledSyntaxDistribution, rootSyntaxVar, rootPredicateVar,
         rootPosVar, rootSyntaxDistribution, headedRootSyntaxDistribution, normalFormOnly);
   }
+  
+  public DiscreteFactor getWordSkipFactor() {
+    return wordSkipFactor;
+  }
+  
+  public boolean canSkipWords() {
+    return wordSkipFactor != null;
+  }
+  
+  public double getWordSkipProbability(String lowercaseWord) {
+    Assignment assignment = wordSkipWordVar.outcomeArrayToAssignment(Arrays.asList(lowercaseWord));
+    if (wordSkipWordVar.isValidAssignment(assignment)) {
+      return wordSkipFactor.getUnnormalizedProbability(assignment);
+    } else {
+      return 1.0;
+    }
+  }
 
   public boolean isPossibleDependencyStructure(DependencyStructure dependency, List<String> posTags) {
     return getDependencyStructureLogProbability(dependency, posTags) != Double.NEGATIVE_INFINITY;
@@ -582,7 +599,7 @@ public class CcgParser implements Serializable {
 
     log.startTimer("ccg_parse/initialize_chart");
     initializeChart(chart, input, beamFilter);
-    initializeChartTerminals(chart, input);
+    initializeChartTerminals(chart, input, wordSkipFactor != null);
     log.stopTimer("ccg_parse/initialize_chart");
 
     log.startTimer("ccg_parse/calculate_inside_beam");
@@ -633,10 +650,16 @@ public class CcgParser implements Serializable {
     chart.setDepProbCache(new double[input.size()]);
   }
 
-  public void initializeChartTerminals(CcgChart chart, AnnotatedSentence sentence) {
+  public void initializeChartTerminals(CcgChart chart, AnnotatedSentence sentence, boolean wordSkip) {
+    Preconditions.checkArgument(wordSkip == false || wordSkipFactor != null);
+    
     for (int k = 0; k < lexicons.size(); k++) {
       CcgLexicon lexicon = lexicons.get(k);
-      lexicon.initializeChart(chart, sentence, this, k, wordSkipWordVar, wordSkipFactor);
+      if (wordSkip) {
+        lexicon.initializeChart(chart, sentence, this, k, wordSkipWordVar, wordSkipFactor);
+      } else {
+        lexicon.initializeChart(chart, sentence, this, k, null, null);
+      }
     }
   }
 

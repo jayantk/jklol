@@ -76,12 +76,7 @@ public abstract class AbstractCcgLexicon implements CcgLexicon {
     List<String> lcWords = sentence.getWordsLowercase();
     double[] skipProbs = new double[sentence.size()];
     for (int i = 0; i < lcWords.size(); i++) {
-      Assignment assignment = terminalVar.outcomeArrayToAssignment(lcWords.subList(i, i + 1));
-      if (terminalVar.isValidAssignment(assignment)) {
-        skipProbs[i] = skipWeights.getUnnormalizedProbability(assignment);
-      } else {
-        skipProbs[i] = 1.0;
-      }
+      skipProbs[i] = parser.getWordSkipProbability(lcWords.get(i));
     }
 
     for (int i = 0; i < sentence.size(); i++) {

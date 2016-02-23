@@ -289,8 +289,9 @@ public class CcgTrainingTest extends TestCase {
 
   private CcgParser trainLoglikelihoodParser(ParametricCcgParser family, List<CcgExample> examples) {
     ExpressionComparator comparator = new SimplificationComparator(getExpressionSimplifier());
-    CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family,
-        comparator, new CcgCkyInference(null, 100, -1, Integer.MAX_VALUE, 1));
+    // CcgInference inference = new CcgCkyInference(null, 100, -1, Integer.MAX_VALUE, 1);
+    CcgInference inference = new CcgShiftReduceInference(100);
+    CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, comparator, inference);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10, 1, 1,
         true, false, 0.1, new DefaultLogFunction());
 

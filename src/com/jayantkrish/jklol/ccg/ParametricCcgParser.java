@@ -14,7 +14,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
-import com.jayantkrish.jklol.ccg.lexicon.AbstractCcgLexicon.SkipTrigger;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.LexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
@@ -767,34 +766,20 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
       int lexiconIndex = info.getLexiconIndex();
       int spanStart = info.getSpanStart();
       int spanEnd = info.getSpanEnd();
+      int triggerSpanStart = info.getTriggerSpanStart();
+      int triggerSpanEnd = info.getTriggerSpanEnd();
       
-      if (wordSkipFamily == null) {
-        lexiconFamilies.get(lexiconIndex).incrementLexiconSufficientStatistics(
-            lexiconGradientList.get(lexiconIndex), lexiconParameterList.get(lexiconIndex),
-            spanStart, spanEnd, sentence, trigger, ccgCategory, count);
-
-        for (int j = 0; j < lexiconScorerFamilies.size(); j++) {
-          lexiconScorerFamilies.get(j).incrementLexiconSufficientStatistics(
-              lexiconScorerGradientList.get(j), lexiconScorerParameterList.get(j),
-              spanStart, spanEnd, sentence, ccgCategory, count);
-        }
-      } else {
-        SkipTrigger skipTrigger = (SkipTrigger) trigger;
-        
-        int triggerSpanStart = skipTrigger.getTriggerSpanStart();
-        int triggerSpanEnd = skipTrigger.getTriggerSpanEnd();
-        Object originalTrigger = skipTrigger.getTrigger();
-
-        lexiconFamilies.get(lexiconIndex).incrementLexiconSufficientStatistics(
-            lexiconGradientList.get(lexiconIndex), lexiconParameterList.get(lexiconIndex),
-            triggerSpanStart, triggerSpanEnd, sentence, originalTrigger, ccgCategory, count);
-        
-        for (int j = 0; j < lexiconScorerFamilies.size(); j++) {
-          lexiconScorerFamilies.get(j).incrementLexiconSufficientStatistics(
-              lexiconScorerGradientList.get(j), lexiconScorerParameterList.get(j),
-              triggerSpanStart, triggerSpanEnd, sentence, ccgCategory, count);
-        }
-
+      lexiconFamilies.get(lexiconIndex).incrementLexiconSufficientStatistics(
+          lexiconGradientList.get(lexiconIndex), lexiconParameterList.get(lexiconIndex),
+          triggerSpanStart, triggerSpanEnd, sentence, trigger, ccgCategory, count);
+      
+      for (int j = 0; j < lexiconScorerFamilies.size(); j++) {
+        lexiconScorerFamilies.get(j).incrementLexiconSufficientStatistics(
+            lexiconScorerGradientList.get(j), lexiconScorerParameterList.get(j),
+            triggerSpanStart, triggerSpanEnd, sentence, ccgCategory, count);
+      }
+      
+      if (wordSkipFamily != null) {
         for (int k = spanStart; k < triggerSpanStart; k++) {
           String word = lcWords.get(k);
           Assignment a = wordSkipWordVar.outcomeArrayToAssignment(Arrays.asList(word));
@@ -804,7 +789,7 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
           }
         }
 
-        for (int k = skipTrigger.getTriggerSpanEnd() + 1; k <= spanEnd; k++) {
+        for (int k = triggerSpanEnd + 1; k <= spanEnd; k++) {
           String word = lcWords.get(k);
           Assignment a = wordSkipWordVar.outcomeArrayToAssignment(Arrays.asList(word));
           if (wordSkipWordVar.isValidAssignment(a)) {

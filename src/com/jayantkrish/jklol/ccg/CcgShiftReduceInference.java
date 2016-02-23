@@ -8,7 +8,6 @@ import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgLeftToRightChart;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
-import com.jayantkrish.jklol.ccg.lexicon.AbstractCcgLexicon.SkipTrigger;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.util.IntMultimap;
@@ -234,13 +233,7 @@ public class CcgShiftReduceInference implements CcgInference {
       CcgChart chart, CcgParser parser) {
     int triggerSpanStart = e.getRightSpanStart();
     int triggerSpanEnd = e.getRightSpanEnd();
-    Object oldTrigger = e.getLexiconTrigger();
-    Object trigger = null;
-    if (oldTrigger instanceof SkipTrigger) {
-      trigger = oldTrigger;
-    } else {
-      trigger = new SkipTrigger(trigger, triggerSpanStart, triggerSpanEnd);
-    }
+    Object trigger = e.getLexiconTrigger();
 
     // TODO: handle the additionalInfo for GroundedParser
     ChartEntry next = new ChartEntry(e.getHeadedSyntax(), e.getSyntaxUniqueVars(), e.getHeadVariable(),

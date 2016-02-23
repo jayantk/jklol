@@ -11,7 +11,6 @@ import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
-import com.jayantkrish.jklol.util.Assignment;
 
 /**
  * Implementations of common {@code CcgLexicon} methods.
@@ -93,7 +92,7 @@ public abstract class AbstractCcgLexicon implements CcgLexicon {
         Preconditions.checkState(accumulator.size() == triggerAccumulator.size());
 
         for (int n = 0; n < accumulator.size(); n++) {
-          Object trigger = new SkipTrigger(triggerAccumulator.get(n), i, j);
+          Object trigger = triggerAccumulator.get(n);
           CcgCategory entry = accumulator.get(n);
           double prob = probAccumulator.get(n);
           parser.addLexiconEntryToChart(chart, trigger, entry, prob, i, j, i, j, sentence, lexiconNum);
@@ -128,35 +127,6 @@ public abstract class AbstractCcgLexicon implements CcgLexicon {
       for (int j = i; j < sentence.size(); j++) {
         chart.doneAddingChartEntriesForSpan(i, j);
       }
-    }
-  }
-
-  public static class SkipTrigger {
-    private final Object trigger;
-    private final int triggerSpanStart;
-    private final int triggerSpanEnd;
-
-    public SkipTrigger(Object trigger, int triggerSpanStart, int triggerSpanEnd) {
-      this.trigger = trigger;
-      this.triggerSpanStart = triggerSpanStart;
-      this.triggerSpanEnd = triggerSpanEnd;
-    }
-
-    public Object getTrigger() {
-      return trigger;
-    }
-
-    public int getTriggerSpanStart() {
-      return triggerSpanStart;
-    }
-
-    public int getTriggerSpanEnd() {
-      return triggerSpanEnd;
-    }
-
-    @Override
-    public String toString() {
-      return trigger.toString();
     }
   }
 }

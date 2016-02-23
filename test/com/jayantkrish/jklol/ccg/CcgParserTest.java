@@ -27,7 +27,6 @@ import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
-import com.jayantkrish.jklol.ccg.lexicon.AbstractCcgLexicon.SkipTrigger;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.LexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon;
@@ -569,7 +568,7 @@ public class CcgParserTest extends TestCase {
     
     assertEquals(0, bestParse.getSpanStart());
     assertEquals(2, bestParse.getSpanEnd());
-    assertEquals(Arrays.asList("i"), ((SkipTrigger) bestParse.getLexiconEntry().getLexiconTrigger()).getTrigger());
+    assertEquals(Arrays.asList("i"), bestParse.getLexiconEntry().getLexiconTrigger());
     assertEquals(1.5, bestParse.getSubtreeProbability());
 
     // TODO: test that dependencies are projected from the spans of the original

@@ -158,11 +158,13 @@ public class GroundedParser {
 
       // System.out.println("  : " + result.spanStart + "," + result.spanEnd + " " + syntax);
 
-      if (incrEval.isEvaluatable(syntax)) {
+      // Try evaluating entries that have the appropriate syntactic category
+      // and that have not already been evaluated.
+      if (result.entry.getAdditionalInfo() == null && incrEval.isEvaluatable(syntax)) {
         log.startTimer("grounded_parser/shift_reduce/initialize_continuation");
         GroundedCcgParse parse = decodeParseFromSpan(result.spanStart, result.spanEnd,
             result.chartEntryIndex, chart, parser);
-
+        
         continuationEnv = Environment.extend(state.env);
         continuation = incrEval.parseToContinuation(parse, continuationEnv);
         log.stopTimer("grounded_parser/shift_reduce/initialize_continuation");

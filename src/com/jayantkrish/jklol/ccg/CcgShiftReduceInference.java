@@ -57,13 +57,17 @@ public class CcgShiftReduceInference implements CcgInference {
     // Array of elements in the current beam.
     ShiftReduceStack[] currentBeam = new ShiftReduceStack[beamSize + 1];
     int currentBeamSize = 0;
+    
+    System.out.println(sentence.getWords());
 
     int numSteps = 0;
     while (heap.size() > 0 || numSteps < chart.getWords().size()) {
       // Copy the heap to the current beam.
       ShiftReduceStack[] keys = heap.getKeys();
+      System.out.println("LOOP " + numSteps + ":" + heap.size());
       for (int i = 0; i < heap.size(); i++) {
         currentBeam[i] = keys[i];
+        System.out.println(currentBeam[i]);
       }
       
       // System.out.println();

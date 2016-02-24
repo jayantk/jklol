@@ -107,7 +107,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
 
     if (correctParses.size() == 0) {
       // Search error: couldn't find any correct parses.
-      // System.out.println("Search error (Correct): " + sentence + " " + example.getLogicalForm());
+      System.out.println("Search error (Correct): " + sentence + " " + example.getLogicalForm());
       throw new ZeroProbabilityError();
     }
 

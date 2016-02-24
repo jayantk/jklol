@@ -10,13 +10,13 @@ import java.util.Arrays;
  *
  * @param <T>
  */
-public class KbestHeap<T> {
+public class KbestQueue<T> implements SearchQueue<T> {
   private double[] values;
   private T[] keys;
   private int size;
   private int maxElements;
 
-  public KbestHeap(int maxElements, T[] keyType) {
+  public KbestQueue(int maxElements, T[] keyType) {
     values = new double[maxElements + 1];
     keys = Arrays.copyOf(keyType, maxElements + 1);
     size = 0;
@@ -33,7 +33,7 @@ public class KbestHeap<T> {
    * @param score
    * @return
    */
-  public final int offer(T toQueue, double score) {
+  public final void offer(T toQueue, double score) {
     HeapUtils.offer(keys, values, size, toQueue, score);
     size++;
 
@@ -41,7 +41,6 @@ public class KbestHeap<T> {
       HeapUtils.removeMin(keys, values, size);
       size--;
     }
-    return size;
   }
   
   public T removeMin() {
@@ -55,7 +54,7 @@ public class KbestHeap<T> {
     return size;
   }
 
-  public T[] getKeys() {
+  public T[] getItems() {
     return keys;
   }
 

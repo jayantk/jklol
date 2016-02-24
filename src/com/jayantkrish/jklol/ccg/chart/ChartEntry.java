@@ -486,6 +486,13 @@ public class ChartEntry {
         rightSpanEnd, rightChartIndex, combinator, isProducedByConjunction, newAdditionalInfo);
   }
 
+  public ChartEntry replaceRight(int newRightSpanStart, int newRightSpanEnd, int newRightChartIndex) {
+    return new ChartEntry(syntax, syntaxUniqueVars, syntaxHeadVar, rootUnaryRule, leftUnaryRule, rightUnaryRule,
+        assignmentVarIndex, assignments, unfilledDependencyVarIndex, unfilledDependencies, deps, syntaxHeadHashCode, 
+        lexiconEntry, lexiconTrigger, lexiconIndex, leftSpanStart, leftSpanEnd, leftChartIndex, newRightSpanStart,
+        newRightSpanEnd, newRightChartIndex, combinator, isProducedByConjunction, additionalInfo);
+  }
+
   @Override
   public String toString() {
     return "[" + Arrays.toString(assignments) + ":" + syntax

@@ -18,12 +18,12 @@ public class GroundedParserLoglikelihoodOracle implements
   GradientOracle<GroundedParser, GroundedParseExample> {
   
   private final ParametricGroundedParser family;
-  private final int beamSize;
+  private final GroundedParserInference inference;
 
   public GroundedParserLoglikelihoodOracle(ParametricGroundedParser family,
-      int beamSize) {
+      GroundedParserInference inference) {
     this.family = Preconditions.checkNotNull(family);
-    this.beamSize = beamSize;
+    this.inference = inference;
   }
   
   @Override
@@ -45,9 +45,9 @@ public class GroundedParserLoglikelihoodOracle implements
 
     // Get a distribution over unconditional executions.
     log.startTimer("update_gradient/input_marginal");
-    List<GroundedCcgParse> unconditionalParses = model.beamSearch(sentence,
-        diagram, beamSize, null, null, log);
-    
+    List<GroundedCcgParse> unconditionalParses = inference.beamSearch(
+        model, sentence, diagram, null, null, log);
+
     if (unconditionalParses.size() == 0) {
       System.out.println("unconditional search failure");
       throw new ZeroProbabilityError();      
@@ -58,8 +58,8 @@ public class GroundedParserLoglikelihoodOracle implements
     log.startTimer("update_gradient/output_marginal");
     Predicate<State> evalFilter = example.getEvalFilter();
     ChartCost chartFilter = example.getChartFilter();
-    List<GroundedCcgParse> conditionalParsesInit = model.beamSearch(sentence,
-        diagram, beamSize, chartFilter, evalFilter, log);
+    List<GroundedCcgParse> conditionalParsesInit = inference.beamSearch(
+        model, sentence, diagram, chartFilter, evalFilter, log);
     
     List<GroundedCcgParse> conditionalParses = Lists.newArrayList();
     for (GroundedCcgParse parse : conditionalParsesInit) {

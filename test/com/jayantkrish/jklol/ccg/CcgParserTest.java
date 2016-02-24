@@ -142,10 +142,11 @@ public class CcgParserTest extends TestCase {
     {"green_(N{0}/N{0}){1}", "(N{1}/N{1}){0}", "1", "people", DEFAULT_POS, DEFAULT_POS},
     {"tasty", "(N{1}/N{1}){0}", "1", "berries", "JJ", "NN"},
     {"stringfunc", "(S{0}/N{1}){0}", "1", "special:string", DEFAULT_POS, DEFAULT_POS},
+    {"special:compound", "N{0}", "2", "people", DEFAULT_POS, DEFAULT_POS},
   };
 
   private static final double[] dependencyWeightIncrements = {
-    1.0, 1.0, 3.0, 1.0, 1.0, 1.0, 3.0, 1.0,
+    1.0, 1.0, 3.0, 1.0, 1.0, 1.0, 3.0, 1.0, 1.0,
   };
 
   private VariableNumMap terminalVar;
@@ -564,6 +565,28 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(1, parses.size());
   }
+  
+  public void testParseWordSkip3() {
+    List<String> words = Arrays.asList("i", "backward", "quickly");
+    List<CcgParse> parses = beamSearch(parserWordSkip, words, 10);
+    
+    /*
+     * The expected parses in order of probability are:
+     * 3 i
+     * 3 i backward
+     * 2 backward
+     * 1 quickly
+     */
+    List<Double> expectedProbs = Arrays.asList(3.0, 3.0, 2.0, 1.0);
+    List<Double> actualProbs = Lists.newArrayList();
+    for (CcgParse parse : parses) {
+      System.out.println(parse.getSubtreeProbability() + " " + parse);
+      actualProbs.add(parse.getSubtreeProbability());
+    }
+
+    assertEquals(4, parses.size());
+    assertEquals(expectedProbs, actualProbs);
+  }
 
   public void testParseWordSkipExact() {
     List<String> words = Arrays.asList("green", "green", "i");
@@ -832,7 +855,7 @@ public class CcgParserTest extends TestCase {
         Arrays.asList("people", "berries", "and", "people"), 10);
 
     assertEquals(2, parses.size());
-    CcgParse parse = parses.get(1);
+    CcgParse parse = parses.get(0);
     Set<DependencyStructure> deps = Sets.newHashSet(parse.getAllDependencies());
 
     Set<DependencyStructure> expected = Sets.newHashSet(
@@ -1293,7 +1316,9 @@ public class CcgParserTest extends TestCase {
     DiscreteFactor wordSkipFactor = null;
     if (allowWordSkipping) {
       wordSkipWordVar = terminalVar;
-      wordSkipFactor = TableFactor.unity(terminalVar);
+      Assignment quickly = terminalVar.outcomeArrayToAssignment(Arrays.asList("quickly"));
+      wordSkipFactor = TableFactor.unity(terminalVar).add(
+          TableFactor.pointDistribution(terminalVar, quickly));
     } 
 
     if (useStringLexicon) {

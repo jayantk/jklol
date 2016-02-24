@@ -11,7 +11,7 @@ public class CcgShiftReduceInferenceTest extends CcgParserTest {
 
   @Override
   public List<CcgParse> beamSearch(CcgParser parser, List<String> words, List<String> posTags, int beamSize) {
-    CcgShiftReduceInference inference = new CcgShiftReduceInference(beamSize);
+    CcgShiftReduceInference inference = new CcgShiftReduceInference(beamSize, -1);
     return inference.beamSearch(parser, new AnnotatedSentence(words, posTags), null, null);
   }
 }

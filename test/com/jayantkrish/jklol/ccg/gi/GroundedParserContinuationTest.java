@@ -137,7 +137,8 @@ public class GroundedParserContinuationTest extends TestCase {
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG));
 
     Object initialDiagram = ambEval.eval(sexpParser.parse(initialDiagramExpression), env, null).getValue();
-    return parser.beamSearch(sentence, initialDiagram, 100);
+    GroundedParserInference inf = new GroundedParserBeamSearchInference(100, -1);
+    return inf.beamSearch(parser, sentence, initialDiagram);
   }
   
   public GroundedCcgParse parse(GroundedParser parser, List<String> words, String initialDiagramExpression) {

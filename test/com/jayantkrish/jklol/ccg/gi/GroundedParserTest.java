@@ -69,7 +69,8 @@ public class GroundedParserTest extends TestCase {
     AnnotatedSentence sentence = new AnnotatedSentence(words,
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG));
     Object initialDiagram = null;
-    return parser.beamSearch(sentence, initialDiagram, 10);
+    GroundedParserInference inf = new GroundedParserBeamSearchInference(10, -1);
+    return inf.beamSearch(parser, sentence, initialDiagram);
   }
   
   public GroundedCcgParse parse(GroundedParser parser, List<String> words) {

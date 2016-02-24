@@ -9,7 +9,7 @@ import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
-import com.jayantkrish.jklol.util.KbestHeap;
+import com.jayantkrish.jklol.util.KbestQueue;
 
 /**
  * Common implementations of {@code IncrementalEval} methods.
@@ -50,11 +50,11 @@ public abstract class AbstractIncEval implements IncEval {
       Predicate<IncEvalState> filter, Environment startEnv,
       LogFunction log, int beamSize) {
     // Working heap for queuing parses to process next.
-    KbestHeap<IncEvalState> heap = new KbestHeap<IncEvalState>(beamSize,
+    KbestQueue<IncEvalState> heap = new KbestQueue<IncEvalState>(beamSize,
         new IncEvalState[0]);
     
     // Heap for finished parses.
-    KbestHeap<IncEvalState> finishedHeap = new KbestHeap<IncEvalState>(beamSize,
+    KbestQueue<IncEvalState> finishedHeap = new KbestQueue<IncEvalState>(beamSize,
         new IncEvalState[0]);
 
     // Array of elements in the current beam.
@@ -75,7 +75,7 @@ public abstract class AbstractIncEval implements IncEval {
 
     while (heap.size() > 0) {
       // Copy the heap to the current beam.
-      IncEvalState[] keys = heap.getKeys();
+      IncEvalState[] keys = heap.getItems();
       for (int i = 0; i < heap.size(); i++) {
         currentBeam[i] = keys[i];
       }
@@ -111,7 +111,7 @@ public abstract class AbstractIncEval implements IncEval {
     return finalStates;
   }
 
-  private static void offer(KbestHeap<IncEvalState> heap, IncEvalState state,
+  private static void offer(KbestQueue<IncEvalState> heap, IncEvalState state,
       Predicate<IncEvalState> filter) {
     if (filter == null || filter.apply(state)) {
       heap.offer(state, state.getProb());

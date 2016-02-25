@@ -139,7 +139,7 @@ public class GroundedParserTrainingTest extends TestCase {
   public void testTraining() {
     List<ValueGroundedParseExample> examples = parseExamples(sentences, labels);
 
-    GroundedParserInference inf = new GroundedParserBeamSearchInference(10, 3);
+    GroundedParserInference inf = new GroundedParserBeamSearchInference(20, 3);
     GroundedParserLoglikelihoodOracle oracle = new GroundedParserLoglikelihoodOracle(family, inf);
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(100,
         1, 1, true, true, 0.0, new DefaultLogFunction());
@@ -149,6 +149,14 @@ public class GroundedParserTrainingTest extends TestCase {
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);
     GroundedParser parser = family.getModelFromParameters(parameters);
     System.out.println(family.getParameterDescription(parameters));
+    
+    for (ValueGroundedParseExample ex : examples) {
+      System.out.println(ex.getSentence());
+      List<GroundedCcgParse> parses = inf.beamSearch(parser, ex.getSentence(), initialDiagram);
+      for (GroundedCcgParse parse : parses) {
+        System.out.println(parse.getDenotation() + " " + parse.getDiagram() + " " + parse.getLogicalForm());
+      }
+    }
 
     List<GroundedCcgParse> parses = inf.beamSearch(parser, toSentence("odd"), initialDiagram);
     for (GroundedCcgParse parse : parses) {

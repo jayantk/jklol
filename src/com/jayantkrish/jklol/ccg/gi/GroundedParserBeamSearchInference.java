@@ -164,7 +164,8 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
 
       // Try evaluating entries that have the appropriate syntactic category
       // and that have not already been evaluated.
-      if (result.entry.getAdditionalInfo() == null && parser.getEval().isEvaluatable(syntax)) {
+      if (result.entry.getAdditionalInfo() == null && parser.getEval().isEvaluatable(syntax)
+          && (result.size == 1 || !result.entry.isTerminal())) {
         log.startTimer("grounded_parser/shift_reduce/initialize_continuation");
         GroundedCcgParse parse = decodeParseFromSpan(result.spanStart, result.spanEnd,
             result.chartEntryIndex, chart, parser.getCcgParser());

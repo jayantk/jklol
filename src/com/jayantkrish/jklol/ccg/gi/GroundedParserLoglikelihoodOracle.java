@@ -8,6 +8,8 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.gi.GroundedParser.State;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
@@ -19,11 +21,13 @@ public class GroundedParserLoglikelihoodOracle implements
   
   private final ParametricGroundedParser family;
   private final GroundedParserInference inference;
+  private final ExpressionSimplifier simplifier;
 
   public GroundedParserLoglikelihoodOracle(ParametricGroundedParser family,
       GroundedParserInference inference) {
     this.family = Preconditions.checkNotNull(family);
     this.inference = inference;
+    this.simplifier = ExpressionSimplifier.lambdaCalculus();
   }
   
   @Override
@@ -49,7 +53,7 @@ public class GroundedParserLoglikelihoodOracle implements
         model, sentence, diagram, null, null, log);
 
     if (unconditionalParses.size() == 0) {
-      System.out.println("unconditional search failure");
+      System.out.println("Search error (Predicted): " + sentence);
       throw new ZeroProbabilityError();      
     }
     log.stopTimer("update_gradient/input_marginal");
@@ -63,14 +67,19 @@ public class GroundedParserLoglikelihoodOracle implements
     
     List<GroundedCcgParse> conditionalParses = Lists.newArrayList();
     for (GroundedCcgParse parse : conditionalParsesInit) {
-      System.out.println(parse.getDenotation() + " " + parse.getLogicalForm() + " " + parse.getSyntacticParse());
+      Expression2 lf = parse.getLogicalForm();
+      if (lf != null) {
+        lf = simplifier.apply(lf);
+      }
+
+      System.out.println(parse.getDenotation() + " " + lf + " " + parse.getSyntacticParse());
       if (example.isCorrectDenotation(parse.getDenotation(), parse.getDiagram())) {
         conditionalParses.add(parse);
       }
     }
     
     if (conditionalParses.size() == 0) {
-      System.out.println("conditional search failure");
+      System.out.println("Search error (Correct): " + sentence);
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/output_marginal");

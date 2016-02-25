@@ -158,7 +158,7 @@ public class ContinuationIncEval extends AbstractIncEval {
   @Override
   public AmbFunctionValue lfToContinuation(Expression2 lf, Environment env) {
     lf = simplifier.apply(lf);
-    // System.out.println(lf);
+    // System.out.println("lfToContinuation: " + lf);
     Expression2 cpsLf = simplifier.apply(CpsTransform.apply(lf, Expression2.constant(FINAL_CONTINUATION)));
     // System.out.println(cpsLf);
     

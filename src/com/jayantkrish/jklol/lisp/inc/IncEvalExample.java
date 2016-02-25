@@ -11,17 +11,15 @@ public interface IncEvalExample {
   public Object getDiagram();
   
   /**
-   * Get a procedure for scoring evaluation states against
-   * the label of this example. The returned
-   * predicate returns a log probability indicating how
-   * compatible the argument is with the label.
+   * Get a procedure for assigning cost for states
+   * compared to the label of this example. The probability
+   * of a state gets multiplied with exp({@code cost}).
    */
-  public IncEvalCost getIncEvalCost();
+  public IncEvalCost getMarginCost();
 
   /**
-   * Predicate version of the cost function, returns {@code 0.0}
-   * if argument is consistent with label, otherwise it
-   * return {@code Double.NEGATIVE_INFINITY}
+   * This will typically return 0.0 for states matching the
+   * label and {@code Double.NEGATIVE_INFINITY} otherwise.
    */
-  public IncEvalCost getIncEvalCostPredicate();
+  public IncEvalCost getLabelCost();
 }

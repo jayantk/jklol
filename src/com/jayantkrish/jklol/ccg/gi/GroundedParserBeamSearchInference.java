@@ -82,7 +82,7 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
 
       // Empty the heap.
       currentBeamSize = heap.size();
-      System.out.println(currentBeamSize);
+      // System.out.println(currentBeamSize);
       heap.clear();
 
       for (int i = 0; i < currentBeamSize; i++) {

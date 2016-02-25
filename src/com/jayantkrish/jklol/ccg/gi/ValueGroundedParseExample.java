@@ -32,7 +32,12 @@ public class ValueGroundedParseExample implements GroundedParseExample {
   }
 
   @Override
-  public Predicate<State> getEvalFilter() {
+  public GroundedParseCost getMarginCost() {
+    return null;
+  }
+
+  @Override
+  public GroundedParseCost getLabelCost() {
     return null;
   }
 

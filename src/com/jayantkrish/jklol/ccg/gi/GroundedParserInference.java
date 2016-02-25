@@ -11,12 +11,12 @@ import com.jayantkrish.jklol.training.LogFunction;
 public interface GroundedParserInference {
 
   public List<GroundedCcgParse> beamSearch(GroundedParser parser, AnnotatedSentence sentence,
-      Object initialDiagram, ChartCost chartFilter, Predicate<State> evalFilter, LogFunction log);
+      Object initialDiagram, ChartCost chartFilter, GroundedParseCost evalCost, LogFunction log);
   
   public List<GroundedCcgParse> beamSearch(GroundedParser parser, AnnotatedSentence sentence,
       Object initialDiagram);
   
   public List<GroundedCcgParse> beamSearch(GroundedParser parser, AnnotatedSentence sentence,
-      Object initialDiagram, ChartCost chartFilter, Predicate<State> evalFilter);
+      Object initialDiagram, ChartCost chartFilter, GroundedParseCost evalCost);
 
 }

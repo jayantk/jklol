@@ -11,6 +11,6 @@ public interface IncEvalCost {
   * the given entry will be discarded (i.e., not included in the
   * search).
   */
-  public abstract double apply(IncEvalState state);
+  public double apply(IncEvalState state);
 
 }

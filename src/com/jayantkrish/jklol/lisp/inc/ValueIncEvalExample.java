@@ -16,20 +16,32 @@ public class ValueIncEvalExample extends AbstractIncEvalExample {
   }
 
   @Override
-  public Predicate<IncEvalState> getLabelFilter() {
-    return new ValuePredicate(labelValue);
+  public IncEvalCost getIncEvalCost() {
+    return new ValueIncEvalLoss(labelValue, false);
   }
-  
-  private static class ValuePredicate implements Predicate<IncEvalState> {
+
+  @Override
+  public IncEvalCost getIncEvalCostPredicate() {
+    return new ValueIncEvalLoss(labelValue, true);
+  }
+
+
+  private static class ValueIncEvalLoss implements IncEvalCost {
     private final Object labelValue;
+    private final boolean isPredicate;
     
-    public ValuePredicate(Object labelValue) {
+    public ValueIncEvalLoss(Object labelValue, boolean isPredicate) {
       this.labelValue = labelValue;
+      this.isPredicate = isPredicate;
     }
 
     @Override
-    public boolean apply(IncEvalState state) {
-      return state.getContinuation() != null || labelValue.equals(state.getDenotation());
+    public double apply(IncEvalState state) {
+      if (!isPredicate || state.getContinuation() != null || labelValue.equals(state.getDenotation())) {
+        return 0.0;
+      } else {
+        return Double.NEGATIVE_INFINITY;
+      }
     }
   }
 }

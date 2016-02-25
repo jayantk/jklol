@@ -11,12 +11,17 @@ public interface IncEvalExample {
   public Object getDiagram();
   
   /**
-   * Get a procedure for filtering evaluation states that are
-   * consistent with the label of this example. The returned
-   * predicate returns {@code true} if its argument is consistent
-   * with the label, and {@code false} otherwise.
-   * 
-   * @return
+   * Get a procedure for scoring evaluation states against
+   * the label of this example. The returned
+   * predicate returns a log probability indicating how
+   * compatible the argument is with the label.
    */
-  public Predicate<IncEvalState> getLabelFilter();
+  public IncEvalCost getIncEvalCost();
+
+  /**
+   * Predicate version of the cost function, returns {@code 0.0}
+   * if argument is consistent with label, otherwise it
+   * return {@code Double.NEGATIVE_INFINITY}
+   */
+  public IncEvalCost getIncEvalCostPredicate();
 }

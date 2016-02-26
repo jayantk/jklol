@@ -1,17 +1,26 @@
 package com.jayantkrish.jklol.ccg.gi;
 
-import com.google.common.base.Predicate;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
-import com.jayantkrish.jklol.ccg.gi.GroundedParser.State;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
 public interface GroundedParseExample {
 
   public AnnotatedSentence getSentence();
 
-  public Object getDiagram();  
+  public Object getDiagram();
 
-  public Predicate<State> getEvalFilter();
+  /**
+   * Get a procedure for assigning cost for states
+   * compared to the label of this example. The probability
+   * of a state gets multiplied with exp({@code cost}).
+   */
+  public GroundedParseCost getMarginCost();
+
+  /**
+   * This will typically return 0.0 for states matching the
+   * label and {@code Double.NEGATIVE_INFINITY} otherwise.
+   */
+  public GroundedParseCost getLabelCost();
 
   public ChartCost getChartFilter();
   

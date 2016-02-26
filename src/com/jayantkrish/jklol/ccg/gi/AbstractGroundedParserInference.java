@@ -18,7 +18,7 @@ public abstract class AbstractGroundedParserInference implements GroundedParserI
   
   @Override
   public List<GroundedCcgParse> beamSearch(GroundedParser parser, AnnotatedSentence sentence,
-      Object initialDiagram, ChartCost chartFilter, Predicate<State> evalFilter) {
-    return beamSearch(parser, sentence, initialDiagram, chartFilter, evalFilter, new NullLogFunction());
+      Object initialDiagram, ChartCost chartFilter, GroundedParseCost evalCost) {
+    return beamSearch(parser, sentence, initialDiagram, chartFilter, evalCost, new NullLogFunction());
   }
 }

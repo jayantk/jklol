@@ -1,12 +1,10 @@
 package com.jayantkrish.jklol.ccg.gi;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.CcgShiftReduceInference;
@@ -40,7 +38,7 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
 
   @Override
   public List<GroundedCcgParse> beamSearch(GroundedParser parser, AnnotatedSentence sentence,
-      Object initialDiagram, ChartCost chartFilter, Predicate<State> evalFilter,
+      Object initialDiagram, ChartCost chartFilter, GroundedParseCost evalCost,
       LogFunction log) {
     CcgLeftToRightChart chart = new CcgLeftToRightChart(sentence, Integer.MAX_VALUE);
     parser.getCcgParser().initializeChart(chart, sentence, chartFilter);
@@ -104,7 +102,11 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
         if (state.evalResult != null) {
           log.startTimer("grounded_parser/evaluate_continuation");
           evaluateContinuation(state, tempEvalResults, heap,
+<<<<<<< HEAD
               finishedHeap, tempStateHeap, chart, parser, evalFilter, log);
+=======
+              finishedHeap, chart, parser, evalCost, log);
+>>>>>>> 1fe20f6dd49e98ac638d79739e18d1e59554d617
           log.stopTimer("grounded_parser/evaluate_continuation");
         } else {
           log.startTimer("grounded_parser/shift_reduce");
@@ -123,8 +125,13 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
           // Ensure that we didn't discard any candidate parses due to the
           // capped temporary heap size.
           Preconditions.checkState(tempHeap.size() < TEMP_HEAP_MAX_SIZE);
+<<<<<<< HEAD
           offerParseStates(state, tempHeap, heap, finishedHeap, tempStateHeap, tempEvalResults, chart, parser,
               evalFilter, log);
+=======
+          offerParseStates(state, tempHeap, heap, finishedHeap, tempEvalResults, chart, parser,
+              evalCost, log);
+>>>>>>> 1fe20f6dd49e98ac638d79739e18d1e59554d617
           // System.out.println("shift/reducing: " + curSyntax + " " + curSpanStart + "," + curSpanEnd);
           log.stopTimer("grounded_parser/shift_reduce");
         }
@@ -133,8 +140,13 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
       tempHeap.clear();
       CcgShiftReduceInference.shiftSkipLeft(numSteps, chart, tempHeap, parser.getCcgParser(),
           lowercaseWords);
+<<<<<<< HEAD
       offerParseStates(startState, tempHeap, heap, finishedHeap, tempStateHeap, tempEvalResults, chart,
           parser, evalFilter, log);
+=======
+      offerParseStates(startState, tempHeap, heap, finishedHeap, tempEvalResults, chart,
+          parser, evalCost, log);
+>>>>>>> 1fe20f6dd49e98ac638d79739e18d1e59554d617
       numSteps++;
     }
 
@@ -154,7 +166,7 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
   private void offerParseStates(State state, SearchQueue<ShiftReduceStack> tempHeap,
       SearchQueue<State> heap, SearchQueue<State> finishedHeap, SearchQueue<State> tempStateHeap, 
       List<IncEvalState> tempEvalResults, CcgChart chart, GroundedParser parser,
-      Predicate<State> evalFilter, LogFunction log) {
+      GroundedParseCost evalCost, LogFunction log) {
     ShiftReduceStack[] tempHeapKeys = tempHeap.getItems();
     for (int j = 0; j < tempHeap.size(); j++) {
       ShiftReduceStack result = tempHeapKeys[j];
@@ -187,18 +199,18 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
             null, state.diagram, 1.0, null);
         State next = new State(result, state.diagram, null, r);
         evaluateContinuation(next, tempEvalResults, heap,
-            finishedHeap, tempStateHeap, chart, parser, evalFilter, log);
+            finishedHeap, tempStateHeap, chart, parser, evalCost, log);
         log.stopTimer("grounded_parser/shift_reduce/evaluate_continuation");
       } else {
         State next = new State(result, state.diagram, state.env, null);
-        offer(heap, finishedHeap, next, evalFilter);
+        offer(heap, finishedHeap, next, evalCost);
       }
     }
   }
 
   private void evaluateContinuation(State state, List<IncEvalState> tempEvalResults,
       SearchQueue<State> heap, SearchQueue<State> finishedHeap, SearchQueue<State> tempHeap,
-      CcgChart chart, GroundedParser parser, Predicate<State> evalFilter, LogFunction log) {
+      CcgChart chart, GroundedParser parser, GroundedParseCost evalCost, LogFunction log) {
     IncEvalState next = state.evalResult;
     while (next != null) {
       tempEvalResults.clear();
@@ -206,7 +218,7 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
       parser.getEval().evaluateContinuation(next, tempEvalResults, log);
       
       for (IncEvalState result : tempEvalResults) {
-        queueEvalState(result, state.stack, tempHeap, finishedHeap, chart, parser, evalFilter);
+        queueEvalState(result, state.stack, tempHeap, finishedHeap, chart, parser, evalCost);
       }
 
       if (tempHeap.size() == 1) {
@@ -219,13 +231,13 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
           // This state has finished evaluating and the next move
           // is a parser move.
           next = null;
-          offer(heap, finishedHeap, nextState, evalFilter);
+          offer(heap, finishedHeap, nextState, evalCost);
         }
       } else {
         int numItems = tempHeap.size();
         State[] nextStates = tempHeap.getItems();
         for (int i = 0; i < numItems; i++) {
-          offer(heap, finishedHeap, nextStates[i], evalFilter);
+          offer(heap, finishedHeap, nextStates[i], evalCost);
         }
         next = null;
       }
@@ -240,11 +252,11 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
    * @param heap
    * @param finishedHeap
    * @param chart
-   * @param evalFilter
+   * @param evalCost
    */
   private void queueEvalState(IncEvalState evalResult, ShiftReduceStack cur,
       SearchQueue<State> heap, SearchQueue<State> finishedHeap,
-      CcgChart chart, GroundedParser parser, Predicate<State> evalFilter) {
+      CcgChart chart, GroundedParser parser, GroundedParseCost evalCost) {
     if (evalResult.getContinuation() == null) {
       // Evaluation has finished (for now) and the search must switch back
       // to parsing. Create a new entry on the CCG chart representing the
@@ -264,24 +276,25 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
       if (finalEntryIndex > entryIndex) {
         ShiftReduceStack newStack = cur.previous.push(cur.spanStart, cur.spanEnd, entryIndex,
             entry, entryProb, cur.includesRootProb);
-
         State next = new State(newStack, evalResult.getDiagram(), evalResult.getEnvironment(), null);
-        offer(heap, finishedHeap, next, evalFilter);
+        offer(heap, finishedHeap, next, evalCost);
       }
     } else {
       // Evaluation is still in progress. 
       State next = new State(cur, null, null, evalResult);
-      offer(heap, finishedHeap, next, evalFilter);
+      offer(heap, finishedHeap, next, evalCost);
     }
   }
 
   private static final void offer(SearchQueue<State> heap, SearchQueue<State> finishedHeap,
-      State state, Predicate<State> filter) {
-    if (filter == null || filter.apply(state)) {
+      State state, GroundedParseCost cost) {
+    double costValue = 0.0;
+    if (cost != null) costValue = cost.apply(state);
+    if (costValue != Double.NEGATIVE_INFINITY) {
       if (state.evalResult == null && state.stack.includesRootProb) {
-        finishedHeap.offer(state, state.totalProb);
+        finishedHeap.offer(state, state.totalProb * Math.exp(costValue));
       } else {
-        heap.offer(state, state.totalProb);
+        heap.offer(state, state.totalProb * Math.exp(costValue));
       }
     }
   }

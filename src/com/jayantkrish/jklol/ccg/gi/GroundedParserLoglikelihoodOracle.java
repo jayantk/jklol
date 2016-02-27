@@ -48,14 +48,14 @@ public class GroundedParserLoglikelihoodOracle implements
     Object diagram = example.getDiagram();
     
     System.out.println(sentence);
-    
+
     // Get a distribution on executions conditioned on the label of the example.
     // Do this first because it's faster, so search errors take less time to process.
     log.startTimer("update_gradient/output_marginal");
-    Predicate<State> evalFilter = example.getEvalFilter();
+    GroundedParseCost labelCost = example.getLabelCost();
     ChartCost chartFilter = example.getChartFilter();
     List<GroundedCcgParse> conditionalParsesInit = inference.beamSearch(
-        model, sentence, diagram, chartFilter, evalFilter, log);
+        model, sentence, diagram, chartFilter, labelCost, log);
     
     List<GroundedCcgParse> conditionalParses = Lists.newArrayList();
     for (GroundedCcgParse parse : conditionalParsesInit) {
@@ -74,11 +74,12 @@ public class GroundedParserLoglikelihoodOracle implements
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/output_marginal");
-
+    
     // Get a distribution over unconditional executions.
     log.startTimer("update_gradient/input_marginal");
+    GroundedParseCost marginCost = example.getMarginCost();
     List<GroundedCcgParse> unconditionalParses = inference.beamSearch(
-        model, sentence, diagram, null, null, log);
+        model, sentence, diagram, null, marginCost, log);
 
     if (unconditionalParses.size() == 0) {
       System.out.println("Search error (Predicted): " + sentence);

@@ -94,20 +94,20 @@ public interface IncEval {
 
   /**
    * Evaluates {@code lf} to completion using a beam search and 
-   * {@code initialDiagram}. The search prunes any states for which 
-   * {@code filter} returns {@code false}.
+   * {@code initialDiagram}. The search penalizes states by
+   * log probability {@code cost} (pruned if {@code Double.NEGATIVE_INFINITY}).
    * 
    * @param lf
    * @param initialDiagram
-   * @param filter
+   * @param cost
    * @param beamSize
    * @return
    */
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
-      Predicate<IncEvalState> filter, int beamSize);
+      IncEvalCost cost, int beamSize);
 
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
-      Predicate<IncEvalState> filter, Environment initialEnv, LogFunction log,
+      IncEvalCost cost, Environment initialEnv, LogFunction log,
       int beamSize);
   
   public static class IncEvalState {

@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.ccg.gi;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Function;
@@ -102,11 +103,7 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
         if (state.evalResult != null) {
           log.startTimer("grounded_parser/evaluate_continuation");
           evaluateContinuation(state, tempEvalResults, heap,
-<<<<<<< HEAD
-              finishedHeap, tempStateHeap, chart, parser, evalFilter, log);
-=======
-              finishedHeap, chart, parser, evalCost, log);
->>>>>>> 1fe20f6dd49e98ac638d79739e18d1e59554d617
+              finishedHeap, tempStateHeap, chart, parser, evalCost, log);
           log.stopTimer("grounded_parser/evaluate_continuation");
         } else {
           log.startTimer("grounded_parser/shift_reduce");
@@ -125,13 +122,8 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
           // Ensure that we didn't discard any candidate parses due to the
           // capped temporary heap size.
           Preconditions.checkState(tempHeap.size() < TEMP_HEAP_MAX_SIZE);
-<<<<<<< HEAD
           offerParseStates(state, tempHeap, heap, finishedHeap, tempStateHeap, tempEvalResults, chart, parser,
-              evalFilter, log);
-=======
-          offerParseStates(state, tempHeap, heap, finishedHeap, tempEvalResults, chart, parser,
               evalCost, log);
->>>>>>> 1fe20f6dd49e98ac638d79739e18d1e59554d617
           // System.out.println("shift/reducing: " + curSyntax + " " + curSpanStart + "," + curSpanEnd);
           log.stopTimer("grounded_parser/shift_reduce");
         }
@@ -140,13 +132,8 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
       tempHeap.clear();
       CcgShiftReduceInference.shiftSkipLeft(numSteps, chart, tempHeap, parser.getCcgParser(),
           lowercaseWords);
-<<<<<<< HEAD
       offerParseStates(startState, tempHeap, heap, finishedHeap, tempStateHeap, tempEvalResults, chart,
-          parser, evalFilter, log);
-=======
-      offerParseStates(startState, tempHeap, heap, finishedHeap, tempEvalResults, chart,
           parser, evalCost, log);
->>>>>>> 1fe20f6dd49e98ac638d79739e18d1e59554d617
       numSteps++;
     }
 

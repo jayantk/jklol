@@ -1,6 +1,10 @@
 package com.jayantkrish.jklol.util;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import com.google.common.collect.Lists;
 
 /**
  * Heap data structure for finding the K highest-scoring
@@ -21,6 +25,10 @@ public class KbestQueue<T> implements SearchQueue<T> {
     keys = Arrays.copyOf(keyType, maxElements + 1);
     size = 0;
     this.maxElements = maxElements;
+  }
+  
+  public static <T> KbestQueue<T> create(int maxElements, T[] keyType) {
+    return new KbestQueue<T>(maxElements, keyType);
   }
 
   /**
@@ -56,6 +64,24 @@ public class KbestQueue<T> implements SearchQueue<T> {
 
   public T[] getItems() {
     return keys;
+  }
+  
+  /**
+   * Pops all of the items in this queue and places them
+   * into a list sorted in descending score order (i.e.,
+   * with the highest scoring item first). This queue
+   * will be empty after calling this method.
+   *  
+   * @param queue
+   * @return
+   */
+  public List<T> toSortedList() {
+    List<T> sortedItems = Lists.newArrayList();
+    while (size() > 0) {
+      sortedItems.add(removeMin());
+    }
+    Collections.reverse(sortedItems);
+    return sortedItems;
   }
 
   public void clear() {

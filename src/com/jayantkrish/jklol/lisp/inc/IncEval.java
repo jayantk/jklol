@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.lisp.inc;
 
 import java.util.List;
 
-import com.google.common.base.Predicate;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.gi.GroundedCcgParse;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -105,6 +104,9 @@ public interface IncEval {
    */
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       IncEvalCost cost, int beamSize);
+  
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      IncEvalCost cost, LogFunction log, int beamSize);
 
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       IncEvalCost cost, Environment initialEnv, LogFunction log,

@@ -26,13 +26,13 @@ import com.jayantkrish.jklol.util.KbestQueue;
 import com.jayantkrish.jklol.util.SearchQueue;
 import com.jayantkrish.jklol.util.SegregatedKbestQueue;
 
-public class GroundedParserBeamSearchInference extends AbstractGroundedParserInference {
+public class GroundedParserInterleavedInference extends AbstractGroundedParserInference {
   private final int beamSize;
   private final int maxStackSize;
   
   private final int TEMP_HEAP_MAX_SIZE=100000;
   
-  public GroundedParserBeamSearchInference(int beamSize, int maxStackSize) {
+  public GroundedParserInterleavedInference(int beamSize, int maxStackSize) {
     this.beamSize = beamSize;
     this.maxStackSize = maxStackSize;
   }

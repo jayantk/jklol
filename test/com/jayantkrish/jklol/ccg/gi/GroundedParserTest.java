@@ -17,7 +17,7 @@ import com.jayantkrish.jklol.lisp.inc.IncEval;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.IndexedList;
 
-public class GroundedParserTest extends TestCase {
+public abstract class GroundedParserTest extends TestCase {
 
   private static final String[] lexicon = {
     "1,N{0},1,0 num",
@@ -33,8 +33,13 @@ public class GroundedParserTest extends TestCase {
   private static final String[] ruleArray = {"DUMMY{0} BLAH{0}"};
 
   private GroundedParser parser;
+  private GroundedParserInference inf;
   
   private static final double TOLERANCE = 1e-6;
+  
+  public GroundedParserTest(GroundedParserInference inf) {
+    this.inf = inf;
+  }
   
   public void setUp() {
     ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
@@ -69,7 +74,9 @@ public class GroundedParserTest extends TestCase {
     AnnotatedSentence sentence = new AnnotatedSentence(words,
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG));
     Object initialDiagram = null;
-    GroundedParserInference inf = new GroundedParserBeamSearchInference(10, -1);
+    // GroundedParserInference inf = new GroundedParserBeamSearchInference(10, -1);
+    // GroundedParserInference inf = new GroundedParserPipelinedInference(
+    // CcgCkyInference.getDefault(100), 10, 100);
     return inf.beamSearch(parser, sentence, initialDiagram);
   }
   

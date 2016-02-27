@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.lisp.inc;
 import java.util.Collections;
 import java.util.List;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
@@ -38,6 +37,13 @@ public abstract class AbstractIncEval implements IncEval {
         new NullLogFunction(), beamSize);
   }
   
+  @Override
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      IncEvalCost cost, LogFunction log, int beamSize) {
+    return evaluateBeam(lf, initialDiagram, cost, getEnvironment(),
+        log, beamSize);
+  }
+
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       Environment initialEnv, int beamSize) {

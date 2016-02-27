@@ -11,6 +11,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
@@ -139,7 +140,9 @@ public class GroundedParserTrainingTest extends TestCase {
   public void testTraining() {
     List<ValueGroundedParseExample> examples = parseExamples(sentences, labels);
 
-    GroundedParserInference inf = new GroundedParserBeamSearchInference(20, 3);
+    // GroundedParserInference inf = new GroundedParserInterleavedInference(20, 3);
+    GroundedParserInference inf = new GroundedParserPipelinedInference(
+        CcgCkyInference.getDefault(100), 10, 100);
     GroundedParserLoglikelihoodOracle oracle = new GroundedParserLoglikelihoodOracle(family, inf);
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(100,
         1, 1, true, true, 0.0, new DefaultLogFunction());
@@ -153,12 +156,14 @@ public class GroundedParserTrainingTest extends TestCase {
     for (ValueGroundedParseExample ex : examples) {
       System.out.println(ex.getSentence());
       List<GroundedCcgParse> parses = inf.beamSearch(parser, ex.getSentence(), initialDiagram);
+      parses = parses.subList(0, Math.min(parses.size(), 10));
       for (GroundedCcgParse parse : parses) {
         System.out.println(parse.getDenotation() + " " + parse.getDiagram() + " " + parse.getLogicalForm());
       }
     }
 
     List<GroundedCcgParse> parses = inf.beamSearch(parser, toSentence("odd"), initialDiagram);
+    parses = parses.subList(0, Math.min(parses.size(), 10));
     for (GroundedCcgParse parse : parses) {
       System.out.println(parse.getDenotation() + " " + parse.getDiagram() + " " + parse.getLogicalForm());
     }

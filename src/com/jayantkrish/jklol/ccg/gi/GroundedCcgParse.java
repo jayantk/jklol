@@ -52,6 +52,24 @@ public class GroundedCcgParse extends CcgParse {
     return new GroundedCcgParse(syntax, null, null, null, heads, dependencies, probability, left,
         right, combinator, unaryRule, spanStart, spanEnd, state, null);
   }
+  
+  public static GroundedCcgParse fromCcgParse(CcgParse parse) {
+    if (parse.isTerminal()) {
+      return new GroundedCcgParse(parse.getHeadedSyntacticCategory(),
+          parse.getLexiconEntry(), parse.getWords(), parse.getPosTags(), parse.getSemanticHeads(),
+          parse.getNodeDependencies(), parse.getNodeProbability(), null, null,
+          null, parse.getUnaryRule(), parse.getSpanStart(), parse.getSpanEnd(), null, null);
+    } else {
+      GroundedCcgParse left = fromCcgParse(parse.getLeft());
+      GroundedCcgParse right = fromCcgParse(parse.getRight());
+      
+      return new GroundedCcgParse(parse.getHeadedSyntacticCategory(),
+          parse.getLexiconEntry(), parse.getWords(), parse.getPosTags(), parse.getSemanticHeads(),
+          parse.getNodeDependencies(), parse.getNodeProbability(), left, right,
+          parse.getCombinator(), parse.getUnaryRule(), parse.getSpanStart(), parse.getSpanEnd(),
+          null, null);
+    }
+  }
 
   public GroundedCcgParse getParseForSpan(int spanStart, int spanEnd) {
     if (!isTerminal()) {
@@ -133,6 +151,12 @@ public class GroundedCcgParse extends CcgParse {
     return new GroundedCcgParse(getHeadedSyntacticCategory(), getLexiconEntry(), getWords(), getPosTags(), getSemanticHeads(),
         getNodeDependencies(), getNodeProbability(), getLeft(), getRight(), getCombinator(), getUnaryRule(),
         getSpanStart(), getSpanEnd(), state, diagram);
+  }
+  
+  public GroundedCcgParse addState(IncEvalState newState, double newProb) {
+    return new GroundedCcgParse(getHeadedSyntacticCategory(), getLexiconEntry(), getWords(), getPosTags(), getSemanticHeads(),
+        getNodeDependencies(), newProb, getLeft(), getRight(), getCombinator(), getUnaryRule(),
+        getSpanStart(), getSpanEnd(), newState, diagram);
   }
 
   /**

@@ -68,6 +68,9 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
     // Temporary list of evaluation results for interfacing with IncrementalEval
     List<IncEvalState> tempEvalResults = Lists.newArrayList();
 
+    // Temporary state heap for deterministic evaluation lookahead
+    KbestQueue<State> tempStateHeap = new KbestQueue<State>(beamSize, new State[0]);
+
     // Array of elements in the current beam.
     State[] currentBeam = new State[beamSize * curMaxStackSize];
     int currentBeamSize = 0;
@@ -101,7 +104,7 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
         if (state.evalResult != null) {
           log.startTimer("grounded_parser/evaluate_continuation");
           evaluateContinuation(state, tempEvalResults, heap,
-              finishedHeap, chart, parser, evalFilter, log);
+              finishedHeap, tempStateHeap, chart, parser, evalFilter, log);
           log.stopTimer("grounded_parser/evaluate_continuation");
         } else {
           log.startTimer("grounded_parser/shift_reduce");
@@ -120,7 +123,7 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
           // Ensure that we didn't discard any candidate parses due to the
           // capped temporary heap size.
           Preconditions.checkState(tempHeap.size() < TEMP_HEAP_MAX_SIZE);
-          offerParseStates(state, tempHeap, heap, finishedHeap, tempEvalResults, chart, parser,
+          offerParseStates(state, tempHeap, heap, finishedHeap, tempStateHeap, tempEvalResults, chart, parser,
               evalFilter, log);
           // System.out.println("shift/reducing: " + curSyntax + " " + curSpanStart + "," + curSpanEnd);
           log.stopTimer("grounded_parser/shift_reduce");
@@ -130,7 +133,7 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
       tempHeap.clear();
       CcgShiftReduceInference.shiftSkipLeft(numSteps, chart, tempHeap, parser.getCcgParser(),
           lowercaseWords);
-      offerParseStates(startState, tempHeap, heap, finishedHeap, tempEvalResults, chart,
+      offerParseStates(startState, tempHeap, heap, finishedHeap, tempStateHeap, tempEvalResults, chart,
           parser, evalFilter, log);
       numSteps++;
     }
@@ -149,8 +152,9 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
   }
 
   private void offerParseStates(State state, SearchQueue<ShiftReduceStack> tempHeap,
-      SearchQueue<State> heap, SearchQueue<State> finishedHeap, List<IncEvalState> tempEvalResults,
-      CcgChart chart, GroundedParser parser, Predicate<State> evalFilter, LogFunction log) {
+      SearchQueue<State> heap, SearchQueue<State> finishedHeap, SearchQueue<State> tempStateHeap, 
+      List<IncEvalState> tempEvalResults, CcgChart chart, GroundedParser parser,
+      Predicate<State> evalFilter, LogFunction log) {
     ShiftReduceStack[] tempHeapKeys = tempHeap.getItems();
     for (int j = 0; j < tempHeap.size(); j++) {
       ShiftReduceStack result = tempHeapKeys[j];
@@ -183,7 +187,7 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
             null, state.diagram, 1.0, null);
         State next = new State(result, state.diagram, null, r);
         evaluateContinuation(next, tempEvalResults, heap,
-            finishedHeap, chart, parser, evalFilter, log);
+            finishedHeap, tempStateHeap, chart, parser, evalFilter, log);
         log.stopTimer("grounded_parser/shift_reduce/evaluate_continuation");
       } else {
         State next = new State(result, state.diagram, state.env, null);
@@ -193,26 +197,35 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
   }
 
   private void evaluateContinuation(State state, List<IncEvalState> tempEvalResults,
-      SearchQueue<State> heap, SearchQueue<State> finishedHeap, CcgChart chart,
-      GroundedParser parser, Predicate<State> evalFilter, LogFunction log) {
+      SearchQueue<State> heap, SearchQueue<State> finishedHeap, SearchQueue<State> tempHeap,
+      CcgChart chart, GroundedParser parser, Predicate<State> evalFilter, LogFunction log) {
     IncEvalState next = state.evalResult;
     while (next != null) {
       tempEvalResults.clear();
+      tempHeap.clear();
       parser.getEval().evaluateContinuation(next, tempEvalResults, log);
+      
+      for (IncEvalState result : tempEvalResults) {
+        queueEvalState(result, state.stack, tempHeap, finishedHeap, chart, parser, evalFilter);
+      }
 
-      // TODO: make the lookahead work with the filter as well.
-      // Do lookahead for any state that is deterministically evaluated.
-      if (tempEvalResults.size() == 1) {
-        IncEvalState nextInc = tempEvalResults.get(0);
-        if (nextInc.getContinuation() != null) {
+      if (tempHeap.size() == 1) {
+        // May be able to do deterministic lookahead on evaluation
+        State nextState = tempHeap.getItems()[0];
+        IncEvalState nextInc = nextState.evalResult;
+        if (nextInc != null) {
           next = nextInc;
         } else {
+          // This state has finished evaluating and the next move
+          // is a parser move.
           next = null;
-          queueEvalState(nextInc, state.stack, heap, finishedHeap, chart, parser, evalFilter);
+          offer(heap, finishedHeap, nextState, evalFilter);
         }
       } else {
-        for (IncEvalState result : tempEvalResults) {
-          queueEvalState(result, state.stack, heap, finishedHeap, chart, parser, evalFilter);
+        int numItems = tempHeap.size();
+        State[] nextStates = tempHeap.getItems();
+        for (int i = 0; i < numItems; i++) {
+          offer(heap, finishedHeap, nextStates[i], evalFilter);
         }
         next = null;
       }
@@ -246,12 +259,15 @@ public class GroundedParserBeamSearchInference extends AbstractGroundedParserInf
       int entryIndex = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
       chart.addChartEntryForSpan(entry, entryProb, spanStart, spanEnd,
           parser.getCcgParser().getSyntaxVarType());
+      int finalEntryIndex = chart.getNumChartEntriesForSpan(spanStart, spanEnd);
 
-      ShiftReduceStack newStack = cur.previous.push(cur.spanStart, cur.spanEnd, entryIndex,
-          entry, entryProb, cur.includesRootProb);
+      if (finalEntryIndex > entryIndex) {
+        ShiftReduceStack newStack = cur.previous.push(cur.spanStart, cur.spanEnd, entryIndex,
+            entry, entryProb, cur.includesRootProb);
 
-      State next = new State(newStack, evalResult.getDiagram(), evalResult.getEnvironment(), null);
-      offer(heap, finishedHeap, next, evalFilter);
+        State next = new State(newStack, evalResult.getDiagram(), evalResult.getEnvironment(), null);
+        offer(heap, finishedHeap, next, evalFilter);
+      }
     } else {
       // Evaluation is still in progress. 
       State next = new State(cur, null, null, evalResult);

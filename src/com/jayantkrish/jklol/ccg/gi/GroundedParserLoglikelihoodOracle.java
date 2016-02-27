@@ -46,19 +46,11 @@ public class GroundedParserLoglikelihoodOracle implements
       GroundedParseExample example, LogFunction log) {
     AnnotatedSentence sentence = example.getSentence();
     Object diagram = example.getDiagram();
-
-    // Get a distribution over unconditional executions.
-    log.startTimer("update_gradient/input_marginal");
-    List<GroundedCcgParse> unconditionalParses = inference.beamSearch(
-        model, sentence, diagram, null, null, log);
-
-    if (unconditionalParses.size() == 0) {
-      System.out.println("Search error (Predicted): " + sentence);
-      throw new ZeroProbabilityError();      
-    }
-    log.stopTimer("update_gradient/input_marginal");
+    
+    System.out.println(sentence);
     
     // Get a distribution on executions conditioned on the label of the example.
+    // Do this first because it's faster, so search errors take less time to process.
     log.startTimer("update_gradient/output_marginal");
     Predicate<State> evalFilter = example.getEvalFilter();
     ChartCost chartFilter = example.getChartFilter();
@@ -71,8 +63,7 @@ public class GroundedParserLoglikelihoodOracle implements
       if (lf != null) {
         lf = simplifier.apply(lf);
       }
-
-      // System.out.println(parse.getDenotation() + " " + lf + " " + parse.getSyntacticParse());
+      System.out.println(parse.getDenotation() + " " + lf + " " + parse.getSyntacticParse());
       if (example.isCorrectDenotation(parse.getDenotation(), parse.getDiagram())) {
         conditionalParses.add(parse);
       }
@@ -83,6 +74,17 @@ public class GroundedParserLoglikelihoodOracle implements
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/output_marginal");
+
+    // Get a distribution over unconditional executions.
+    log.startTimer("update_gradient/input_marginal");
+    List<GroundedCcgParse> unconditionalParses = inference.beamSearch(
+        model, sentence, diagram, null, null, log);
+
+    if (unconditionalParses.size() == 0) {
+      System.out.println("Search error (Predicted): " + sentence);
+      throw new ZeroProbabilityError();      
+    }
+    log.stopTimer("update_gradient/input_marginal");
 
     log.startTimer("update_gradient/increment_gradient");
     double unconditionalPartitionFunction = getPartitionFunction(unconditionalParses);

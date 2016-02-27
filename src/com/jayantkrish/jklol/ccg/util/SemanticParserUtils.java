@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.ccg.util;
 
-import java.util.Collections;
 import java.util.List;
 
 import com.jayantkrish.jklol.ccg.CcgExample;
@@ -8,14 +7,12 @@ import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.DependencyStructure;
-import com.jayantkrish.jklol.ccg.LexiconEntryInfo;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
-import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplificationException;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
+import com.jayantkrish.jklol.util.CountAccumulator;
 
 public class SemanticParserUtils {
 
@@ -45,45 +42,31 @@ public class SemanticParserUtils {
     for (CcgExample example : testExamples) {
       Expression2 correctLf = simplifier.apply(example.getLogicalForm());
 
-      CcgParse parse = inferenceAlg.getBestParse(parser, example.getSentence(), null, log);
+      List<CcgParse> parses = inferenceAlg.beamSearch(parser, example.getSentence(), null, log);
+      CountAccumulator<Expression2> lfProbs = estimateLfProbabilities(parses, simplifier);
+      
       if (print) {
         System.out.println("====");
         System.out.println("SENT: " + example.getSentence().getWords());
       }
-      if (parse != null) {
+      if (lfProbs.keySet().size() > 0) {
         int correct = 0;
         int correctLfPossible = 0;
-        Expression2 lf = null;
+        Expression2 lf = lfProbs.getSortedKeys().get(0);
 
-        try {
-          lf = simplifier.apply(parse.getLogicalForm());
-          correct = comparator.equals(lf, correctLf) ? 1 : 0;
-        } catch (ExpressionSimplificationException e) {
-          // Make lf print out as null.
-          lf = Expression2.constant("null");
-        }
+        correct = comparator.equals(lf, correctLf) ? 1 : 0;
 
-        List<CcgParse> parses = inferenceAlg.beamSearch(parser, example.getSentence(), null, log);
         List<CcgParse> conditionalParses = CcgLoglikelihoodOracle.filterParsesByLogicalForm(
             correctLf, comparator, parses);
         if (conditionalParses.size() > 0) {
           correctLfPossible = 1;
         }
 
-        List<DependencyStructure> deps = parse.getAllDependencies();
-        List<LexiconEntryInfo> entries = parse.getSpannedLexiconEntries();
-
         if (print) {
           System.out.println("PREDICTED: " + lf);
           System.out.println("TRUE:      " + correctLf);
-          System.out.println("DEPS: " + deps);
           System.out.println("CORRECT: " + correct);
           System.out.println("LICENSED: " + correctLfPossible);
-          System.out.println("LEX: ");
-
-          for (int i = 0; i < entries.size(); i++) {
-            System.out.println("   " + entries.get(i));
-          }
         }
 
         numCorrect += correct;
@@ -91,8 +74,8 @@ public class SemanticParserUtils {
         numParsed++;
         
         if (exampleLossAccumulator != null) {
-          exampleLossAccumulator.add(new SemanticParserExampleLoss(example, lf, deps,
-              entries, correctLf, true, correct > 0, correctLfPossible > 0));
+          exampleLossAccumulator.add(new SemanticParserExampleLoss(example, lf,
+              correctLf, true, correct > 0, correctLfPossible > 0));
         }
       } else {
         if (print) {
@@ -101,7 +84,6 @@ public class SemanticParserUtils {
 
         if (exampleLossAccumulator != null) {
           exampleLossAccumulator.add(new SemanticParserExampleLoss(example, null,
-              Collections.<DependencyStructure>emptyList(), Collections.<LexiconEntryInfo>emptyList(),
               correctLf, false, false, false));
         }
       }
@@ -120,6 +102,21 @@ public class SemanticParserUtils {
     return new SemanticParserLoss(testExamples.size(), numParsed,
         numCorrect, numCorrectLfPossible);
   }
+  
+  public static CountAccumulator<Expression2> estimateLfProbabilities(List<CcgParse> parses,
+      ExpressionSimplifier simplifier) {
+    CountAccumulator<Expression2> probs = CountAccumulator.create();
+
+    for (CcgParse parse : parses) {
+      Expression2 lf = parse.getLogicalForm();
+      if (lf != null) {
+        lf = simplifier.apply(lf);
+        probs.increment(lf, parse.getSubtreeProbability());
+      } 
+    }
+    return probs;
+  }
+
   
   private SemanticParserUtils() {
     // Prevent instantiation.

@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.lisp.AmbEval.WrappedBuiltinFunction;
 import com.jayantkrish.jklol.lisp.ConsValue;
 import com.jayantkrish.jklol.lisp.ConstantValue;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.lisp.EvalContext;
 import com.jayantkrish.jklol.lisp.FunctionValue;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.LispUtil;
@@ -95,7 +96,8 @@ public class ContinuationIncEval extends AbstractIncEval {
     log.startTimer("evaluate_continuation/apply");
     int finalNumValues = finalContinuation.denotations.size();
     int queueNumValues = queueContinuations.getContinuations().size();
-    currentContinuation.apply(Arrays.asList(state.getDiagram()), env, null);
+    currentContinuation.apply(Arrays.asList(state.getDiagram()),
+        new EvalContext(log), null);
     log.stopTimer("evaluate_continuation/apply");
     
     log.startTimer("evaluate_continuation/queue");
@@ -190,7 +192,7 @@ public class ContinuationIncEval extends AbstractIncEval {
     }
 
     @Override
-    public Object apply(List<Object> args, Environment env) {
+    public Object apply(List<Object> args, EvalContext context) {
       LispUtil.checkArgument(args.size() == 2 || args.size() == 3,
           "Expected 2 or 3 arguments, got: %s", args);
       AmbFunctionValue continuation = (AmbFunctionValue) args.get(0);
@@ -202,7 +204,7 @@ public class ContinuationIncEval extends AbstractIncEval {
       LispUtil.checkState(nextOtherArgs.size() == nextDenotations.size());
       
       return new WrappedBuiltinFunction(new FunctionValue() {
-        public Object apply(List<Object> args2, Environment env2) {
+        public Object apply(List<Object> args2, EvalContext context2) {
           LispUtil.checkArgument(args2.size() == 1 || args2.size() == 2,
               "Expected 1 or 2 arguments, got: %s", args2);
           List<Object> nextDiagrams = ConsValue.consListToList(args2.get(0));
@@ -213,7 +215,7 @@ public class ContinuationIncEval extends AbstractIncEval {
             Object diagram = nextDiagrams.get(i);
             // System.out.println("queue: " + continuation + " " + denotation + " " + diagram);
           
-            continuations.add(continuation.apply(Arrays.asList(denotation), env, null));
+            continuations.add(continuation.apply(Arrays.asList(denotation), context, null));
             denotations.add(denotation);
             diagrams.add(diagram);
             otherArgs.add(nextOtherArgs.get(i));
@@ -249,14 +251,14 @@ public class ContinuationIncEval extends AbstractIncEval {
       this.diagrams = Lists.newArrayList();
     }
 
-    public Object apply(List<Object> args1, Environment env1) {
+    public Object apply(List<Object> args1, EvalContext context1) {
       LispUtil.checkArgument(args1.size() == 1);
       Object denotation = args1.get(0);
       
       // System.out.println("final denotation: " + denotation);
 
       return new WrappedBuiltinFunction(new FunctionValue() {
-        public Object apply(List<Object> args2, Environment env2) {
+        public Object apply(List<Object> args2, EvalContext context2) {
           LispUtil.checkArgument(args2.size() == 1);
           Object diagram = args2.get(0);
           

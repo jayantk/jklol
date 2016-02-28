@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class LispEval {
@@ -19,6 +20,9 @@ public class LispEval {
   }
 
   public EvalResult eval(SExpression expression, Environment environment) {
+    // TODO: deal with this context in a reasonable way.
+    EvalContext context = new EvalContext(new NullLogFunction());
+
     if (expression.isConstant()) {
       // The expression may be a primitive type or a variable.
       String constantString = expression.getConstant();
@@ -90,7 +94,7 @@ public class LispEval {
         // Primitive procedures.
         FunctionValue functionToApply = (FunctionValue) values.get(0);
         List<Object> arguments = values.subList(1, values.size());
-        Object result = functionToApply.apply(arguments, environment);
+        Object result = functionToApply.apply(arguments, context);
         return new EvalResult(result);
       } else if (values.get(0) instanceof LambdaValue) {
         // Lambda procedures.

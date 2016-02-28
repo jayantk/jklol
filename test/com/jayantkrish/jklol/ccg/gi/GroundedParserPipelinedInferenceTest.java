@@ -6,6 +6,6 @@ public class GroundedParserPipelinedInferenceTest extends GroundedParserTest {
 
   public GroundedParserPipelinedInferenceTest() {
     super(new GroundedParserPipelinedInference(CcgCkyInference.getDefault(100),
-        10, 100, Runtime.getRuntime().availableProcessors()));
+        10, 100, 1));
   }
 }

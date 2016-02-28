@@ -7,6 +7,7 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.lisp.EvalContext;
 import com.jayantkrish.jklol.lisp.FunctionValue;
 import com.jayantkrish.jklol.lisp.LispEval;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
@@ -54,7 +55,7 @@ public class CcgPatternUtils {
 
   private static class WordPatternFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       List<String> args = Lists.newArrayList();
       for (Object argumentValue : argumentValues) {
         args.add((String) argumentValue);
@@ -65,7 +66,7 @@ public class CcgPatternUtils {
   
   private static class SyntaxPatternFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(
           (String) argumentValues.get(0));
@@ -75,7 +76,7 @@ public class CcgPatternUtils {
 
   private static class LogicalFormPatternFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       return new CcgLogicalFormPattern((String) argumentValues.get(0));
     }
@@ -83,7 +84,7 @@ public class CcgPatternUtils {
 
   private static class AndPatternFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       List<CcgPattern> childPatterns = Lists.newArrayList();
       for (Object argumentValue : argumentValues) {
         childPatterns.add((CcgPattern) argumentValue);
@@ -94,7 +95,7 @@ public class CcgPatternUtils {
 
   private static class OrPatternFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       List<CcgPattern> childPatterns = Lists.newArrayList();
       for (Object argumentValue : argumentValues) {
         childPatterns.add((CcgPattern) argumentValue);
@@ -113,7 +114,7 @@ public class CcgPatternUtils {
     }
 
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       return new CcgSubtreePattern((CcgPattern) argumentValues.get(0), matchSameHead,
           returnWholeTree);
@@ -122,7 +123,7 @@ public class CcgPatternUtils {
 
   private static class CombinatorPatternFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 2);
       return new CcgCombinatorPattern((CcgPattern) argumentValues.get(0),
           (CcgPattern) argumentValues.get(1));
@@ -131,7 +132,7 @@ public class CcgPatternUtils {
 
   private static class SmallestPatternFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       return new CcgSmallestPattern((CcgPattern) argumentValues.get(0));
     }
@@ -139,7 +140,7 @@ public class CcgPatternUtils {
 
   private static class ReplaceSyntaxPatternFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       return new CcgReplaceSyntaxPattern(HeadedSyntacticCategory.parseFrom(
           (String) argumentValues.get(0)));
@@ -148,7 +149,7 @@ public class CcgPatternUtils {
 
   private static class IfPatternFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 2);
       return new CcgIfPattern((CcgPattern) argumentValues.get(0),
           (CcgPattern) argumentValues.get(1));
@@ -157,7 +158,7 @@ public class CcgPatternUtils {
 
   private static class RecursivePatternFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       return new CcgRecursivePattern((CcgPattern) argumentValues.get(0));
     }
@@ -165,7 +166,7 @@ public class CcgPatternUtils {
 
   private static class NotPatternFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       return new CcgNotPattern((CcgPattern) argumentValues.get(0));
     }
@@ -173,7 +174,7 @@ public class CcgPatternUtils {
 
   private static class PropagateFeaturesPatternFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 0);
       return new CcgPropagateFeaturesPattern();
     }

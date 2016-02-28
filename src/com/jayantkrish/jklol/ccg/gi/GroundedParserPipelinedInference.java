@@ -30,6 +30,8 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
   
   public GroundedParserPipelinedInference(CcgInference ccgInference,
       int numLogicalForms, int evalBeamSize, int numThreads) {
+    Preconditions.checkArgument(numThreads == 1,
+        "A thread safety issue currently does not permit the use of multiple threads.");
     this.ccgInference = Preconditions.checkNotNull(ccgInference);
     this.numLogicalForms = numLogicalForms;
     this.evalBeamSize = evalBeamSize;
@@ -49,8 +51,16 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
     IncEval eval = parser.getEval();
     IncEvalCost evalCost = cost != null ? new WrapperIncEvalCost(cost) : null;
     EvalMapper mapper = new EvalMapper(eval, initialDiagram, evalCost, log, evalBeamSize);
-    MapReduceExecutor executor = new LocalMapReduceExecutor(numThreads, parsesToEvaluate.size());
-    List<List<GroundedCcgParse>> parseResults = executor.map(ccgParses, mapper);
+    List<List<GroundedCcgParse>> parseResults = null;
+    if (numThreads == 1) {
+      parseResults = Lists.newArrayList();
+      for (CcgParse parse : ccgParses) {
+        parseResults.add(mapper.apply(parse));
+      }
+    } else {
+      MapReduceExecutor executor = new LocalMapReduceExecutor(numThreads, parsesToEvaluate.size());
+      parseResults = executor.map(ccgParses, mapper);
+    }
 
     KbestQueue<GroundedCcgParse> parses = KbestQueue.create(numLogicalForms * evalBeamSize,
         new GroundedCcgParse[0]);

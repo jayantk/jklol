@@ -32,15 +32,15 @@ import com.jayantkrish.jklol.util.Assignment;
 public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionValue, Example<List<Object>, Object>> {
 
   private final AmbFunctionValue family;
-  private final Environment environment;
+  private final EvalContext context;
   private final ParameterSpec parameterSpec;
 
   private final MarginalCalculator marginalCalculator;
 
-  public AmbLispLoglikelihoodOracle(AmbFunctionValue family, Environment environment,
+  public AmbLispLoglikelihoodOracle(AmbFunctionValue family, EvalContext context,
       ParameterSpec parameterSpec, MarginalCalculator marginalCalculator) {
     this.family = Preconditions.checkNotNull(family);
-    this.environment = Preconditions.checkNotNull(environment);
+    this.context = Preconditions.checkNotNull(context);
     this.parameterSpec = Preconditions.checkNotNull(parameterSpec);
     this.marginalCalculator = Preconditions.checkNotNull(marginalCalculator);
   }
@@ -49,7 +49,7 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
   public AmbFunctionValue instantiateModel(SufficientStatistics parameters) {
     ParametricBfgBuilder newBuilder = new ParametricBfgBuilder(true);
     Object value = family.apply(Arrays.<Object>asList(new SpecAndParameters(parameterSpec, parameters)),
-        environment, newBuilder);
+        context, newBuilder);
     Preconditions.checkState(value instanceof AmbFunctionValue);    
     return (AmbFunctionValue) value;
   }
@@ -70,7 +70,7 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
     log.stopTimer("compute_gradient/input_eval/builder");
 
     log.startTimer("compute_gradient/input_eval/eval");
-    Object inputApplicationResult = instantiatedModel.apply(example.getInput(), environment, newBuilder);
+    Object inputApplicationResult = instantiatedModel.apply(example.getInput(), context, newBuilder);
     log.stopTimer("compute_gradient/input_eval/eval");
 
     log.startTimer("compute_gradient/input_eval/fg");
@@ -94,7 +94,7 @@ public class AmbLispLoglikelihoodOracle implements GradientOracle<AmbFunctionVal
       log.startTimer("compute_gradient/output_eval");
       log.startTimer("compute_gradient/output_eval/eval");
 
-      outputCondition.apply(Arrays.asList(inputApplicationResult), environment, newBuilder);
+      outputCondition.apply(Arrays.asList(inputApplicationResult), context, newBuilder);
       log.stopTimer("compute_gradient/output_eval/eval");
 
       log.startTimer("compute_gradient/output_eval/fg");

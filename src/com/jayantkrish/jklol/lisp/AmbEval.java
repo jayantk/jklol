@@ -98,6 +98,8 @@ public class AmbEval {
         return new EvalResult(primitiveValue);
       } else {
         // Variable name
+        // TODO: these environment lookups could be slow because they go up
+        // the parent environment chain.
         return new EvalResult(environment.getValue(expression.getConstantIndex(), symbolTable));
       }
     } else {

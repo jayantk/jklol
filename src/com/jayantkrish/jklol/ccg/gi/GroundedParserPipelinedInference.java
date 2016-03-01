@@ -7,6 +7,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
+import com.jayantkrish.jklol.ccg.ShiftReduceStack;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.gi.GroundedParser.State;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -83,7 +84,7 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
 
     @Override
     public double apply(IncEvalState state) {
-      State parserState = new State(null, null, null, state);
+      State parserState = new State(ShiftReduceStack.empty(), null, null, state);
       return evalCost.apply(parserState);
     }
   }

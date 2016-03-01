@@ -120,7 +120,7 @@ public class ParametricLinearClassifierFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public ClassifierFactor getModelFromParameters(SufficientStatistics parameters) {
+  public LinearClassifierFactor getModelFromParameters(SufficientStatistics parameters) {
     return new LinearClassifierFactor(inputVar, outputVars, conditionalVars, featureDictionary, 
         getWeightTensorFromStatistics(parameters));
   }

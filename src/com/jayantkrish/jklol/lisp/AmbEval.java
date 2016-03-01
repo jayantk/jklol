@@ -98,9 +98,10 @@ public class AmbEval {
         return new EvalResult(primitiveValue);
       } else {
         // Variable name
-        // TODO: these environment lookups could be slow because they go up
-        // the parent environment chain.
-        return new EvalResult(environment.getValue(expression.getConstantIndex(), symbolTable));
+        // context.getLog().startTimer("amb_eval/environment_get_value");
+        Object value = environment.getValue(expression.getConstantIndex(), symbolTable);
+        // context.getLog().stopTimer("amb_eval/environment_get_value");
+        return new EvalResult(value);
       }
     } else {
       List<SExpression> subexpressions = expression.getSubexpressions();
@@ -116,7 +117,11 @@ public class AmbEval {
         case LAMBDA_SYMBOL_INDEX:
           // Create and return a function value representing this function.
           LispUtil.checkArgument(subexpressions.size() >= 3, "Invalid lambda expression arguments: %s", subexpressions);
-          return new EvalResult(makeLambda(subexpressions.get(1), subexpressions.subList(2, subexpressions.size()), environment));
+          // context.getLog().startTimer("amb_eval/make_lambda");
+          EvalResult result = new EvalResult(makeLambda(subexpressions.get(1),
+              subexpressions.subList(2, subexpressions.size()), environment));
+          // context.getLog().stopTimer("amb_eval/make_lambda");
+          return result;
 
         case QUOTE_SYMBOL_INDEX:
           LispUtil.checkArgument(subexpressions.size() == 2, "Invalid quote arguments: %s", subexpressions);
@@ -553,7 +558,8 @@ public class AmbEval {
     List<Object> argumentValues = values.subList(1, values.size());
     if (functionObject instanceof AmbFunctionValue) {
       AmbFunctionValue function = (AmbFunctionValue) functionObject;
-      return new EvalResult(function.apply(argumentValues, context, gfgBuilder));
+      EvalResult result = new EvalResult(function.apply(argumentValues, context, gfgBuilder));
+      return result;
     } else if (functionObject instanceof AmbValue) {
       // TODO: This gets messed up if the called functions themselves modify gfgBuilder.
       AmbValue functionAmb = ((AmbValue) functionObject);
@@ -822,12 +828,24 @@ public class AmbEval {
 
     @Override
     public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder gfgBuilder) {
+      // Try to short circuit the computation if no amb values are given
+      boolean noAmbValues = true;
+      for (int i = 0; i < argumentValues.size(); i++) {
+        if (argumentValues.get(i) instanceof AmbValue) {
+          noAmbValues = false;
+          break;
+        }
+      }
+      
+      if (noAmbValues) {
+        return baseFunction.apply(argumentValues, context);
+      }
+      
       // Default case: perform function application.
       List<List<Object>> inputVarValues = Lists.newArrayList();
       List<VariableNumMap> inputVars = Lists.newArrayList();
       VariableNumMap ambVars = VariableNumMap.EMPTY;
       int[] sizes = new int[argumentValues.size()];
-      boolean noAmbValues = true;
       for (int i = 0; i < argumentValues.size(); i++) {
         Object value = argumentValues.get(i);
         if (value instanceof AmbValue) {
@@ -836,21 +854,11 @@ public class AmbEval {
           sizes[i] = ambValue.getPossibleValues().size();
           ambVars = ambVars.union(ambValue.getVar());
           inputVars.add(ambValue.getVar());
-          noAmbValues = false;
         } else {
           inputVarValues.add(Lists.newArrayList(value));
           sizes[i] = 1;
           inputVars.add(null);
         }
-      }
-      
-      if (noAmbValues) {
-        // Short-circuit the more complex computation for efficiency.
-        List<Object> arguments = Lists.newArrayList();
-        for (List<Object> valueList : inputVarValues) {
-          arguments.add(Iterables.getOnlyElement(valueList));
-        }
-        return baseFunction.apply(arguments, context);
       }
 
       // Apply the function to every possible combination of 

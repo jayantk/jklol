@@ -56,7 +56,7 @@ public class IncEvalTrainingTest extends TestCase {
   };
 
   private static final String[] evalDefs = {
-    "(define amb-k (k l) (lambda (world) ((queue-k k l) (map (lambda (x) world) l)) ))",
+    "(define amb-k (k l) (lambda (world) ((queue-k k l) (list world)) ))",
     "(define score-k (k v tag) (lambda (world) ((queue-k k (list v) (list tag)) (list world)) ))",
     "(define resolve-k (k name) (lambda (world) (let ((v (alist-get name world))) (if (not (nil? v)) ((k v) world) ((amb-k (lambda (v) (cput-k k name v)) (alist-get name possible-values)) world)))))",
   };

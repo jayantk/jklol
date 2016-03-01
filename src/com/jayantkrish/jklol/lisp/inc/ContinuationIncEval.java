@@ -43,9 +43,14 @@ public class ContinuationIncEval extends AbstractIncEval {
   
   protected final ExpressionParser<SExpression> sexpParser;
   protected final SExpression defs;
+  
+  protected final int finalContinuationIndex;
+  protected final int queueContinuationsIndex;
+  protected final int continuationHolderIndex;
 
   public static final String FINAL_CONTINUATION = "final-continuation";
   public static final String QUEUE_CONTINUATIONS = "queue-k";
+  public static final String CONTINUATION_HOLDER = "continuation-inc-eval:continuation-holder";
   
   public ContinuationIncEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier,
       SExpression defs) {
@@ -55,6 +60,10 @@ public class ContinuationIncEval extends AbstractIncEval {
 
     this.sexpParser = ExpressionParser.sExpression(eval.getSymbolTable());
     this.defs = defs;
+    
+    this.finalContinuationIndex = this.eval.getSymbolTable().add(FINAL_CONTINUATION);
+    this.queueContinuationsIndex = this.eval.getSymbolTable().add(QUEUE_CONTINUATIONS);
+    this.continuationHolderIndex = this.eval.getSymbolTable().add(CONTINUATION_HOLDER);
   }
   
   public AmbEval getEval() {
@@ -84,23 +93,23 @@ public class ContinuationIncEval extends AbstractIncEval {
   public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue,
       LogFunction log) {
     Environment env = state.getEnvironment();
-    FinalContinuation finalContinuation = (FinalContinuation) ((WrappedBuiltinFunction)
-        env.getValue(FINAL_CONTINUATION, eval.getSymbolTable())).getBaseFunction();
-    QueueContinuations queueContinuations = (QueueContinuations) ((WrappedBuiltinFunction)
-        env.getValue(QUEUE_CONTINUATIONS, eval.getSymbolTable())).getBaseFunction();
+    ContinuationHolder holder = (ContinuationHolder) env.getValue(
+        continuationHolderIndex, eval.getSymbolTable());
+    FinalContinuation finalContinuation = holder.finalContinuation;
+    QueueContinuations queueContinuations = holder.queueContinuations;
     AmbFunctionValue currentContinuation = (AmbFunctionValue) state.getContinuation();
     
     // System.out.println("evaluating: " + state.getContinuation());
     // System.out.println("diagram: " + state.getDiagram());
     
-    log.startTimer("evaluate_continuation/apply");
+    // log.startTimer("evaluate_continuation/apply");
     int finalNumValues = finalContinuation.denotations.size();
     int queueNumValues = queueContinuations.getContinuations().size();
     currentContinuation.apply(Arrays.asList(state.getDiagram()),
         new EvalContext(log), null);
-    log.stopTimer("evaluate_continuation/apply");
+    // log.stopTimer("evaluate_continuation/apply");
     
-    log.startTimer("evaluate_continuation/queue");
+    // log.startTimer("evaluate_continuation/queue");
     for (int i = finalNumValues; i < finalContinuation.denotations.size(); i++) {
       Object denotation = finalContinuation.denotations.get(i);
       Object diagram = finalContinuation.diagrams.get(i);
@@ -122,7 +131,7 @@ public class ContinuationIncEval extends AbstractIncEval {
           denotation, diagram, otherArg, log);
       resultQueue.add(next);
     }
-    log.stopTimer("evaluate_continuation/queue");
+    // log.stopTimer("evaluate_continuation/queue");
   }
 
   /**
@@ -139,10 +148,12 @@ public class ContinuationIncEval extends AbstractIncEval {
   @Override
   public Environment getEnvironment() {
     Environment continuationEnv = Environment.extend(env);
-    continuationEnv.bindName(FINAL_CONTINUATION, new WrappedBuiltinFunction(new FinalContinuation()),
-        eval.getSymbolTable());
-    continuationEnv.bindName(QUEUE_CONTINUATIONS, new WrappedBuiltinFunction(new QueueContinuations()),
-        eval.getSymbolTable());
+    FinalContinuation finalContinuation = new FinalContinuation();
+    QueueContinuations queueContinuations = new QueueContinuations();
+    ContinuationHolder holder = new ContinuationHolder(finalContinuation, queueContinuations);
+    continuationEnv.bindName(finalContinuationIndex, new WrappedBuiltinFunction(finalContinuation));
+    continuationEnv.bindName(queueContinuationsIndex, new WrappedBuiltinFunction(queueContinuations));
+    continuationEnv.bindName(continuationHolderIndex, holder);
 
     if (defs != null) {
       eval.eval(defs, continuationEnv, null);
@@ -199,26 +210,41 @@ public class ContinuationIncEval extends AbstractIncEval {
       List<Object> nextDenotations = ConsValue.consListToList(args.get(1));
       
       List<Object> nextOtherArgs = (args.size() == 3) ?
-          ConsValue.consListToList(args.get(2)) :
-          Collections.nCopies(nextDenotations.size(), null);
-      LispUtil.checkState(nextOtherArgs.size() == nextDenotations.size());
+          ConsValue.consListToList(args.get(2)) : null;
+      LispUtil.checkState(nextOtherArgs == null ||
+          nextOtherArgs.size() == nextDenotations.size());
       
       return new WrappedBuiltinFunction(new FunctionValue() {
         public Object apply(List<Object> args2, EvalContext context2) {
           LispUtil.checkArgument(args2.size() == 1 || args2.size() == 2,
               "Expected 1 or 2 arguments, got: %s", args2);
           List<Object> nextDiagrams = ConsValue.consListToList(args2.get(0));
-          LispUtil.checkState(nextDiagrams.size() == nextDenotations.size());
+          
+          if (nextDiagrams.size() == 1 && nextDenotations.size() > 1) {
+            nextDiagrams = Collections.nCopies(nextDenotations.size(), nextDiagrams.get(0));
+          }
+          List<Object> myNextDenotations = nextDenotations;
+          if (myNextDenotations.size() == 1 && nextDiagrams.size() > 1) {
+            myNextDenotations = Collections.nCopies(nextDiagrams.size(), myNextDenotations.get(0));
+          }
+          
+          LispUtil.checkState(nextDiagrams.size() == myNextDenotations.size());
           
           for (int i = 0; i < nextDiagrams.size(); i++) {
-            Object denotation = nextDenotations.get(i);
+            Object denotation = myNextDenotations.get(i);
             Object diagram = nextDiagrams.get(i);
             // System.out.println("queue: " + continuation + " " + denotation + " " + diagram);
           
             continuations.add(continuation.apply(Arrays.asList(denotation), context, null));
             denotations.add(denotation);
             diagrams.add(diagram);
-            otherArgs.add(nextOtherArgs.get(i));
+
+            // TODO: technically this should also be resized up if necessary.
+            if (nextOtherArgs != null) {
+              otherArgs.add(nextOtherArgs.get(i));
+            } else {
+              otherArgs.add(null);
+            }
           }
           return ConstantValue.NIL;
         }
@@ -270,6 +296,17 @@ public class ContinuationIncEval extends AbstractIncEval {
           return ConstantValue.NIL;
         }
       });
+    }
+  }
+  
+  private static class ContinuationHolder {
+    public final FinalContinuation finalContinuation;
+    public final QueueContinuations queueContinuations;
+
+    public ContinuationHolder(FinalContinuation finalContinuation,
+        QueueContinuations queueContinuations) {
+      this.finalContinuation = finalContinuation;
+      this.queueContinuations = queueContinuations;
     }
   }
 }

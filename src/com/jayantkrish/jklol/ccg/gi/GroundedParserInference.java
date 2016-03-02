@@ -2,9 +2,7 @@ package com.jayantkrish.jklol.ccg.gi;
 
 import java.util.List;
 
-import com.google.common.base.Predicate;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
-import com.jayantkrish.jklol.ccg.gi.GroundedParser.State;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
 

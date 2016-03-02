@@ -4,11 +4,8 @@ import java.util.Collection;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
-import com.jayantkrish.jklol.ccg.gi.GroundedParser.State;
-import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -48,22 +45,26 @@ public class GroundedParserLoglikelihoodOracle implements
     Object diagram = example.getDiagram();
     
     System.out.println(sentence);
+    System.out.println(diagram);
 
     // Get a distribution on executions conditioned on the label of the example.
     // Do this first because it's faster, so search errors take less time to process.
     log.startTimer("update_gradient/output_marginal");
     GroundedParseCost labelCost = example.getLabelCost();
     ChartCost chartFilter = example.getChartFilter();
+    System.out.println("conditional evaluations:");
     List<GroundedCcgParse> conditionalParsesInit = inference.beamSearch(
         model, sentence, diagram, chartFilter, labelCost, log);
     
     List<GroundedCcgParse> conditionalParses = Lists.newArrayList();
     for (GroundedCcgParse parse : conditionalParsesInit) {
+      /*
       Expression2 lf = parse.getLogicalForm();
       if (lf != null) {
         lf = simplifier.apply(lf);
       }
       System.out.println(parse.getDenotation() + " " + lf + " " + parse.getSyntacticParse());
+      */
       if (example.isCorrectDenotation(parse.getDenotation(), parse.getDiagram())) {
         conditionalParses.add(parse);
       }
@@ -78,6 +79,7 @@ public class GroundedParserLoglikelihoodOracle implements
     // Get a distribution over unconditional executions.
     log.startTimer("update_gradient/input_marginal");
     GroundedParseCost marginCost = example.getMarginCost();
+    System.out.println("unconditional evaluations:");
     List<GroundedCcgParse> unconditionalParses = inference.beamSearch(
         model, sentence, diagram, null, marginCost, log);
 

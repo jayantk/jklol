@@ -31,7 +31,8 @@ import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.HashingFeatureVectorGenerator;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOptimizer;
-import com.jayantkrish.jklol.training.StochasticGradientTrainer;
+import com.jayantkrish.jklol.training.Lbfgs;
+import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class GroundedParserTrainingTest extends TestCase {
@@ -86,16 +87,12 @@ public class GroundedParserTrainingTest extends TestCase {
   private static final String[] sentences = {
     "a even",
     "a even",
-    "1 times 1 equals 1",
-    "2 plus 1 equals a odd",
-    "a even plus 1 equals a odd",
+    "1 plus 1 equals 2",
   };
 
   private static final String[] labels = {
     "2",
     "4",
-    "#t",
-    "#t",
     "#t",
   };
 
@@ -142,30 +139,45 @@ public class GroundedParserTrainingTest extends TestCase {
 
     // GroundedParserInference inf = new GroundedParserInterleavedInference(20, 3);
     GroundedParserInference inf = new GroundedParserPipelinedInference(
-        CcgCkyInference.getDefault(100), 10, 100, 1);
+        CcgCkyInference.getDefault(100), ExpressionSimplifier.lambdaCalculus(), 10, 100);
     GroundedParserLoglikelihoodOracle oracle = new GroundedParserLoglikelihoodOracle(family, inf);
+    /*
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(100,
         1, 1, true, true, 0.0, new DefaultLogFunction());
-    // GradientOptimizer trainer = new Lbfgs(100, 10, 0.0, new DefaultLogFunction());
+    */
+    GradientOptimizer trainer = new Lbfgs(100, 10, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);
     GroundedParser parser = family.getModelFromParameters(parameters);
     System.out.println(family.getParameterDescription(parameters));
     
-    for (ValueGroundedParseExample ex : examples) {
-      System.out.println(ex.getSentence());
-      List<GroundedCcgParse> parses = inf.beamSearch(parser, ex.getSentence(), initialDiagram);
-      parses = parses.subList(0, Math.min(parses.size(), 10));
-      for (GroundedCcgParse parse : parses) {
-        System.out.println(parse.getDenotation() + " " + parse.getDiagram() + " " + parse.getLogicalForm());
-      }
+    assertDistributionEquals(parser, inf, "a even", new Object[] {2, 4}, new double[] {0.5, 0.5});
+    assertDistributionEquals(parser, inf, "a even plus 1", new Object[] {3, 5}, new double[] {0.5, 0.5});
+  }
+  
+  private void assertDistributionEquals(GroundedParser parser, GroundedParserInference inf,
+      String sentence, Object[] values, double[] probs) {
+    Preconditions.checkArgument(values.length == probs.length);
+    
+    AnnotatedSentence annotatedSentence = toSentence(sentence);
+    List<GroundedCcgParse> parses = inf.beamSearch(parser, annotatedSentence, initialDiagram);
+    CountAccumulator<Object> denotationProbs = CountAccumulator.create();
+    System.out.println(sentence);
+    int numToPrint = 10;
+    int numPrinted = 0;
+    for (GroundedCcgParse parse : parses) {
+      if (numPrinted < numToPrint) {
+        System.out.println("   " + parse.getDenotation() + " " + parse.getSubtreeProbability()
+            + " " + parse.getLogicalForm());
+        numPrinted++;
+      } 
+      denotationProbs.increment(parse.getDenotation(), parse.getSubtreeProbability());
     }
 
-    List<GroundedCcgParse> parses = inf.beamSearch(parser, toSentence("odd"), initialDiagram);
-    parses = parses.subList(0, Math.min(parses.size(), 10));
-    for (GroundedCcgParse parse : parses) {
-      System.out.println(parse.getDenotation() + " " + parse.getDiagram() + " " + parse.getLogicalForm());
+    for (int i = 0; i < values.length; i++) {
+      double actual = denotationProbs.getProbability(values[i]);
+      assertEquals(probs[i], actual, TOLERANCE);
     }
   }
   

@@ -56,6 +56,7 @@ public class IncEvalLoglikelihoodOracle implements
     
     if (conditionalStates.size() == 0) {
       System.out.println("conditional search failure");
+      System.out.println(example.getDiagram());
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/output_marginal");

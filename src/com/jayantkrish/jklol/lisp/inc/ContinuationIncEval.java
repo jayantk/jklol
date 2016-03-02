@@ -228,7 +228,8 @@ public class ContinuationIncEval extends AbstractIncEval {
             myNextDenotations = Collections.nCopies(nextDiagrams.size(), myNextDenotations.get(0));
           }
           
-          LispUtil.checkState(nextDiagrams.size() == myNextDenotations.size());
+          LispUtil.checkState(nextDiagrams.size() == myNextDenotations.size(),
+              "Unequal number of diagrams and denotations. Got: %s %s", nextDiagrams, myNextDenotations);
           
           for (int i = 0; i < nextDiagrams.size(); i++) {
             Object denotation = myNextDenotations.get(i);

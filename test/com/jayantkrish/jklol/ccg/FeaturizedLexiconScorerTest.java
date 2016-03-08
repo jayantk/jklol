@@ -95,7 +95,7 @@ public class FeaturizedLexiconScorerTest extends TestCase {
 
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, comparator, inferenceAlg, 0.0);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10,
-        1, 1, false, true, 0.0, new DefaultLogFunction());
+        1, 1, false, true, Double.MAX_VALUE, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);

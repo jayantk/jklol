@@ -67,27 +67,38 @@ public class StochasticGradientTrainerTest extends TestCase {
 	}
 	
 	public void testTrainUnregularized() {
-	  runTest(new StochasticGradientTrainer(100, 9, 1.0, true, false, new DefaultLogFunction()));
+	  runTest(new StochasticGradientTrainer(100, 9, 1.0, true, false, Double.MAX_VALUE,
+	      new DefaultLogFunction()));
 	}
 
 	public void testTrainL2() {
-	  runTest(StochasticGradientTrainer.createWithL2Regularization(100, 3, 1, true, false, 1, new DefaultLogFunction()));
+	  runTest(StochasticGradientTrainer.createWithL2Regularization(100, 3, 1, true, false,
+	      Double.MAX_VALUE, 1, new DefaultLogFunction()));
 	}
 	
 	public void testTrainStochasticL2() {
-	  runTest(StochasticGradientTrainer.createWithStochasticL2Regularization(100, 3, 0.01, true, false, 1, 0.1, new DefaultLogFunction()));
+	  runTest(StochasticGradientTrainer.createWithStochasticL2Regularization(100, 3, 0.01, true, false,
+	      Double.MAX_VALUE, 1, 0.1, new DefaultLogFunction()));
 	}
 	
+	public void testTrainL2Clipped() {
+	  runTest(StochasticGradientTrainer.createWithL2Regularization(100, 3, 1, true, false,
+	      0.5, 1, new DefaultLogFunction()));
+	}
+
 	public void testTrainAdagrad() {
-	  runTest(StochasticGradientTrainer.createAdagrad(100, 3, 0.01, true, false, 0, 0, new DefaultLogFunction()));
+	  runTest(StochasticGradientTrainer.createAdagrad(100, 3, 0.01, true, false, Double.MAX_VALUE,
+	      0, 0, new DefaultLogFunction()));
 	}
 
 	public void testTrainAdagradL2() {
-	  runTest(StochasticGradientTrainer.createAdagrad(100, 3, 0.01, true, false, 1, 1, new DefaultLogFunction()));
+	  runTest(StochasticGradientTrainer.createAdagrad(100, 3, 0.01, true, false, Double.MAX_VALUE,
+	      1, 1, new DefaultLogFunction()));
 	}
 
 	public void testTrainAdagradStochasticL2() {
-	  runTest(StochasticGradientTrainer.createAdagrad(100, 3, 0.01, true, false, 1, 0.1, new DefaultLogFunction()));
+	  runTest(StochasticGradientTrainer.createAdagrad(100, 3, 0.01, true, false, Double.MAX_VALUE,
+	      1, 0.1, new DefaultLogFunction()));
 	}
 
 	public void testL2Sag() {
@@ -95,19 +106,23 @@ public class StochasticGradientTrainerTest extends TestCase {
 	}
 
 	public void testTrainL1() {
-	  runTest(StochasticGradientTrainer.createWithL1Regularization(100, 3, 0.01, true, false, 0.1, new DefaultLogFunction()));
+	  runTest(StochasticGradientTrainer.createWithL1Regularization(100, 3, 0.01, true, false,
+	      Double.MAX_VALUE, 0.1, new DefaultLogFunction()));
 	}
 	
 	public void testTrainL2Averaged() {
-	  runTest(StochasticGradientTrainer.createWithL2Regularization(100, 3, 0.01, true, true, 1, new DefaultLogFunction()));
+	  runTest(StochasticGradientTrainer.createWithL2Regularization(100, 3, 0.01, true, true,
+	      Double.MAX_VALUE, 1, new DefaultLogFunction()));
 	}
 	
 	public void testTrainStochasticL2Averaged() {
-	  runTest(StochasticGradientTrainer.createWithStochasticL2Regularization(100, 3, 0.01, true, true, 1, 0.1, new DefaultLogFunction()));
+	  runTest(StochasticGradientTrainer.createWithStochasticL2Regularization(100, 3, 0.01,
+	      true, true, Double.MAX_VALUE, 1, 0.1, new DefaultLogFunction()));
 	}
 
 	public void testTrainL1Averaged() {
-	  runTest(StochasticGradientTrainer.createWithL1Regularization(100, 3, 0.01, true, true, 0.1, new DefaultLogFunction()));
+	  runTest(StochasticGradientTrainer.createWithL1Regularization(100, 3, 0.01, true, true,
+	      Double.MAX_VALUE, 0.1, new DefaultLogFunction()));
 	}
 
 	private void runTest(GradientOptimizer trainer) {

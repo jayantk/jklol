@@ -142,9 +142,9 @@ public class GroundedParserTrainingTest extends TestCase {
     GroundedParserInference inf = new GroundedParserPipelinedInference(
         CcgCkyInference.getDefault(100), ExpressionSimplifier.lambdaCalculus(), 10, 100);
     GroundedParserLoglikelihoodOracle oracle = new GroundedParserLoglikelihoodOracle(family, inf);
-    GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(4,
-        1, 1, true, true, 0.0, new DefaultLogFunction());
-    // GradientOptimizer trainer = new Lbfgs(100, 10, 0.0, new DefaultLogFunction());
+    // GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(1000,
+    // 1, 1, true, true, Double.MAX_VALUE, 0.0, new DefaultLogFunction());
+    GradientOptimizer trainer = new Lbfgs(100, 10, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);

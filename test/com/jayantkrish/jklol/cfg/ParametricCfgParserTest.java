@@ -130,7 +130,7 @@ public class ParametricCfgParserTest extends TestCase {
       GradientOracle<CfgParser, CfgExample> oracle) {
 
     StochasticGradientTrainer trainer = new StochasticGradientTrainer(
-        10 * TRAINING_DATA.length, 1, 1.0, true, false, new DefaultLogFunction());
+        10 * TRAINING_DATA.length, 1, 1.0, true, false, Double.MAX_VALUE, new DefaultLogFunction());
 
     SufficientStatistics parameters = trainer.train(oracle,
         oracle.initializeGradient(), trainingData);

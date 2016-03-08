@@ -100,6 +100,7 @@ public abstract class AbstractCli {
   protected OptionSpec<Void> sgdNoReturnAveragedParameters;
   protected OptionSpec<Double> sgdL2Regularization;
   protected OptionSpec<Double> sgdRegularizationFrequency;
+  protected OptionSpec<Double> sgdClipGradients;
   protected OptionSpec<Void> sgdAdagrad;
 
   // LBFGS options.
@@ -265,6 +266,8 @@ public abstract class AbstractCli {
       sgdRegularizationFrequency = parser.accepts("regularizationFrequency",
           "Fraction of iterations on which to apply regularization. Must be between 0 and 1")
           .withRequiredArg().ofType(Double.class).defaultsTo(1.0);
+      sgdClipGradients = parser.accepts("clipGradients", "Clip gradients to a max l2 norm of the given value.")
+          .withRequiredArg().ofType(Double.class).defaultsTo(Double.MAX_VALUE);
       sgdAdagrad = parser.accepts("adagrad", "Use the adagrad algorithm for stochastic gradient descent.");
     }
 
@@ -388,13 +391,13 @@ public abstract class AbstractCli {
     if (!parsedOptions.has(sgdAdagrad)) {
       trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
           numIterations, batchSize, initialStepSize, !parsedOptions.has(sgdNoDecayStepSize),
-          !parsedOptions.has(sgdNoReturnAveragedParameters), l2Regularization,
-          parsedOptions.valueOf(sgdRegularizationFrequency), log);
+          !parsedOptions.has(sgdNoReturnAveragedParameters), parsedOptions.valueOf(sgdClipGradients),
+          l2Regularization, parsedOptions.valueOf(sgdRegularizationFrequency), log);
     } else {
       trainer = StochasticGradientTrainer.createAdagrad(
           numIterations, batchSize, initialStepSize, !parsedOptions.has(sgdNoDecayStepSize),
-          !parsedOptions.has(sgdNoReturnAveragedParameters), l2Regularization,
-          parsedOptions.valueOf(sgdRegularizationFrequency), log);
+          !parsedOptions.has(sgdNoReturnAveragedParameters), parsedOptions.valueOf(sgdClipGradients),
+          l2Regularization, parsedOptions.valueOf(sgdRegularizationFrequency), log);
     }
 
     return trainer;

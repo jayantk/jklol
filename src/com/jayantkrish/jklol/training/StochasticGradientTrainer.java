@@ -28,9 +28,12 @@ public class StochasticGradientTrainer implements GradientOptimizer {
   private final double stepSize;
   private final boolean decayStepSize;
   private final Regularizer regularizer;
-
+  
   private final boolean returnAveragedParameters;
   private final boolean adaGrad;
+
+  // Gradients are clipped to at most maxGradientNorm 
+  private final double maxGradientNorm;
 
   // Factor used to discount earlier observations in the moving average
   // estimates of the gradient norm and objective value. Smaller values
@@ -44,10 +47,13 @@ public class StochasticGradientTrainer implements GradientOptimizer {
    * @param batchSize
    * @param stepSize
    * @param decayStepSize
+   * @param returnAveragedParameters
+   * @param maxGradientNorm
    * @param log
    */
   public StochasticGradientTrainer(long numIterations, int batchSize,
-      double stepSize, boolean decayStepSize, boolean returnAveragedParameters, LogFunction log) {
+      double stepSize, boolean decayStepSize, boolean returnAveragedParameters,
+      double maxGradientNorm, LogFunction log) {
     this.numIterations = numIterations;
     this.batchSize = batchSize;
     this.log = (log != null) ? log : new NullLogFunction();
@@ -56,9 +62,10 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     this.decayStepSize = decayStepSize;
     this.returnAveragedParameters = returnAveragedParameters;
     this.adaGrad = false;
+    this.maxGradientNorm = maxGradientNorm;
     this.regularizer = new StochasticL2Regularizer(0.0, 0.0);
   }
-
+  
   /**
    * Regularized stochastic gradient descent, using {@code regularizer}.
    * 
@@ -66,12 +73,15 @@ public class StochasticGradientTrainer implements GradientOptimizer {
    * @param batchSize
    * @param stepSize
    * @param decayStepSize
+   * @param returnAveragedParameters
+   * @param adaGrad
+   * @param maxGradientNorm
    * @param regularizer
    * @param log
    */
   public StochasticGradientTrainer(long numIterations, int batchSize,
       double stepSize, boolean decayStepSize, boolean returnAveragedParameters, boolean adaGrad,
-      Regularizer regularizer, LogFunction log) {
+      double maxGradientNorm, Regularizer regularizer, LogFunction log) {
     this.numIterations = numIterations;
     this.batchSize = batchSize;
     this.log = (log != null) ? log : new NullLogFunction();
@@ -80,33 +90,38 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     this.decayStepSize = decayStepSize;
     this.returnAveragedParameters = returnAveragedParameters;
     this.adaGrad = adaGrad;
+    this.maxGradientNorm = maxGradientNorm;
     this.regularizer = regularizer;
   }
 
   public static StochasticGradientTrainer createWithL2Regularization(long numIterations, int batchSize,
-      double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double l2Penalty, LogFunction log) {
+      double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double maxGradientNorm,
+      double l2Penalty, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize,
-        returnAveragedParameters, false, new StochasticL2Regularizer(l2Penalty, 1.0), log);
+        returnAveragedParameters, false, maxGradientNorm, new StochasticL2Regularizer(l2Penalty, 1.0), log);
   }
 
   public static StochasticGradientTrainer createWithStochasticL2Regularization(long numIterations,
-      int batchSize, double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double l2Penalty,
-      double regularizationFrequency, LogFunction log) {
+      int batchSize, double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double maxGradientNorm,
+      double l2Penalty, double regularizationFrequency, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, 
-        returnAveragedParameters, false, new StochasticL2Regularizer(l2Penalty, regularizationFrequency), log);
+        returnAveragedParameters, false, maxGradientNorm,
+        new StochasticL2Regularizer(l2Penalty, regularizationFrequency), log);
   }
 
   public static StochasticGradientTrainer createAdagrad(long numIterations,
       int batchSize, double stepSize, boolean decayStepSize, boolean returnAveragedParameters,
-      double l2Penalty, double regularizationFrequency, LogFunction log) {
+      double maxGradientNorm, double l2Penalty, double regularizationFrequency, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize, 
-        returnAveragedParameters, true, new AdagradL2Regularizer(l2Penalty, regularizationFrequency), log);
+        returnAveragedParameters, true, maxGradientNorm,
+        new AdagradL2Regularizer(l2Penalty, regularizationFrequency), log);
   }
 
   public static StochasticGradientTrainer createWithL1Regularization(long numIterations, int batchSize,
-      double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double l1Penalty, LogFunction log) {
+      double stepSize, boolean decayStepSize, boolean returnAveragedParameters, double maxGradientNorm,
+      double l1Penalty, LogFunction log) {
     return new StochasticGradientTrainer(numIterations, batchSize, stepSize, decayStepSize,
-        returnAveragedParameters, false, new L1Regularizer(l1Penalty), log);
+        returnAveragedParameters, false, maxGradientNorm, new L1Regularizer(l1Penalty), log);
   }
 
   @Override
@@ -167,7 +182,13 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       if (batchSize > 1) {
         gradient.multiply(1.0 / batchSize);
       }
-
+      
+      // Clip gradient if necessary.
+      gradientL2 = gradient.getL2Norm();
+      if (gradientL2 > maxGradientNorm) {
+        gradient.multiply(maxGradientNorm / gradientL2);
+        gradientL2 = maxGradientNorm;
+      }
       log.stopTimer("compute_gradient_(serial)");
 
       log.startTimer("parameter_update");
@@ -179,7 +200,6 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       log.stopTimer("parameter_update");
 
       log.startTimer("compute_statistics");
-      gradientL2 = gradient.getL2Norm();
       double objectiveValue = gradientAccumulator.getObjectiveValue() / batchSize;
       exponentiallyWeightedUpdateNorm = gradientL2 
           + (MOVING_AVG_DISCOUNT * exponentiallyWeightedUpdateNorm);

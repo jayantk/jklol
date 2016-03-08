@@ -474,7 +474,7 @@ public class AmbEval {
     }
 
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createAdagrad(
-        trainingData.size() * epochs, 1, 1, true, false, l2Penalty, l2Frequency,
+        trainingData.size() * epochs, 1, 1, true, false, Double.MAX_VALUE, l2Penalty, l2Frequency,
         new DefaultLogFunction(10000, false));
 
     SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getParameters(), trainingData);
@@ -525,7 +525,8 @@ public class AmbEval {
     }
 
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
-        trainingData.size() * epochs, 1, 1, true, true, l2Penalty, l2Frequency, new NullLogFunction());
+        trainingData.size() * epochs, 1, 1, true, true, Double.MAX_VALUE, l2Penalty,
+        l2Frequency, new NullLogFunction());
 
     SufficientStatistics parameters = trainer.train(oracle,
         parameterSpec.getParameters(), trainingData);

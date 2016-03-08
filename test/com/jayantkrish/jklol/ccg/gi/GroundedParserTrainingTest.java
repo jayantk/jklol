@@ -32,6 +32,7 @@ import com.jayantkrish.jklol.preprocessing.HashingFeatureVectorGenerator;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.Lbfgs;
+import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -85,15 +86,15 @@ public class GroundedParserTrainingTest extends TestCase {
   };
   
   private static final String[] sentences = {
-    "a even",
-    "a even",
     "1 plus 1 equals 2",
+    "a even",
+    "a even",
   };
 
   private static final String[] labels = {
+    "#t",
     "2",
     "4",
-    "#t",
   };
 
   private static final String[] ruleArray = {"DUMMY{0} BLAH{0}"};
@@ -141,11 +142,9 @@ public class GroundedParserTrainingTest extends TestCase {
     GroundedParserInference inf = new GroundedParserPipelinedInference(
         CcgCkyInference.getDefault(100), ExpressionSimplifier.lambdaCalculus(), 10, 100);
     GroundedParserLoglikelihoodOracle oracle = new GroundedParserLoglikelihoodOracle(family, inf);
-    /*
-    GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(100,
+    GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(4,
         1, 1, true, true, 0.0, new DefaultLogFunction());
-    */
-    GradientOptimizer trainer = new Lbfgs(100, 10, 0.0, new DefaultLogFunction());
+    // GradientOptimizer trainer = new Lbfgs(100, 10, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);

@@ -6,6 +6,7 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -58,15 +59,14 @@ public class GroundedParserLoglikelihoodOracle implements
     
     List<GroundedCcgParse> conditionalParses = Lists.newArrayList();
     for (GroundedCcgParse parse : conditionalParsesInit) {
-      /*
       Expression2 lf = parse.getLogicalForm();
       if (lf != null) {
         lf = simplifier.apply(lf);
       }
-      System.out.println(parse.getDenotation() + " " + lf + " " + parse.getSyntacticParse());
-      */
+
       if (example.isCorrectDenotation(parse.getDenotation(), parse.getDiagram())) {
         conditionalParses.add(parse);
+        // System.out.println(parse.getSubtreeProbability() + " " + lf + " " + parse.getSyntacticParse());
       }
     }
     
@@ -82,7 +82,7 @@ public class GroundedParserLoglikelihoodOracle implements
     System.out.println("unconditional evaluations:");
     List<GroundedCcgParse> unconditionalParses = inference.beamSearch(
         model, sentence, diagram, null, marginCost, log);
-
+    
     if (unconditionalParses.size() == 0) {
       System.out.println("Search error (Predicted): " + sentence);
       throw new ZeroProbabilityError();      

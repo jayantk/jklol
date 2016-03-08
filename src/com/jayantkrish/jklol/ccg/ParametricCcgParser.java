@@ -876,6 +876,8 @@ public class ParametricCcgParser implements ParametricFamily<CcgParser> {
         parameterList.getStatisticByName(UNARY_RULE_PARAMETERS), numFeatures));
     sb.append(headedBinaryRuleFamily.getParameterDescription(
         parameterList.getStatisticByName(HEADED_SYNTAX_PARAMETERS), numFeatures));
+
+    sb.append("root:\n");
     sb.append(rootSyntaxFamily.getParameterDescription(
         parameterList.getStatisticByName(ROOT_SYNTAX_PARAMETERS), numFeatures));
     sb.append(headedRootSyntaxFamily.getParameterDescription(

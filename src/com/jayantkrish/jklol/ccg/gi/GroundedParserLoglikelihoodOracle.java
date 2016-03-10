@@ -103,6 +103,8 @@ public class GroundedParserLoglikelihoodOracle implements
     }
     log.stopTimer("update_gradient/increment_gradient");
 
+    // System.out.println(family.getParameterDescription(gradient));
+    
     // Note that the returned loglikelihood is an approximation because
     // inference is approximate.
     return Math.log(conditionalPartitionFunction) - Math.log(unconditionalPartitionFunction);

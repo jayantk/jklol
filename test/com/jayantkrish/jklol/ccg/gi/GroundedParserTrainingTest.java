@@ -32,7 +32,6 @@ import com.jayantkrish.jklol.preprocessing.HashingFeatureVectorGenerator;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.Lbfgs;
-import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -52,6 +51,8 @@ public class GroundedParserTrainingTest extends TestCase {
     "a,NP{0}/N{0},(lambda (values) (amb-k values)),0 a",
     "equals,((S{0}\\NP{1}){0}/NP{2}){0},(lambda (x y) (=-k x y)),0 equals",
     "x,N{0},(resolve-k ~\"x~\")",
+    "foo,N{0},(rpred-k ~\"even~\"),0 foo",
+    "foo,N{0},3,0 foo"
 //    "1_or_2,N{0},1,0 num",
 //    "1_or_2,N{0},2,0 num",
   };
@@ -89,12 +90,14 @@ public class GroundedParserTrainingTest extends TestCase {
     "1 plus 1 equals 2",
     "a even",
     "a even",
+    "foo",
   };
 
   private static final String[] labels = {
     "#t",
     "2",
     "4",
+    "3",
   };
 
   private static final String[] ruleArray = {"DUMMY{0} BLAH{0}"};
@@ -107,7 +110,7 @@ public class GroundedParserTrainingTest extends TestCase {
   private Environment env;
   private AmbEval ambEval;
   
-  private static final double TOLERANCE = 1e-6;
+  private static final double TOLERANCE = 1e-3;
   
   public void setUp() {
     ParametricCcgParser ccgFamily = ParametricCcgParser.parseFromLexicon(Arrays.asList(lexicon),
@@ -151,6 +154,7 @@ public class GroundedParserTrainingTest extends TestCase {
     GroundedParser parser = family.getModelFromParameters(parameters);
     System.out.println(family.getParameterDescription(parameters));
     
+    assertDistributionEquals(parser, inf, "foo", new Object[] {3}, new double[] {1.0});
     assertDistributionEquals(parser, inf, "a even", new Object[] {2, 4}, new double[] {0.5, 0.5});
     assertDistributionEquals(parser, inf, "a even plus 1", new Object[] {3, 5}, new double[] {0.5, 0.5});
   }

@@ -152,7 +152,7 @@ public class StochasticGradientTrainer implements GradientOptimizer {
     GradientEvaluation gradientAccumulator = null;
     // This is an attempt at estimating how much the parameters are still
     // changing.
-    double exponentiallyWeightedUpdateNorm = stepSize;
+    double exponentiallyWeightedUpdateNorm = 0.0;
     double exponentiallyWeightedObjectiveValue = 0.0;
     double exponentiallyWeightedDenom = 0.0;
     int totalSearchErrors = 0;
@@ -182,18 +182,19 @@ public class StochasticGradientTrainer implements GradientOptimizer {
       if (batchSize > 1) {
         gradient.multiply(1.0 / batchSize);
       }
-      
-      // Clip gradient if necessary.
-      gradientL2 = gradient.getL2Norm();
-      if (gradientL2 > maxGradientNorm) {
-        gradient.multiply(maxGradientNorm / gradientL2);
-        gradientL2 = maxGradientNorm;
-      }
       log.stopTimer("compute_gradient_(serial)");
 
       log.startTimer("parameter_update");
       // Apply regularization and take a gradient step.
       double currentStepSize = decayStepSize ? (stepSize / Math.sqrt(i + 2)) : stepSize;
+      
+      // Clip gradient if necessary.
+      gradientL2 = gradient.getL2Norm();
+      if (gradientL2 * currentStepSize > maxGradientNorm) {
+        gradient.multiply(maxGradientNorm / (gradientL2 * currentStepSize));
+        gradientL2 = maxGradientNorm / currentStepSize;
+      }
+      
       regularizer.apply(gradient, initialParameters, gradientSumSquares, currentStepSize);
 
       // System.out.println(initialParameters);

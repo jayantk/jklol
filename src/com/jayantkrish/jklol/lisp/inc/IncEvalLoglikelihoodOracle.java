@@ -4,7 +4,6 @@ import java.util.Collection;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
@@ -56,7 +55,9 @@ public class IncEvalLoglikelihoodOracle implements
     
     if (conditionalStates.size() == 0) {
       System.out.println("conditional search failure");
-      System.out.println(example.getDiagram());
+      System.out.println("   " + example.getLogicalForm());
+      System.out.println("   " + example.getDiagram());
+      System.out.println("   " + example);
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/output_marginal");

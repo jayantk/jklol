@@ -58,7 +58,7 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
     
     Multimap<Expression2, CcgParse> lfMap = HashMultimap.create();
     CountAccumulator<Expression2> lfProbs = CountAccumulator.create();
-    aggregateParsesByLogicalForm(ccgParses, lfMap, lfProbs);
+    aggregateParsesByLogicalForm(ccgParses, lfMap, lfProbs, simplifier);
     
     List<Expression2> sortedLfs = lfProbs.getSortedKeys();
 
@@ -90,8 +90,8 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
     return parses;
   }
   
-  private void aggregateParsesByLogicalForm(List<CcgParse> parses, Multimap<Expression2, CcgParse> map,
-      CountAccumulator<Expression2> probs) {
+  public static void aggregateParsesByLogicalForm(List<CcgParse> parses, Multimap<Expression2, CcgParse> map,
+      CountAccumulator<Expression2> probs, ExpressionSimplifier simplifier) {
     for (CcgParse parse : parses) {
       Expression2 lf = parse.getLogicalForm();
       if (lf != null) {

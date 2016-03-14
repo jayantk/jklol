@@ -1,6 +1,7 @@
 package com.jayantkrish.jklol.lisp.inc;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -17,10 +18,12 @@ import com.jayantkrish.jklol.lisp.AmbEval.WrappedBuiltinFunction;
 import com.jayantkrish.jklol.lisp.ConsValue;
 import com.jayantkrish.jklol.lisp.ConstantValue;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.lisp.EvalContext;
 import com.jayantkrish.jklol.lisp.FunctionValue;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.LispUtil;
 import com.jayantkrish.jklol.lisp.SExpression;
+import com.jayantkrish.jklol.training.LogFunction;
 
 /**
  * Incremental evaluation oracle for a nondeterministic lambda
@@ -40,9 +43,14 @@ public class ContinuationIncEval extends AbstractIncEval {
   
   protected final ExpressionParser<SExpression> sexpParser;
   protected final SExpression defs;
+  
+  protected final int finalContinuationIndex;
+  protected final int queueContinuationsIndex;
+  protected final int continuationHolderIndex;
 
   public static final String FINAL_CONTINUATION = "final-continuation";
   public static final String QUEUE_CONTINUATIONS = "queue-k";
+  public static final String CONTINUATION_HOLDER = "continuation-inc-eval:continuation-holder";
   
   public ContinuationIncEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier,
       SExpression defs) {
@@ -52,6 +60,10 @@ public class ContinuationIncEval extends AbstractIncEval {
 
     this.sexpParser = ExpressionParser.sExpression(eval.getSymbolTable());
     this.defs = defs;
+    
+    this.finalContinuationIndex = this.eval.getSymbolTable().add(FINAL_CONTINUATION);
+    this.queueContinuationsIndex = this.eval.getSymbolTable().add(QUEUE_CONTINUATIONS);
+    this.continuationHolderIndex = this.eval.getSymbolTable().add(CONTINUATION_HOLDER);
   }
   
   public AmbEval getEval() {
@@ -78,38 +90,48 @@ public class ContinuationIncEval extends AbstractIncEval {
   }
 
   @Override
-  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue) {
+  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue,
+      LogFunction log) {
     Environment env = state.getEnvironment();
-    FinalContinuation finalContinuation = (FinalContinuation) ((WrappedBuiltinFunction)
-        env.getValue(FINAL_CONTINUATION, eval.getSymbolTable())).getBaseFunction();
-    QueueContinuations queueContinuations = (QueueContinuations) ((WrappedBuiltinFunction)
-        env.getValue(QUEUE_CONTINUATIONS, eval.getSymbolTable())).getBaseFunction();
+    ContinuationHolder holder = (ContinuationHolder) env.getValue(
+        continuationHolderIndex, eval.getSymbolTable());
+    FinalContinuation finalContinuation = holder.finalContinuation;
+    QueueContinuations queueContinuations = holder.queueContinuations;
     AmbFunctionValue currentContinuation = (AmbFunctionValue) state.getContinuation();
     
     // System.out.println("evaluating: " + state.getContinuation());
     // System.out.println("diagram: " + state.getDiagram());
     
+    // log.startTimer("evaluate_continuation/apply");
     int finalNumValues = finalContinuation.denotations.size();
     int queueNumValues = queueContinuations.getContinuations().size();
-    currentContinuation.apply(Arrays.asList(state.getDiagram()), env, null);
+    currentContinuation.apply(Arrays.asList(state.getDiagram()),
+        new EvalContext(log), null);
+    // log.stopTimer("evaluate_continuation/apply");
     
+    // log.startTimer("evaluate_continuation/queue");
     for (int i = finalNumValues; i < finalContinuation.denotations.size(); i++) {
       Object denotation = finalContinuation.denotations.get(i);
       Object diagram = finalContinuation.diagrams.get(i);
-      IncEvalState next = nextState(state, null, Environment.extend(env), denotation, diagram);
+      IncEvalState next = nextState(state, null, Environment.extend(env),
+          denotation, diagram, null, log);
       resultQueue.add(next);
     }
 
     List<Object> continuations = queueContinuations.getContinuations();
     List<Object> denotations = queueContinuations.getDenotations();
     List<Object> diagrams = queueContinuations.getDiagrams();
+    List<Object> otherArgs = queueContinuations.getOtherArgs();
     for (int i = queueNumValues; i < continuations.size(); i++) {
       Object continuation = continuations.get(i);
       Object denotation = denotations.get(i);
       Object diagram = diagrams.get(i);
-      IncEvalState next = nextState(state, continuation, Environment.extend(env), denotation, diagram);
+      Object otherArg = otherArgs.get(i);
+      IncEvalState next = nextState(state, continuation, Environment.extend(env),
+          denotation, diagram, otherArg, log);
       resultQueue.add(next);
     }
+    // log.stopTimer("evaluate_continuation/queue");
   }
 
   /**
@@ -119,17 +141,19 @@ public class ContinuationIncEval extends AbstractIncEval {
    * @return
    */
   protected IncEvalState nextState(IncEvalState prev, Object continuation, Environment env, Object denotation,
-      Object diagram) {
+      Object diagram, Object otherArgs, LogFunction log) {
     return new IncEvalState(continuation, env, denotation, diagram, 1.0 * prev.getProb(), null);
   }
 
   @Override
   public Environment getEnvironment() {
     Environment continuationEnv = Environment.extend(env);
-    continuationEnv.bindName(FINAL_CONTINUATION, new WrappedBuiltinFunction(new FinalContinuation()),
-        eval.getSymbolTable());
-    continuationEnv.bindName(QUEUE_CONTINUATIONS, new WrappedBuiltinFunction(new QueueContinuations()),
-        eval.getSymbolTable());
+    FinalContinuation finalContinuation = new FinalContinuation();
+    QueueContinuations queueContinuations = new QueueContinuations();
+    ContinuationHolder holder = new ContinuationHolder(finalContinuation, queueContinuations);
+    continuationEnv.bindName(finalContinuationIndex, new WrappedBuiltinFunction(finalContinuation));
+    continuationEnv.bindName(queueContinuationsIndex, new WrappedBuiltinFunction(queueContinuations));
+    continuationEnv.bindName(continuationHolderIndex, holder);
 
     if (defs != null) {
       eval.eval(defs, continuationEnv, null);
@@ -147,7 +171,7 @@ public class ContinuationIncEval extends AbstractIncEval {
   @Override
   public AmbFunctionValue lfToContinuation(Expression2 lf, Environment env) {
     lf = simplifier.apply(lf);
-    // System.out.println(lf);
+    // System.out.println("lfToContinuation: " + lf);
     Expression2 cpsLf = simplifier.apply(CpsTransform.apply(lf, Expression2.constant(FINAL_CONTINUATION)));
     // System.out.println(cpsLf);
     
@@ -169,33 +193,59 @@ public class ContinuationIncEval extends AbstractIncEval {
     private final List<Object> continuations;
     private final List<Object> denotations;
     private final List<Object> diagrams;
+    private final List<Object> otherArgs;
 
     public QueueContinuations() {
       this.continuations = Lists.newArrayList();
       this.denotations = Lists.newArrayList();
       this.diagrams = Lists.newArrayList();
+      this.otherArgs = Lists.newArrayList();
     }
 
     @Override
-    public Object apply(List<Object> args, Environment env) {
-      LispUtil.checkArgument(args.size() == 2);
+    public Object apply(List<Object> args, EvalContext context) {
+      LispUtil.checkArgument(args.size() == 2 || args.size() == 3,
+          "Expected 2 or 3 arguments, got: %s", args);
       AmbFunctionValue continuation = (AmbFunctionValue) args.get(0);
       List<Object> nextDenotations = ConsValue.consListToList(args.get(1));
       
+      List<Object> nextOtherArgs = (args.size() == 3) ?
+          ConsValue.consListToList(args.get(2)) : null;
+      LispUtil.checkState(nextOtherArgs == null ||
+          nextOtherArgs.size() == nextDenotations.size());
+      
       return new WrappedBuiltinFunction(new FunctionValue() {
-        public Object apply(List<Object> args2, Environment env2) {
-          LispUtil.checkArgument(args2.size() == 1, "Expected 1 argument, got: %s", args2);
+        public Object apply(List<Object> args2, EvalContext context2) {
+          LispUtil.checkArgument(args2.size() == 1 || args2.size() == 2,
+              "Expected 1 or 2 arguments, got: %s", args2);
           List<Object> nextDiagrams = ConsValue.consListToList(args2.get(0));
-          LispUtil.checkState(nextDiagrams.size() == nextDenotations.size());
+          
+          if (nextDiagrams.size() == 1 && nextDenotations.size() > 1) {
+            nextDiagrams = Collections.nCopies(nextDenotations.size(), nextDiagrams.get(0));
+          }
+          List<Object> myNextDenotations = nextDenotations;
+          if (myNextDenotations.size() == 1 && nextDiagrams.size() > 1) {
+            myNextDenotations = Collections.nCopies(nextDiagrams.size(), myNextDenotations.get(0));
+          }
+          
+          LispUtil.checkState(nextDiagrams.size() == myNextDenotations.size(),
+              "Unequal number of diagrams and denotations. Got: %s %s", nextDiagrams, myNextDenotations);
           
           for (int i = 0; i < nextDiagrams.size(); i++) {
-            Object denotation = nextDenotations.get(i);
+            Object denotation = myNextDenotations.get(i);
             Object diagram = nextDiagrams.get(i);
             // System.out.println("queue: " + continuation + " " + denotation + " " + diagram);
           
-            continuations.add(continuation.apply(Arrays.asList(denotation), env, null));
+            continuations.add(continuation.apply(Arrays.asList(denotation), context, null));
             denotations.add(denotation);
             diagrams.add(diagram);
+
+            // TODO: technically this should also be resized up if necessary.
+            if (nextOtherArgs != null) {
+              otherArgs.add(nextOtherArgs.get(i));
+            } else {
+              otherArgs.add(null);
+            }
           }
           return ConstantValue.NIL;
         }
@@ -213,6 +263,10 @@ public class ContinuationIncEval extends AbstractIncEval {
     public List<Object> getDiagrams() {
       return diagrams;
     }
+    
+    public List<Object> getOtherArgs() {
+      return otherArgs;
+    }
   }
 
   public static class FinalContinuation implements FunctionValue {
@@ -224,14 +278,14 @@ public class ContinuationIncEval extends AbstractIncEval {
       this.diagrams = Lists.newArrayList();
     }
 
-    public Object apply(List<Object> args1, Environment env1) {
+    public Object apply(List<Object> args1, EvalContext context1) {
       LispUtil.checkArgument(args1.size() == 1);
       Object denotation = args1.get(0);
       
       // System.out.println("final denotation: " + denotation);
 
       return new WrappedBuiltinFunction(new FunctionValue() {
-        public Object apply(List<Object> args2, Environment env2) {
+        public Object apply(List<Object> args2, EvalContext context2) {
           LispUtil.checkArgument(args2.size() == 1);
           Object diagram = args2.get(0);
           
@@ -243,6 +297,17 @@ public class ContinuationIncEval extends AbstractIncEval {
           return ConstantValue.NIL;
         }
       });
+    }
+  }
+  
+  private static class ContinuationHolder {
+    public final FinalContinuation finalContinuation;
+    public final QueueContinuations queueContinuations;
+
+    public ContinuationHolder(FinalContinuation finalContinuation,
+        QueueContinuations queueContinuations) {
+      this.finalContinuation = finalContinuation;
+      this.queueContinuations = queueContinuations;
     }
   }
 }

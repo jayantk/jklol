@@ -77,7 +77,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     log.stopTimer("update_gradient/input_marginal");
 
     // Find parses with the correct syntactic structure and dependencies.
-    log.startTimer("update_gradient/condition_parses_on_dependencies");
+    log.startTimer("update_gradient/condition_parses");
     // Condition parses on provided syntactic / lexicon information,
     // if any is provided.
     ChartCost syntacticCost = null;
@@ -103,11 +103,11 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     if (example.hasLogicalForm()) {
       correctParses = filterParsesByLogicalForm(example.getLogicalForm(), comparator, correctParses);
     }
-    log.stopTimer("update_gradient/condition_parses_on_dependencies");
+    log.stopTimer("update_gradient/condition_parses");
 
     if (correctParses.size() == 0) {
       // Search error: couldn't find any correct parses.
-      // System.out.println("Search error (Correct): " + sentence + " " + example.getLogicalForm());
+      System.out.println("Search error (Correct): " + sentence + " " + example.getLogicalForm());
       throw new ZeroProbabilityError();
     }
 
@@ -126,7 +126,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
           parse.getSubtreeProbability() / conditionalPartitionFunction);
     }
     log.stopTimer("update_gradient/increment_gradient");
-
+    
     // The difference in log partition functions is equivalent to the loglikelihood
     // assigned to all correct parses.
     return Math.log(conditionalPartitionFunction) - Math.log(unconditionalPartitionFunction);

@@ -29,8 +29,6 @@ import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.LexiconScorer;
-import com.jayantkrish.jklol.ccg.lexicon.SkipLexicon;
-import com.jayantkrish.jklol.ccg.lexicon.SkipLexicon.SkipTrigger;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon.CategorySpanConfig;
 import com.jayantkrish.jklol.ccg.lexicon.SyntaxLexiconScorer;
@@ -144,10 +142,11 @@ public class CcgParserTest extends TestCase {
     {"green_(N{0}/N{0}){1}", "(N{1}/N{1}){0}", "1", "people", DEFAULT_POS, DEFAULT_POS},
     {"tasty", "(N{1}/N{1}){0}", "1", "berries", "JJ", "NN"},
     {"stringfunc", "(S{0}/N{1}){0}", "1", "special:string", DEFAULT_POS, DEFAULT_POS},
+    {"special:compound", "N{0}", "2", "people", DEFAULT_POS, DEFAULT_POS},
   };
 
   private static final double[] dependencyWeightIncrements = {
-    1.0, 1.0, 3.0, 1.0, 1.0, 1.0, 3.0, 1.0,
+    1.0, 1.0, 3.0, 1.0, 1.0, 1.0, 3.0, 1.0, 1.0,
   };
 
   private VariableNumMap terminalVar;
@@ -544,6 +543,7 @@ public class CcgParserTest extends TestCase {
     double[] probs = new double[parses.size()];
     for (int i = 0; i < parses.size(); i++) {
       CcgParse parse = parses.get(i);
+      System.out.println(parse);
       probs[i] = parse.getSubtreeProbability();
     }
 
@@ -558,6 +558,35 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(11, parses.size());
   }
+  
+  public void testParseWordSkip2() {
+    List<String> words = Arrays.asList("areugsntgh", "anstheunsb", "i");
+    List<CcgParse> parses = beamSearch(parserWordSkip, words, 10);
+
+    assertEquals(1, parses.size());
+  }
+  
+  public void testParseWordSkip3() {
+    List<String> words = Arrays.asList("i", "backward", "quickly");
+    List<CcgParse> parses = beamSearch(parserWordSkip, words, 10);
+    
+    /*
+     * The expected parses in order of probability are:
+     * 3 i
+     * 3 i backward
+     * 2 backward
+     * 1 quickly
+     */
+    List<Double> expectedProbs = Arrays.asList(3.0, 3.0, 2.0, 1.0);
+    List<Double> actualProbs = Lists.newArrayList();
+    for (CcgParse parse : parses) {
+      System.out.println(parse.getSubtreeProbability() + " " + parse);
+      actualProbs.add(parse.getSubtreeProbability());
+    }
+
+    assertEquals(4, parses.size());
+    assertEquals(expectedProbs, actualProbs);
+  }
 
   public void testParseWordSkipExact() {
     List<String> words = Arrays.asList("green", "green", "i");
@@ -569,15 +598,13 @@ public class CcgParserTest extends TestCase {
     
     assertEquals(0, bestParse.getSpanStart());
     assertEquals(2, bestParse.getSpanEnd());
-    // This fails because the features aren't applied to the same spans
-    // anymore with word skipping.
-    assertEquals(Arrays.asList("i"), ((SkipTrigger) bestParse.getLexiconEntry().getLexiconTrigger()).getTrigger());
+    assertEquals(Arrays.asList("i"), bestParse.getLexiconEntry().getLexiconTrigger());
     assertEquals(1.5, bestParse.getSubtreeProbability());
 
     // TODO: test that dependencies are projected from the spans of the original
     // lexicon entries.
   }
-
+  
   public void testParseHeadedSyntaxWeights() {
     List<CcgParse> parses = beamSearch(parser, Arrays.asList("tasty", "apple"), 10);
     assertEquals(1, parses.size());
@@ -828,7 +855,7 @@ public class CcgParserTest extends TestCase {
         Arrays.asList("people", "berries", "and", "people"), 10);
 
     assertEquals(2, parses.size());
-    CcgParse parse = parses.get(1);
+    CcgParse parse = parses.get(0);
     Set<DependencyStructure> deps = Sets.newHashSet(parse.getAllDependencies());
 
     Set<DependencyStructure> expected = Sets.newHashSet(
@@ -1282,13 +1309,17 @@ public class CcgParserTest extends TestCase {
         ccgCategoryVar, unknownTerminalBuilder.build());
 
     List<CcgLexicon> lexicons = Lists.newArrayList();
+    lexicons.add(lexiconFactor);
+    lexicons.add(unknownWordLexicon);
+    
+    VariableNumMap wordSkipWordVar = null;
+    DiscreteFactor wordSkipFactor = null;
     if (allowWordSkipping) {
-      lexicons.add(new SkipLexicon(lexiconFactor, TableFactor.unity(terminalVar)));
-      lexicons.add(new SkipLexicon(unknownWordLexicon, TableFactor.unity(terminalVar)));
-    } else {
-      lexicons.add(lexiconFactor);
-      lexicons.add(unknownWordLexicon);
-    }
+      wordSkipWordVar = terminalVar;
+      Assignment quickly = terminalVar.outcomeArrayToAssignment(Arrays.asList("quickly"));
+      wordSkipFactor = TableFactor.unity(terminalVar).add(
+          TableFactor.pointDistribution(terminalVar, quickly));
+    } 
 
     if (useStringLexicon) {
       CcgCategory stringCategory = CcgCategory.parseFrom("String{0},(lambda ($0) $0),0 special:string");
@@ -1304,7 +1335,7 @@ public class CcgParserTest extends TestCase {
     scorers.add(new SyntaxLexiconScorer(terminalVar, posTagVar, terminalSyntaxVar, posDistribution,
         terminalSyntaxDistribution));
 
-    return new CcgParser(lexicons, scorers, semanticHeadVar, semanticSyntaxVar,
+    return new CcgParser(lexicons, scorers, wordSkipWordVar, wordSkipFactor, semanticHeadVar, semanticSyntaxVar,
         semanticArgNumVar, semanticArgVar, semanticHeadPosVar, semanticArgPosVar, dependencyFactor,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet,

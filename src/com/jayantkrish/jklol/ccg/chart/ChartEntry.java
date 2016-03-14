@@ -275,6 +275,10 @@ public class ChartEntry {
   public int getHeadedSyntax() {
     return syntax;
   }
+  
+  public int[] getSyntaxUniqueVars() {
+    return syntaxUniqueVars;
+  }
 
   public int getHeadVariable() {
     return syntaxHeadVar;
@@ -480,6 +484,13 @@ public class ChartEntry {
         assignmentVarIndex, assignments, unfilledDependencyVarIndex, unfilledDependencies, deps, syntaxHeadHashCode, 
         lexiconEntry, lexiconTrigger, lexiconIndex, leftSpanStart, leftSpanEnd, leftChartIndex, rightSpanStart,
         rightSpanEnd, rightChartIndex, combinator, isProducedByConjunction, newAdditionalInfo);
+  }
+
+  public ChartEntry replaceRight(int newRightSpanStart, int newRightSpanEnd, int newRightChartIndex) {
+    return new ChartEntry(syntax, syntaxUniqueVars, syntaxHeadVar, rootUnaryRule, leftUnaryRule, rightUnaryRule,
+        assignmentVarIndex, assignments, unfilledDependencyVarIndex, unfilledDependencies, deps, syntaxHeadHashCode, 
+        lexiconEntry, lexiconTrigger, lexiconIndex, leftSpanStart, leftSpanEnd, leftChartIndex, newRightSpanStart,
+        newRightSpanEnd, newRightChartIndex, combinator, isProducedByConjunction, additionalInfo);
   }
 
   @Override

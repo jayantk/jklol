@@ -58,9 +58,13 @@ public class CcgParser implements Serializable {
   private static final int MAX_SYNTACTIC_CATEGORIES = 1 << SYNTACTIC_CATEGORY_BITS;
   private static final int ARG_NUM_BITS = 4;
   private static final long ARG_NUM_MASK = ~(-1L << ARG_NUM_BITS);
-  private static final int WORD_IND_BITS = 8;
+  private static final int WORD_IND_BITS = 7;
   private static final long WORD_IND_MASK = ~(-1L << WORD_IND_BITS);
+  private static final int MAX_WORDS = 1 << WORD_IND_BITS;
   // The largest possible argument number.
+  // This plays a dual role of the largest argument number possible in
+  // a dependency structure, as well as the maximum number in a
+  // syntactic categories head passing markup.
   private static final int MAX_ARG_NUM = 1 << ARG_NUM_BITS;
   // These are the locations of each field within the number. The
   // layout within the number is:
@@ -102,6 +106,9 @@ public class CcgParser implements Serializable {
   // Weights on lexicon entries
   private final List<CcgLexicon> lexicons;
   private final List<LexiconScorer> lexiconScorers;
+  
+  private final VariableNumMap wordSkipWordVar;
+  private final DiscreteFactor wordSkipFactor;
 
   // Weights on dependency structures.
   private final VariableNumMap dependencyHeadVar;
@@ -213,6 +220,7 @@ public class CcgParser implements Serializable {
   private final boolean normalFormOnly;
 
   public CcgParser(List<CcgLexicon> lexicons, List<LexiconScorer> lexiconScorers,
+      VariableNumMap wordSkipWordVar, DiscreteFactor wordSkipFactor,
       VariableNumMap dependencyHeadVar, VariableNumMap dependencySyntaxVar,
       VariableNumMap dependencyArgNumVar, VariableNumMap dependencyArgVar,
       VariableNumMap dependencyHeadPosVar, VariableNumMap dependencyArgPosVar,
@@ -230,6 +238,11 @@ public class CcgParser implements Serializable {
       boolean normalFormOnly) {
     this.lexicons = ImmutableList.copyOf(lexicons);
     this.lexiconScorers = ImmutableList.copyOf(lexiconScorers);
+    
+    this.wordSkipWordVar = wordSkipWordVar;
+    this.wordSkipFactor = wordSkipFactor;
+    // Both must be null or non null.
+    Preconditions.checkArgument(!(wordSkipFactor == null ^ wordSkipWordVar == null));
 
     Preconditions.checkArgument(dependencyDistribution.getVars().equals(VariableNumMap.unionAll(
         dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar,
@@ -258,6 +271,13 @@ public class CcgParser implements Serializable {
     for (int i = 0; i < dependencyArgNumType.numValues(); i++) {
       Preconditions.checkArgument((int) ((Integer) dependencyArgNumType.getValue(i)) == i);
     }
+    
+    // Check that the encoding used for dependencies has enough capacity
+    // to represent all possible dependencies.
+    Preconditions.checkArgument(dependencyHeadType.numValues() + MAX_ARG_NUM < MAX_PREDICATES);
+    Preconditions.checkArgument(dependencyArgNumType.numValues() < MAX_ARG_NUM);
+    Preconditions.checkArgument(dependencySyntaxType.numValues() < MAX_SYNTACTIC_CATEGORIES);
+
 
     DiscreteVariable dependencyArgType = dependencyArgVar.getDiscreteVariables().get(0);
     Preconditions.checkArgument(dependencyHeadType.equals(dependencyArgType));
@@ -366,11 +386,6 @@ public class CcgParser implements Serializable {
     }
 
     this.normalFormOnly = normalFormOnly;
-
-    // Check that the encoding used for dependencies has enough capacity
-    // to represent all possible dependencies.
-    Preconditions.checkArgument(dependencyHeadType.numValues() + MAX_ARG_NUM < MAX_PREDICATES);
-    Preconditions.checkArgument(dependencySyntaxType.numValues() < MAX_SYNTACTIC_CATEGORIES);
   }
 
   public List<CcgLexicon> getLexicons() {
@@ -389,15 +404,32 @@ public class CcgParser implements Serializable {
     List<CcgLexicon> newLexicons = Lists.newArrayList(lexicons);
     newLexicons.set(index, newLexicon);
 
-    return new CcgParser(newLexicons, lexiconScorers, dependencyHeadVar, dependencySyntaxVar,
-      dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar,
-      dependencyDistribution, wordDistanceVar, wordDistanceFactor, puncDistanceVar,
-      puncDistanceFactor, puncTagSet, verbDistanceVar, verbDistanceFactor, verbTagSet,
-      leftSyntaxVar, rightSyntaxVar, combinatorVar, binaryRuleDistribution, unaryRuleInputVar,
-      unaryRuleVar, unaryRuleFactor, headedBinaryPredicateVar, headedBinaryPosVar,
-      headedBinaryRuleDistribution, searchMoveVar, compiledSyntaxDistribution,
-      rootSyntaxVar, rootPredicateVar, rootPosVar, rootSyntaxDistribution, headedRootSyntaxDistribution,
-      normalFormOnly);
+    return new CcgParser(newLexicons, lexiconScorers, wordSkipWordVar, wordSkipFactor,
+        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar,
+        dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution, wordDistanceVar,
+        wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet, verbDistanceVar,
+        verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, combinatorVar,
+        binaryRuleDistribution, unaryRuleInputVar, unaryRuleVar, unaryRuleFactor,
+        headedBinaryPredicateVar, headedBinaryPosVar, headedBinaryRuleDistribution,
+        searchMoveVar, compiledSyntaxDistribution, rootSyntaxVar, rootPredicateVar,
+        rootPosVar, rootSyntaxDistribution, headedRootSyntaxDistribution, normalFormOnly);
+  }
+  
+  public DiscreteFactor getWordSkipFactor() {
+    return wordSkipFactor;
+  }
+  
+  public boolean canSkipWords() {
+    return wordSkipFactor != null;
+  }
+  
+  public double getWordSkipProbability(String lowercaseWord) {
+    Assignment assignment = wordSkipWordVar.outcomeArrayToAssignment(Arrays.asList(lowercaseWord));
+    if (wordSkipWordVar.isValidAssignment(assignment)) {
+      return wordSkipFactor.getUnnormalizedProbability(assignment);
+    } else {
+      return 1.0;
+    }
   }
 
   public boolean isPossibleDependencyStructure(DependencyStructure dependency, List<String> posTags) {
@@ -454,8 +486,9 @@ public class CcgParser implements Serializable {
   }
 
   public CcgParser replaceSyntaxDistribution(DiscreteFactor newCompiledSyntaxDistribution) {
-    return new CcgParser(lexicons, lexiconScorers, dependencyHeadVar, dependencySyntaxVar,
-        dependencyArgNumVar, dependencyArgVar, dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution,
+    return new CcgParser(lexicons, lexiconScorers, wordSkipWordVar, wordSkipFactor,
+        dependencyHeadVar, dependencySyntaxVar, dependencyArgNumVar, dependencyArgVar,
+        dependencyHeadPosVar, dependencyArgPosVar, dependencyDistribution,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet, leftSyntaxVar, rightSyntaxVar, combinatorVar,
         binaryRuleDistribution, unaryRuleInputVar, unaryRuleVar, unaryRuleFactor, 
@@ -560,10 +593,13 @@ public class CcgParser implements Serializable {
     if (log == null) {
       log = new NullLogFunction();
     }
+    
+    Preconditions.checkState(input.getWords().size() <= MAX_WORDS,
+        "Maximum sentence length is %s", MAX_WORDS);
 
     log.startTimer("ccg_parse/initialize_chart");
     initializeChart(chart, input, beamFilter);
-    initializeChartTerminals(chart, input);
+    initializeChartTerminals(chart, input, wordSkipFactor != null);
     log.stopTimer("ccg_parse/initialize_chart");
 
     log.startTimer("ccg_parse/calculate_inside_beam");
@@ -614,10 +650,16 @@ public class CcgParser implements Serializable {
     chart.setDepProbCache(new double[input.size()]);
   }
 
-  public void initializeChartTerminals(CcgChart chart, AnnotatedSentence sentence) {
+  public void initializeChartTerminals(CcgChart chart, AnnotatedSentence sentence, boolean wordSkip) {
+    Preconditions.checkArgument(wordSkip == false || wordSkipFactor != null);
+    
     for (int k = 0; k < lexicons.size(); k++) {
       CcgLexicon lexicon = lexicons.get(k);
-      lexicon.initializeChart(chart, sentence, this, k);
+      if (wordSkip) {
+        lexicon.initializeChart(chart, sentence, this, k, wordSkipWordVar, wordSkipFactor);
+      } else {
+        lexicon.initializeChart(chart, sentence, this, k, null, null);
+      }
     }
   }
 

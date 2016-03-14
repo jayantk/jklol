@@ -11,8 +11,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.ccg.CcgExample;
-import com.jayantkrish.jklol.ccg.DependencyStructure;
-import com.jayantkrish.jklol.ccg.LexiconEntryInfo;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.util.IoUtils;
 
@@ -27,9 +25,6 @@ import com.jayantkrish.jklol.util.IoUtils;
 public class SemanticParserExampleLoss {
   private final CcgExample example;
   private final Expression2 predictedLf;
-  private final List<DependencyStructure> predictedDeps;
-
-  private final List<LexiconEntryInfo> lexiconEntries; 
 
   private final Expression2 correctLf;
   private final boolean parsable;
@@ -37,14 +32,10 @@ public class SemanticParserExampleLoss {
   private final boolean correctLfPossible;
 
   public SemanticParserExampleLoss(CcgExample example, Expression2 predictedLf,
-      List<DependencyStructure> predictedDeps, List<LexiconEntryInfo> lexiconEntries,
       Expression2 correctLf, boolean parsable, boolean correct, boolean correctLfPossible) {
     this.example = Preconditions.checkNotNull(example);
 
     this.predictedLf = predictedLf;
-    this.predictedDeps = Preconditions.checkNotNull(predictedDeps);
-
-    this.lexiconEntries = Preconditions.checkNotNull(lexiconEntries);
 
     this.correctLf = Preconditions.checkNotNull(correctLf);
     this.parsable = parsable;
@@ -86,14 +77,6 @@ public class SemanticParserExampleLoss {
     return predictedLf;
   }
 
-  public List<DependencyStructure> getPredictedDeps() {
-    return predictedDeps;
-  }
-
-  public List<LexiconEntryInfo> getLexiconEntries() {
-    return lexiconEntries;
-  }
-
   public Expression2 getCorrectLf() {
     return correctLf;
   }
@@ -117,27 +100,6 @@ public class SemanticParserExampleLoss {
     jsonDict.put("sentence", Joiner.on(" ").join(example.getSentence().getWords()));
     jsonDict.put("pos", Joiner.on(" ").join(example.getSentence().getPosTags()));
     jsonDict.put("predicted_lf", predictedLf == null ? null : predictedLf.toString());
-
-    List<String> depStrings = Lists.newArrayList();
-    for (DependencyStructure dep : predictedDeps) {
-      depStrings.add(dep.toString());
-    }
-    jsonDict.put("predicted_deps", depStrings);
-
-    List<Map<String, Object>> lexiconDicts = Lists.newArrayList();
-    for (LexiconEntryInfo entry : lexiconEntries) {
-      Map<String, Object> lexiconDict = Maps.newHashMap();
-      
-      lexiconDict.put("index", entry.getLexiconIndex());
-      lexiconDict.put("span_start", entry.getTriggerSpanStart());
-      lexiconDict.put("span_end", entry.getTriggerSpanEnd());
-      lexiconDict.put("trigger", entry.getLexiconTrigger());
-      // TODO: this needs a toJson method.
-      lexiconDict.put("entry", entry.getCategory().toCsvString());
-
-      lexiconDicts.add(lexiconDict);
-    }
-    jsonDict.put("lexicon_entries", lexiconDicts);
 
     jsonDict.put("correct_lf", correctLf.toString());
     jsonDict.put("parsable", parsable ? 1 : 0);

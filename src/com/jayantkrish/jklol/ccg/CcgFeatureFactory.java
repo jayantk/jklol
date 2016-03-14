@@ -136,6 +136,15 @@ public interface CcgFeatureFactory {
       VariableNumMap terminalSyntaxVar);
 
   /**
+   * If this parser is allowed to skip words, returns a factor containing
+   * per-word skip weights. If word skipping is not permitted, returns null. 
+   *
+   * @param terminalWordVar
+   * @return
+   */
+  ParametricFactor getWordSkipFactor(VariableNumMap terminalWordVar);
+  
+  /**
    * Gets features over CCG binary rules. {@code binaryRuleDistribution} is the
    * set of binary rules included in the parser.
    * 

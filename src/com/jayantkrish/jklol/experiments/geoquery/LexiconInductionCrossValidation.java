@@ -342,7 +342,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
 
     int numIterations = trainingExamples.size() * iterations;
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(numIterations, 1,
-        1.0, true, true, l2Penalty, new DefaultLogFunction(100, false));
+        1.0, true, true, Double.MAX_VALUE, l2Penalty, new DefaultLogFunction(100, false));
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),
         trainingExamples);
 

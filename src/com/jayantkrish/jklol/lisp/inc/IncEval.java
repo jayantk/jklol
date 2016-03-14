@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.lisp.inc;
 
 import java.util.List;
 
-import com.google.common.base.Predicate;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.gi.GroundedCcgParse;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -26,6 +25,17 @@ public interface IncEval {
    * @param resultQueue
    */
   public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue);
+  
+  /**
+   * Evaluates the continuation in {@code state}, producing zero or
+   * more future continuations that are stored in {@code resultQueue}.
+   * 
+   * @param state
+   * @param resultQueue
+   * @param log
+   */
+  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue,
+      LogFunction log);
   
   /**
    * Gets the environment in which logical forms are evaluated.
@@ -83,20 +93,23 @@ public interface IncEval {
 
   /**
    * Evaluates {@code lf} to completion using a beam search and 
-   * {@code initialDiagram}. The search prunes any states for which 
-   * {@code filter} returns {@code false}.
+   * {@code initialDiagram}. The search penalizes states by
+   * log probability {@code cost} (pruned if {@code Double.NEGATIVE_INFINITY}).
    * 
    * @param lf
    * @param initialDiagram
-   * @param filter
+   * @param cost
    * @param beamSize
    * @return
    */
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
-      Predicate<IncEvalState> filter, int beamSize);
+      IncEvalCost cost, int beamSize);
+  
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      IncEvalCost cost, LogFunction log, int beamSize);
 
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
-      Predicate<IncEvalState> filter, Environment initialEnv, LogFunction log,
+      IncEvalCost cost, Environment initialEnv, LogFunction log,
       int beamSize);
   
   public static class IncEvalState {

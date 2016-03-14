@@ -16,7 +16,6 @@ import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.LexiconEntryInfo;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
-import com.jayantkrish.jklol.ccg.lexicon.SkipLexicon.SkipTrigger;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
@@ -222,13 +221,8 @@ public class VotingLexiconInduction {
       for (LexiconEntryInfo info : correctMaxParse.getSpannedLexiconEntries()) {
         CcgCategory category = info.getCategory();
         Object trigger = info.getLexiconTrigger();
-        List<String> words = null;
-        if (trigger instanceof SkipTrigger) {
-          words = (List<String>) ((SkipTrigger) trigger).getTrigger();
-        } else {
-          words = (List<String>) trigger;
-        }
-        
+        List<String> words = (List<String>) trigger;
+                
         candidateEntries.add(new LexiconEntry(words, category));
       }
     }

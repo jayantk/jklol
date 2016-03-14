@@ -1,8 +1,6 @@
 package com.jayantkrish.jklol.lisp.inc;
 
-import com.google.common.base.Predicate;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
-import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 
 public interface IncEvalExample {
   
@@ -11,12 +9,15 @@ public interface IncEvalExample {
   public Object getDiagram();
   
   /**
-   * Get a procedure for filtering evaluation states that are
-   * consistent with the label of this example. The returned
-   * predicate returns {@code true} if its argument is consistent
-   * with the label, and {@code false} otherwise.
-   * 
-   * @return
+   * Get a procedure for assigning cost for states
+   * compared to the label of this example. The probability
+   * of a state gets multiplied with exp({@code cost}).
    */
-  public Predicate<IncEvalState> getLabelFilter();
+  public IncEvalCost getMarginCost();
+
+  /**
+   * This will typically return 0.0 for states matching the
+   * label and {@code Double.NEGATIVE_INFINITY} otherwise.
+   */
+  public IncEvalCost getLabelCost();
 }

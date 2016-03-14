@@ -336,8 +336,10 @@ public class CvsmTrainingTest extends TestCase {
     CvsmLoglikelihoodOracle oracle = new CvsmLoglikelihoodOracle(cvsmFamily, loss);
 
     List<StochasticGradientTrainer> trainers = Arrays.asList(
-        StochasticGradientTrainer.createWithL2Regularization(iterations, 1, 1.0, true, false, 0.0, new NullLogFunction()),
-        StochasticGradientTrainer.createAdagrad(iterations, 1, 1.0, true, false, 0.0, 0.0, new NullLogFunction())
+        StochasticGradientTrainer.createWithL2Regularization(iterations, 1, 1.0, true, false,
+            Double.MAX_VALUE, 0.0, new NullLogFunction()),
+        StochasticGradientTrainer.createAdagrad(iterations, 1, 1.0, true, false, Double.MAX_VALUE,
+            0.0, 0.0, new NullLogFunction())
         );
 
     for (StochasticGradientTrainer trainer : trainers) {

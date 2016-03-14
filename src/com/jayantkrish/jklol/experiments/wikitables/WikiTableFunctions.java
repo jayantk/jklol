@@ -10,7 +10,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.lisp.AmbEval.AmbFunctionValue;
 import com.jayantkrish.jklol.lisp.ConstantValue;
-import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.lisp.EvalContext;
 import com.jayantkrish.jklol.lisp.FunctionValue;
 import com.jayantkrish.jklol.lisp.LispUtil;
 
@@ -28,7 +28,7 @@ public class WikiTableFunctions {
     }
     
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 1);
       String tableName = LispUtil.cast(argumentValues.get(0), String.class);
       return tables.get(tableIdMap.get(tableName));
@@ -37,7 +37,7 @@ public class WikiTableFunctions {
   
   public static class GetTableCol implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 2);
       WikiTable table = LispUtil.cast(argumentValues.get(0), WikiTable.class);
       String colName = LispUtil.cast(argumentValues.get(1), String.class);
@@ -47,7 +47,7 @@ public class WikiTableFunctions {
   
   public static class GetTableCells implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 1);
       WikiTable table = LispUtil.cast(argumentValues.get(0), WikiTable.class);
       
@@ -63,7 +63,7 @@ public class WikiTableFunctions {
   
   public static class GetRowCells implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 2);
       WikiTable table = LispUtil.cast(argumentValues.get(0), WikiTable.class);
       int rowId = LispUtil.cast(argumentValues.get(1), Integer.class);
@@ -82,7 +82,7 @@ public class WikiTableFunctions {
 
   public static class GetColCells implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 2);
       WikiTable table = LispUtil.cast(argumentValues.get(0), WikiTable.class);
       int colId = LispUtil.cast(argumentValues.get(1), Integer.class);
@@ -101,7 +101,7 @@ public class WikiTableFunctions {
 
   public static class GetCol implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 1);
       return ((Integer) argumentValues.get(0)) % ROW_MULTIPLE;
     }
@@ -109,7 +109,7 @@ public class WikiTableFunctions {
   
   public static class GetRow implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 1);
       return ((Integer) argumentValues.get(0)) / ROW_MULTIPLE;
     }
@@ -117,7 +117,7 @@ public class WikiTableFunctions {
   
   public static class GetValue implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 2);
       WikiTable table = LispUtil.cast(argumentValues.get(0), WikiTable.class);
       Integer cell = LispUtil.cast(argumentValues.get(1), Integer.class);
@@ -130,14 +130,14 @@ public class WikiTableFunctions {
   
   public static class SetFilter implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 2);
       AmbFunctionValue f = LispUtil.cast(argumentValues.get(0), AmbFunctionValue.class);
       Set<?> objs = LispUtil.cast(argumentValues.get(1), Set.class);
       
       Set<Object> filtered = Sets.newHashSet();
       for (Object o : objs) {
-        Object value = f.apply(Arrays.asList(o), env, null);
+        Object value = f.apply(Arrays.asList(o), context, null);
         if (value.equals(ConstantValue.TRUE)) {
           filtered.add(o);
         }
@@ -148,14 +148,14 @@ public class WikiTableFunctions {
   
   public static class SetMap implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 2);
       AmbFunctionValue f = LispUtil.cast(argumentValues.get(0), AmbFunctionValue.class);
       Set<?> objs = LispUtil.cast(argumentValues.get(1), Set.class);
 
       Set<Object> mapped = Sets.newHashSet();
       for (Object o : objs) {
-        Object value = f.apply(Arrays.asList(o), env, null);
+        Object value = f.apply(Arrays.asList(o), context, null);
         mapped.add(value);
       }
       return mapped;
@@ -164,7 +164,7 @@ public class WikiTableFunctions {
   
   public static class SetMin implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 2);
       AmbFunctionValue f = LispUtil.cast(argumentValues.get(0), AmbFunctionValue.class);
       List<?> objs = Lists.newArrayList(LispUtil.cast(argumentValues.get(1), Set.class));
@@ -173,7 +173,7 @@ public class WikiTableFunctions {
       int minIndex = -1;
       boolean unique = true;
       for (int i = 0; i < objs.size(); i++) {
-        int value = LispUtil.cast(f.apply(Arrays.asList(objs.get(i)), env, null), Integer.class);
+        int value = LispUtil.cast(f.apply(Arrays.asList(objs.get(i)), context, null), Integer.class);
         
         if (value < min) {
           min = value;
@@ -193,7 +193,7 @@ public class WikiTableFunctions {
   
   public static class SetMax implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 2);
       AmbFunctionValue f = LispUtil.cast(argumentValues.get(0), AmbFunctionValue.class);
       List<?> objs = Lists.newArrayList(LispUtil.cast(argumentValues.get(1), Set.class));
@@ -202,7 +202,7 @@ public class WikiTableFunctions {
       int maxIndex = -1;
       boolean unique = true;
       for (int i = 0; i < objs.size(); i++) {
-        int value = LispUtil.cast(f.apply(Arrays.asList(objs.get(i)), env, null), Integer.class);
+        int value = LispUtil.cast(f.apply(Arrays.asList(objs.get(i)), context, null), Integer.class);
         
         if (value > max) {
           max = value;
@@ -222,7 +222,7 @@ public class WikiTableFunctions {
   
   public static class SetSize implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 1);
       Set<?> objs = LispUtil.cast(argumentValues.get(0), Set.class);
       return objs.size();
@@ -231,7 +231,7 @@ public class WikiTableFunctions {
   
   public static class SetContains implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 2);
       Set<?> objs = LispUtil.cast(argumentValues.get(0), Set.class);
       return objs.contains(argumentValues.get(1)) ? ConstantValue.TRUE : ConstantValue.FALSE;
@@ -240,7 +240,7 @@ public class WikiTableFunctions {
   
   public static class MakeSet implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       Set<Object> objs = Sets.newHashSet();
       objs.addAll(argumentValues);
       return objs;
@@ -249,7 +249,7 @@ public class WikiTableFunctions {
   
   public static class SetUnion implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 1);
       Set<?> objs = LispUtil.cast(argumentValues.get(0), Set.class);
       Set<Object> result = Sets.newHashSet();
@@ -262,7 +262,7 @@ public class WikiTableFunctions {
   
   public static class IsSet implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       LispUtil.checkArgument(argumentValues.size() == 1);
       return argumentValues.get(0) instanceof Set ? ConstantValue.TRUE : ConstantValue.FALSE;
     }

@@ -20,8 +20,6 @@ import com.jayantkrish.jklol.tensor.CachedSparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
-import com.jayantkrish.jklol.training.LogFunction;
-import com.jayantkrish.jklol.training.LogFunctions;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.Pair;
 import com.jayantkrish.jklol.util.PairComparator;

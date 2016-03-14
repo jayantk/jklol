@@ -30,7 +30,7 @@ public class CcgParse {
 
   // The words spanned by this portion of the parse tree.
   // Non-null only when this is a terminal.
-  private final List<String> spannedWords;
+  private final List<String> words;
   // The POS tag assigned to the words spanned by this tree.
   // Non-null only when this is a terminal.
   private final List<String> posTags;
@@ -70,7 +70,7 @@ public class CcgParse {
       Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
     this.syntax = Preconditions.checkNotNull(syntax);
     this.lexiconEntry = lexiconEntry;
-    this.spannedWords = spannedWords;
+    this.words = spannedWords;
     this.posTags = posTags;
     this.heads = Preconditions.checkNotNull(heads);
     this.dependencies = Preconditions.checkNotNull(dependencies);
@@ -204,7 +204,7 @@ public class CcgParse {
 
     if (isTerminal()) {
       return CcgSyntaxTree.createTerminal(syntax.getSyntax(), originalSyntax.getSyntax(),
-          spanStart, spanEnd, spannedWords, posTags, originalSyntax);
+          spanStart, spanEnd, words, posTags, originalSyntax);
     } else {
       CcgSyntaxTree leftTree = left.getSyntacticParse();
       CcgSyntaxTree rightTree = right.getSyntacticParse();
@@ -359,7 +359,7 @@ public class CcgParse {
    * @return
    */
   public List<String> getWords() {
-    return spannedWords;
+    return words;
   }
 
   /**
@@ -385,7 +385,7 @@ public class CcgParse {
    */
   public List<String> getSpannedWords() {
     if (isTerminal()) {
-      return spannedWords;
+      return words;
     } else {
       List<String> words = Lists.newArrayList();
       words.addAll(left.getSpannedWords());
@@ -611,7 +611,7 @@ public class CcgParse {
   }
 
   public CcgParse addUnaryRule(UnaryCombinator rule, HeadedSyntacticCategory newSyntax) {
-    return new CcgParse(newSyntax, lexiconEntry, spannedWords, posTags, heads, dependencies,
+    return new CcgParse(newSyntax, lexiconEntry, words, posTags, heads, dependencies,
         probability, left, right, combinator, rule, spanStart, spanEnd);
   }
 
@@ -661,7 +661,7 @@ public class CcgParse {
     } else {
       sb.append("<div class=\"terminalNode\">");
       sb.append("<p class=\"terminalWords\">");
-      sb.append(Joiner.on(" ").join(spannedWords));
+      sb.append(Joiner.on(" ").join(words));
       sb.append("</p>");
 
       sb.append("<p class=\"terminalSyntax\">");

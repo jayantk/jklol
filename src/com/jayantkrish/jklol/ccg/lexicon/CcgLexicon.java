@@ -7,6 +7,7 @@ import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
+import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
@@ -52,7 +53,12 @@ public interface CcgLexicon extends Serializable {
    * @param sentence
    * @param parser
    * @param lexiconNum
+   * @param wordSkipWordVar
+   * @param wordSkipWeights if not null, allow the lexicon to skip
+   * words with the per-word weight in this factor. If null, no
+   * word skipping is permitted.
    */
   void initializeChart(CcgChart chart, AnnotatedSentence sentence,
-      CcgParser parser, int lexiconNum);
+      CcgParser parser, int lexiconNum, VariableNumMap wordSkipWordVar,
+      DiscreteFactor wordSkipWeights);
 }

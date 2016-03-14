@@ -13,8 +13,8 @@ public class ShiftReduceStack {
   public final int chartEntryIndex;
   public final ChartEntry entry;
   public final double entryProb;
-  public boolean includesRootProb;
-
+  public final boolean includesRootProb;
+  
   public final ShiftReduceStack previous;
 
   public final int size;

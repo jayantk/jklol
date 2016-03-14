@@ -139,7 +139,7 @@ public class LinearClassifierTest extends TestCase {
       // Instantiate the optimization algorithm, in this case stochastic gradient
       // with l2 regularization.
       StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(1000, 
-          1, 1.0, true, false, 0.1, new DefaultLogFunction(10000, false));
+          1, 1.0, true, false, Double.MAX_VALUE, 0.1, new DefaultLogFunction(10000, false));
       // Estimate classifier parameters.
       parameters = trainer.train(adaptedOracle,
           linearClassifier.getNewSufficientStatistics(), trainingData);

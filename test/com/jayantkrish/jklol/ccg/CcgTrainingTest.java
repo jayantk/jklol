@@ -289,10 +289,11 @@ public class CcgTrainingTest extends TestCase {
 
   private CcgParser trainLoglikelihoodParser(ParametricCcgParser family, List<CcgExample> examples) {
     ExpressionComparator comparator = new SimplificationComparator(getExpressionSimplifier());
-    CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family,
-        comparator, new CcgCkyInference(null, 100, -1, Integer.MAX_VALUE, 1));
+    CcgInference inference = new CcgCkyInference(null, 100, -1, Integer.MAX_VALUE, 1);
+    // CcgInference inference = new CcgShiftReduceInference(100);
+    CcgLoglikelihoodOracle oracle = new CcgLoglikelihoodOracle(family, comparator, inference);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10, 1, 1,
-        true, false, 0.1, new DefaultLogFunction());
+        true, false, Double.MAX_VALUE, 0.1, new DefaultLogFunction());
 
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(), examples);
     CcgParser parser = family.getModelFromParameters(parameters);
@@ -307,7 +308,7 @@ public class CcgTrainingTest extends TestCase {
     CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, comparator,
         inferenceAlg, maxMargin ? 1.0 : 0.0);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(100,
-        1, 1, true, true, 0.0, new DefaultLogFunction());
+        1, 1, true, true, Double.MAX_VALUE, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);

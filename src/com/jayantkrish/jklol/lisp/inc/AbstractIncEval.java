@@ -3,13 +3,12 @@ package com.jayantkrish.jklol.lisp.inc;
 import java.util.Collections;
 import java.util.List;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
-import com.jayantkrish.jklol.util.KbestHeap;
+import com.jayantkrish.jklol.util.KbestQueue;
 
 /**
  * Common implementations of {@code IncrementalEval} methods.
@@ -18,6 +17,11 @@ import com.jayantkrish.jklol.util.KbestHeap;
  *
  */
 public abstract class AbstractIncEval implements IncEval {
+  
+  @Override
+  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue) {
+    evaluateContinuation(state, resultQueue, new NullLogFunction());
+  }
 
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
@@ -28,11 +32,18 @@ public abstract class AbstractIncEval implements IncEval {
 
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
-      Predicate<IncEvalState> filter, int beamSize) {
-    return evaluateBeam(lf, initialDiagram, filter, getEnvironment(),
+      IncEvalCost cost, int beamSize) {
+    return evaluateBeam(lf, initialDiagram, cost, getEnvironment(),
         new NullLogFunction(), beamSize);
   }
   
+  @Override
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      IncEvalCost cost, LogFunction log, int beamSize) {
+    return evaluateBeam(lf, initialDiagram, cost, getEnvironment(),
+        log, beamSize);
+  }
+
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       Environment initialEnv, int beamSize) {
@@ -42,14 +53,14 @@ public abstract class AbstractIncEval implements IncEval {
 
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
-      Predicate<IncEvalState> filter, Environment startEnv,
+      IncEvalCost cost, Environment startEnv,
       LogFunction log, int beamSize) {
     // Working heap for queuing parses to process next.
-    KbestHeap<IncEvalState> heap = new KbestHeap<IncEvalState>(beamSize,
+    KbestQueue<IncEvalState> heap = new KbestQueue<IncEvalState>(beamSize,
         new IncEvalState[0]);
     
     // Heap for finished parses.
-    KbestHeap<IncEvalState> finishedHeap = new KbestHeap<IncEvalState>(beamSize,
+    KbestQueue<IncEvalState> finishedHeap = new KbestQueue<IncEvalState>(beamSize,
         new IncEvalState[0]);
 
     // Array of elements in the current beam.
@@ -66,11 +77,11 @@ public abstract class AbstractIncEval implements IncEval {
     Object continuation = lfToContinuation(lf, startEnv);
     IncEvalState initialState = new IncEvalState(continuation, startEnv, null,
         initialDiagram, 1.0, null);
-    offer(heap, initialState, filter);
+    offer(heap, initialState, cost);
 
     while (heap.size() > 0) {
       // Copy the heap to the current beam.
-      IncEvalState[] keys = heap.getKeys();
+      IncEvalState[] keys = heap.getItems();
       for (int i = 0; i < heap.size(); i++) {
         currentBeam[i] = keys[i];
       }
@@ -85,15 +96,15 @@ public abstract class AbstractIncEval implements IncEval {
         if (state.getContinuation() != null) {
           resultQueue.clear();
           log.startTimer("evaluate_continuation");
-          evaluateContinuation(state, resultQueue);
+          evaluateContinuation(state, resultQueue, log);
           log.stopTimer("evaluate_continuation");
           
           for (IncEvalState next : resultQueue) {
-            offer(heap, next, filter);
+            offer(heap, next, cost);
           }
         } else {
           // Evaluation is finished.
-          offer(finishedHeap, state, filter);
+          offer(finishedHeap, state, cost);
         }
       }
     }
@@ -106,10 +117,15 @@ public abstract class AbstractIncEval implements IncEval {
     return finalStates;
   }
 
-  private static void offer(KbestHeap<IncEvalState> heap, IncEvalState state,
-      Predicate<IncEvalState> filter) {
-    if (filter == null || filter.apply(state)) {
+  private static void offer(KbestQueue<IncEvalState> heap, IncEvalState state,
+      IncEvalCost cost) {
+    if (cost == null) {
       heap.offer(state, state.getProb());
+    } else {
+      double costValue = cost.apply(state);
+      if (costValue != Double.NEGATIVE_INFINITY) {
+        heap.offer(state, state.getProb() * Math.exp(costValue));
+      }
     }
   }
 }

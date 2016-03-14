@@ -25,7 +25,7 @@ import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.HashingFeatureVectorGenerator;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOptimizer;
-import com.jayantkrish.jklol.training.StochasticGradientTrainer;
+import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -56,7 +56,8 @@ public class IncEvalTrainingTest extends TestCase {
   };
 
   private static final String[] evalDefs = {
-    "(define amb-k (k l) (lambda (world) ((queue-k k l) (map (lambda (x) world) l)) ))",
+    "(define amb-k (k l) (lambda (world) ((queue-k k l) (list world)) ))",
+    "(define score-k (k v tag) (lambda (world) ((queue-k k (list v) (list tag)) (list world)) ))",
     "(define resolve-k (k name) (lambda (world) (let ((v (alist-get name world))) (if (not (nil? v)) ((k v) world) ((amb-k (lambda (v) (cput-k k name v)) (alist-get name possible-values)) world)))))",
   };
   
@@ -67,7 +68,10 @@ public class IncEvalTrainingTest extends TestCase {
     "(resolve-k \"x\")",
     // This last example adds no information because each value of x
     // has one correct execution.
-    "(+-k (amb-k (list-k 0 1)) (resolve-k \"x\"))", 
+    "(+-k (amb-k (list-k 0 1)) (resolve-k \"x\"))",
+    
+    // Examples for testing denotation scoring
+    "(score-k (+-k (amb-k (list-k 0 1)) (resolve-k \"x\")) \"foo\")",
   };
 
   private static final Object[] labels = {
@@ -76,8 +80,9 @@ public class IncEvalTrainingTest extends TestCase {
     2,
     1,
     2,
+    2,
   };
-  
+
   private static final Object initialDiagram = ConsValue.listToConsList(Collections.emptyList());
 
   public void setUp() {
@@ -105,19 +110,26 @@ public class IncEvalTrainingTest extends TestCase {
     List<ValueIncEvalExample> examples = parseExamples(expressions, labels);
     
     IncEvalLoglikelihoodOracle oracle = new IncEvalLoglikelihoodOracle(family, 100);
+    /*
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(1000,
         1, 1, true, true, 0.0, new DefaultLogFunction());
+     */
     
-    // GradientOptimizer trainer = new Lbfgs(100, 10, 0.0, new DefaultLogFunction());
+    GradientOptimizer trainer = new Lbfgs(100, 10, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);
     IncEval trainedEval = family.getModelFromParameters(parameters);
     
+    System.out.println(family.getParameterDescription(parameters));
+    
     assertDistributionEquals(trainedEval, "(resolve-k \"x\")", initialDiagram,
         new Object[] {1, 2}, new double[] {0.25, 0.75});
     assertDistributionEquals(trainedEval, "(resolve-k \"y\")", initialDiagram,
         new Object[] {3, 4}, new double[] {0.5, 0.5});
+    assertDistributionEquals(trainedEval,
+        "(score-k (+-k (amb-k (list-k 0 1)) (resolve-k \"x\")) \"foo\")", initialDiagram,
+        new Object[] {1, 2, 3}, new double[] {0.0, 1.0, 0.0});
   }
 
   private List<ValueIncEvalExample> parseExamples(String[] expressions, Object[] labels) {
@@ -161,6 +173,12 @@ public class IncEvalTrainingTest extends TestCase {
           features.put(newKey + "=" + newBindings.get(newKey), 1.0);
         }
       }
+      
+      if (item.getOtherArg() != null) {
+        // Denotation features.
+        features.put("denotation_" + item.getOtherArg() + "=" + item.getDenotation(), 1.0);
+      }
+      
       return features;
     }
     

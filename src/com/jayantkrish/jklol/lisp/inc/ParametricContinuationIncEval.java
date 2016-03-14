@@ -15,6 +15,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.util.Assignment;
 
 public class ParametricContinuationIncEval implements ParametricIncEval {
@@ -98,14 +99,16 @@ public class ParametricContinuationIncEval implements ParametricIncEval {
     private final Environment env;
     private final Object denotation;
     private final Object diagram;
+    private final Object otherArg;
 
     public StateFeatures(IncEvalState prev, Object continuation, Environment env,
-        Object denotation, Object diagram) {
+        Object denotation, Object diagram, Object otherArg) {
       this.prev = prev;
       this.continuation = continuation;
       this.env = env;
       this.denotation = denotation;
       this.diagram = diagram;
+      this.otherArg = otherArg;
     }
 
     public IncEvalState getPrev() {
@@ -127,6 +130,10 @@ public class ParametricContinuationIncEval implements ParametricIncEval {
     public Object getDiagram() {
       return diagram;
     }
+    
+    public Object getOtherArg() {
+      return otherArg;
+    }    
   }
   
   public static class FeaturizedContinuationIncEval extends ContinuationIncEval {
@@ -149,8 +156,10 @@ public class ParametricContinuationIncEval implements ParametricIncEval {
 
     @Override
     protected IncEvalState nextState(IncEvalState prev, Object continuation, Environment env,
-        Object denotation, Object diagram) {
-      Tensor featureVector = featureGen.apply(new StateFeatures(prev, continuation, env, denotation, diagram));
+        Object denotation, Object diagram, Object otherArg, LogFunction log) {
+      log.startTimer("evaluate_continuation/queue/model");
+      Tensor featureVector = featureGen.apply(new StateFeatures(
+          prev, continuation, env,denotation, diagram, otherArg));
       Assignment a = featureVar.outcomeArrayToAssignment(featureVector);
       // Unnormalized probability of this local decision (not the whole execution). 
       double localProb = classifier.getUnnormalizedProbability(a.union(labelAssignment));
@@ -159,6 +168,7 @@ public class ParametricContinuationIncEval implements ParametricIncEval {
       if (prev.getFeatures() != null) {
         aggregateFeatureVector = prev.getFeatures().elementwiseAddition(featureVector);
       }
+      log.stopTimer("evaluate_continuation/queue/model");
       
       return new IncEvalState(continuation, env, denotation, diagram,
           prev.getProb() * localProb, aggregateFeatureVector);

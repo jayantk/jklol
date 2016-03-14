@@ -13,6 +13,7 @@ import com.jayantkrish.jklol.ccg.LexiconEntryInfo;
 import com.jayantkrish.jklol.ccg.UnaryCombinator;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class GroundedCcgParse extends CcgParse {
@@ -20,36 +21,54 @@ public class GroundedCcgParse extends CcgParse {
   private final GroundedCcgParse myLeft;
   private final GroundedCcgParse myRight;
   
-  private final Object denotation;
+  private final IncEvalState state;
   private final Object diagram;
 
   protected GroundedCcgParse(HeadedSyntacticCategory syntax, LexiconEntryInfo lexiconEntry,
       List<String> spannedWords, List<String> posTags, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double probability, GroundedCcgParse left, GroundedCcgParse right,
-      Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd, Object denotation,
+      Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd, IncEvalState state,
       Object diagram) {
     super(syntax, lexiconEntry, spannedWords, posTags, heads, dependencies, probability, left, right,
         combinator, unaryRule, spanStart, spanEnd);
     this.myLeft = left;
     this.myRight = right;
-    this.denotation = denotation;
+    this.state = state;
     this.diagram = diagram;
   }
 
   public static GroundedCcgParse forTerminal(HeadedSyntacticCategory syntax, LexiconEntryInfo lexiconEntry,
       List<String> posTags, Set<IndexedPredicate> heads, List<DependencyStructure> deps,
       List<String> spannedWords, double probability, UnaryCombinator unaryRule,
-      int spanStart, int spanEnd, Object denotation) {
+      int spanStart, int spanEnd, IncEvalState state) {
     return new GroundedCcgParse(syntax, lexiconEntry, spannedWords, posTags, heads, deps, probability,
-        null, null, null, unaryRule, spanStart, spanEnd, denotation, null);
+        null, null, null, unaryRule, spanStart, spanEnd, state, null);
   }
 
   public static GroundedCcgParse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double probability, GroundedCcgParse left,
       GroundedCcgParse right, Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd,
-      Object denotation) {
+      IncEvalState state) {
     return new GroundedCcgParse(syntax, null, null, null, heads, dependencies, probability, left,
-        right, combinator, unaryRule, spanStart, spanEnd, denotation, null);
+        right, combinator, unaryRule, spanStart, spanEnd, state, null);
+  }
+  
+  public static GroundedCcgParse fromCcgParse(CcgParse parse) {
+    if (parse.isTerminal()) {
+      return new GroundedCcgParse(parse.getHeadedSyntacticCategory(),
+          parse.getLexiconEntry(), parse.getWords(), parse.getPosTags(), parse.getSemanticHeads(),
+          parse.getNodeDependencies(), parse.getNodeProbability(), null, null,
+          null, parse.getUnaryRule(), parse.getSpanStart(), parse.getSpanEnd(), null, null);
+    } else {
+      GroundedCcgParse left = fromCcgParse(parse.getLeft());
+      GroundedCcgParse right = fromCcgParse(parse.getRight());
+      
+      return new GroundedCcgParse(parse.getHeadedSyntacticCategory(),
+          parse.getLexiconEntry(), parse.getWords(), parse.getPosTags(), parse.getSemanticHeads(),
+          parse.getNodeDependencies(), parse.getNodeProbability(), left, right,
+          parse.getCombinator(), parse.getUnaryRule(), parse.getSpanStart(), parse.getSpanEnd(),
+          null, null);
+    }
   }
 
   public GroundedCcgParse getParseForSpan(int spanStart, int spanEnd) {
@@ -87,21 +106,57 @@ public class GroundedCcgParse extends CcgParse {
   public GroundedCcgParse addUnaryRule(UnaryCombinator rule, HeadedSyntacticCategory newSyntax) {
     return new GroundedCcgParse(newSyntax, getLexiconEntry(), getWords(), getPosTags(), getSemanticHeads(),
         getNodeDependencies(), getNodeProbability(), getLeft(), getRight(), getCombinator(), rule,
-        getSpanStart(), getSpanEnd(), denotation, diagram);
+        getSpanStart(), getSpanEnd(), state, diagram);
   }
 
   public Object getDenotation() {
-    return denotation;
+    if (state != null) {
+      return state.getDenotation();
+    } else {
+      return null;
+    }
   }
-  
+
   public Object getDiagram() {
     return diagram;
+  }
+  
+  public IncEvalState getState() {
+    return state;
+  }
+
+  /**
+   * Gets the result of all evaluations anywhere in this tree.
+   * 
+   * @return
+   */
+  public List<IncEvalState> getStates() {
+    List<IncEvalState> states = Lists.newArrayList();
+    getStatesHelper(states);
+    return states;
+  }
+  
+  private void getStatesHelper(List<IncEvalState> states) {
+    if (state != null) {
+      states.add(state);
+    }
+
+    if (!isTerminal()) {
+      myLeft.getStatesHelper(states);
+      myRight.getStatesHelper(states);
+    }
   }
 
   public GroundedCcgParse addDiagram(Object diagram) {
     return new GroundedCcgParse(getHeadedSyntacticCategory(), getLexiconEntry(), getWords(), getPosTags(), getSemanticHeads(),
         getNodeDependencies(), getNodeProbability(), getLeft(), getRight(), getCombinator(), getUnaryRule(),
-        getSpanStart(), getSpanEnd(), denotation, diagram);
+        getSpanStart(), getSpanEnd(), state, diagram);
+  }
+  
+  public GroundedCcgParse addState(IncEvalState newState, double newProb) {
+    return new GroundedCcgParse(getHeadedSyntacticCategory(), getLexiconEntry(), getWords(), getPosTags(), getSemanticHeads(),
+        getNodeDependencies(), newProb, getLeft(), getRight(), getCombinator(), getUnaryRule(),
+        getSpanStart(), getSpanEnd(), newState, diagram);
   }
 
   /**
@@ -122,9 +177,9 @@ public class GroundedCcgParse extends CcgParse {
 
   private Expression2 getUnevaluatedLogicalForm(Environment env,
       IndexedList<String> symbolTable, List<String> newBindings) {
-    if (denotation != null) {
+    if (state != null) {
       String varName = "denotation" + newBindings.size();
-      env.bindName(varName, denotation, symbolTable);
+      env.bindName(varName, state.getDenotation(), symbolTable);
       newBindings.add(varName);
       return Expression2.constant(varName);
     }

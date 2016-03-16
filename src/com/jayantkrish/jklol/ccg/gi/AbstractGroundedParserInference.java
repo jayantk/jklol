@@ -2,9 +2,8 @@ package com.jayantkrish.jklol.ccg.gi;
 
 import java.util.List;
 
-import com.google.common.base.Predicate;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
-import com.jayantkrish.jklol.ccg.gi.GroundedParser.State;
+import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.NullLogFunction;
 
@@ -18,7 +17,7 @@ public abstract class AbstractGroundedParserInference implements GroundedParserI
   
   @Override
   public List<GroundedCcgParse> beamSearch(GroundedParser parser, AnnotatedSentence sentence,
-      Object initialDiagram, ChartCost chartFilter, GroundedParseCost evalCost) {
+      Object initialDiagram, ChartCost chartFilter, IncEvalCost evalCost) {
     return beamSearch(parser, sentence, initialDiagram, chartFilter, evalCost, new NullLogFunction());
   }
 }

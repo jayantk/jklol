@@ -10,9 +10,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Doubles;
 import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
-import com.jayantkrish.jklol.ccg.ShiftReduceStack;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
-import com.jayantkrish.jklol.ccg.gi.GroundedParser.State;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.lisp.inc.IncEval;
@@ -29,6 +27,7 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
   private final ExpressionSimplifier simplifier;
   private final int numLogicalForms;
   private final int evalBeamSize;
+  private final boolean locallyNormalize;
   
   // Natural ordering on parses that sorts them by probability.
   private final static Ordering<GroundedCcgParse> parseOrdering = new Ordering<GroundedCcgParse>() {
@@ -38,23 +37,30 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
   };
   
   public GroundedParserPipelinedInference(CcgInference ccgInference, ExpressionSimplifier simplifier,
-      int numLogicalForms, int evalBeamSize) {
+      int numLogicalForms, int evalBeamSize, boolean locallyNormalize) {
     this.ccgInference = Preconditions.checkNotNull(ccgInference);
     this.simplifier = simplifier;
     this.numLogicalForms = numLogicalForms;
     this.evalBeamSize = evalBeamSize;
+    this.locallyNormalize = locallyNormalize;
   }
-  
+
   @Override
   public List<GroundedCcgParse> beamSearch(GroundedParser parser, AnnotatedSentence sentence,
-      Object initialDiagram, ChartCost chartFilter, GroundedParseCost cost,
+      Object initialDiagram, ChartCost chartFilter, IncEvalCost cost,
       LogFunction log) {
 
     List<CcgParse> ccgParses = ccgInference.beamSearch(parser.getCcgParser(),
         sentence, chartFilter, log);
-    
+    double parsePartitionFunction = 1.0;
+    if (locallyNormalize) {
+      parsePartitionFunction = 0.0;
+      for (CcgParse p : ccgParses) {
+        parsePartitionFunction += p.getSubtreeProbability();
+      }
+    }
+
     IncEval eval = parser.getEval();
-    IncEvalCost evalCost = cost != null ? new WrapperIncEvalCost(cost) : null;
     
     Multimap<Expression2, CcgParse> lfMap = HashMultimap.create();
     CountAccumulator<Expression2> lfProbs = CountAccumulator.create();
@@ -69,7 +75,7 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
         break;
       }
 
-      List<IncEvalState> states = eval.evaluateBeam(lf, initialDiagram, evalCost,
+      List<IncEvalState> states = eval.evaluateBeam(lf, initialDiagram, cost,
           log, evalBeamSize);
       System.out.println("evaluated: " + states.size() + " " + lf);
 
@@ -77,10 +83,19 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
         numEvaluated++;
       }
 
+      double evalPartitionFunction = 1.0;
+      if (locallyNormalize) {
+        evalPartitionFunction = 0.0;
+        for (IncEvalState state : states) {
+          evalPartitionFunction += state.getProb();
+        }
+      }
+
       for (CcgParse ccgParse : lfMap.get(lf)) {
         for (IncEvalState state : states) {
           GroundedCcgParse parse = GroundedCcgParse.fromCcgParse(ccgParse).addDiagram(state.getDiagram())
-              .addState(state, ccgParse.getNodeProbability() * state.getProb());
+              .addState(state, ccgParse.getNodeProbability() * state.getProb()
+                  / (parsePartitionFunction * evalPartitionFunction));
           parses.add(parse);
         }
       }
@@ -99,21 +114,6 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
       }
       map.put(lf, parse);
       probs.increment(lf, parse.getSubtreeProbability());
-    }
-  }
-  
-  private static class WrapperIncEvalCost implements IncEvalCost {
-    
-    private final GroundedParseCost evalCost;
-    
-    public WrapperIncEvalCost(GroundedParseCost evalCost) {
-      this.evalCost = Preconditions.checkNotNull(evalCost);
-    }
-
-    @Override
-    public double apply(IncEvalState state) {
-      State parserState = new State(ShiftReduceStack.empty(), null, null, state);
-      return evalCost.apply(parserState);
     }
   }
 }

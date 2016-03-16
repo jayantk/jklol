@@ -19,6 +19,7 @@ import com.jayantkrish.jklol.ccg.chart.ChartEntry;
 import com.jayantkrish.jklol.ccg.gi.GroundedParser.State;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
+import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
@@ -39,7 +40,7 @@ public class GroundedParserInterleavedInference extends AbstractGroundedParserIn
 
   @Override
   public List<GroundedCcgParse> beamSearch(GroundedParser parser, AnnotatedSentence sentence,
-      Object initialDiagram, ChartCost chartFilter, GroundedParseCost evalCost,
+      Object initialDiagram, ChartCost chartFilter, IncEvalCost evalCost,
       LogFunction log) {
     CcgLeftToRightChart chart = new CcgLeftToRightChart(sentence, Integer.MAX_VALUE);
     parser.getCcgParser().initializeChart(chart, sentence, chartFilter);
@@ -153,7 +154,7 @@ public class GroundedParserInterleavedInference extends AbstractGroundedParserIn
   private void offerParseStates(State state, SearchQueue<ShiftReduceStack> tempHeap,
       SearchQueue<State> heap, SearchQueue<State> finishedHeap, SearchQueue<State> tempStateHeap, 
       List<IncEvalState> tempEvalResults, CcgChart chart, GroundedParser parser,
-      GroundedParseCost evalCost, LogFunction log) {
+      IncEvalCost evalCost, LogFunction log) {
     ShiftReduceStack[] tempHeapKeys = tempHeap.getItems();
     for (int j = 0; j < tempHeap.size(); j++) {
       ShiftReduceStack result = tempHeapKeys[j];
@@ -197,7 +198,7 @@ public class GroundedParserInterleavedInference extends AbstractGroundedParserIn
 
   private void evaluateContinuation(State state, List<IncEvalState> tempEvalResults,
       SearchQueue<State> heap, SearchQueue<State> finishedHeap, SearchQueue<State> tempHeap,
-      CcgChart chart, GroundedParser parser, GroundedParseCost evalCost, LogFunction log) {
+      CcgChart chart, GroundedParser parser, IncEvalCost evalCost, LogFunction log) {
     IncEvalState next = state.evalResult;
     while (next != null) {
       tempEvalResults.clear();
@@ -243,7 +244,7 @@ public class GroundedParserInterleavedInference extends AbstractGroundedParserIn
    */
   private void queueEvalState(IncEvalState evalResult, ShiftReduceStack cur,
       SearchQueue<State> heap, SearchQueue<State> finishedHeap,
-      CcgChart chart, GroundedParser parser, GroundedParseCost evalCost) {
+      CcgChart chart, GroundedParser parser, IncEvalCost evalCost) {
     if (evalResult.getContinuation() == null) {
       // Evaluation has finished (for now) and the search must switch back
       // to parsing. Create a new entry on the CCG chart representing the
@@ -274,9 +275,12 @@ public class GroundedParserInterleavedInference extends AbstractGroundedParserIn
   }
 
   private static final void offer(SearchQueue<State> heap, SearchQueue<State> finishedHeap,
-      State state, GroundedParseCost cost) {
+      State state, IncEvalCost cost) {
     double costValue = 0.0;
-    if (cost != null) costValue = cost.apply(state);
+    if (cost != null && state.evalResult != null) {
+      costValue = cost.apply(state.evalResult);
+    }
+
     if (costValue != Double.NEGATIVE_INFINITY) {
       if (state.evalResult == null && state.stack.includesRootProb) {
         finishedHeap.offer(state, state.totalProb * Math.exp(costValue));

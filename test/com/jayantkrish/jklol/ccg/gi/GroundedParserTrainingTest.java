@@ -26,12 +26,13 @@ import com.jayantkrish.jklol.lisp.inc.ParametricContinuationIncEval.StateFeature
 import com.jayantkrish.jklol.lisp.inc.ParametricIncEval;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
-import com.jayantkrish.jklol.preprocessing.HashingFeatureVectorGenerator;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.Lbfgs;
+import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -131,7 +132,9 @@ public class GroundedParserTrainingTest extends TestCase {
     ContinuationIncEval eval = new ContinuationIncEval(ambEval, env, simplifier, defs);
     
     FeatureVectorGenerator<StateFeatures> featureVectorGen =
-        new HashingFeatureVectorGenerator<StateFeatures>(100, new StateFeatureGen());
+        new DictionaryFeatureVectorGenerator<StateFeatures, String>(StateFeatureGen.getFeatureNames(
+            Arrays.asList("even", "odd"), Arrays.asList("1", "2", "3", "4", "5"), Arrays.asList("TRUE", "FALSE")),
+            new StateFeatureGen(), false);
     ParametricIncEval evalFamily = ParametricContinuationIncEval.fromFeatureGenerator(
         featureVectorGen, eval);
 
@@ -143,7 +146,7 @@ public class GroundedParserTrainingTest extends TestCase {
 
     // GroundedParserInference inf = new GroundedParserInterleavedInference(20, 3);
     GroundedParserInference inf = new GroundedParserPipelinedInference(
-        CcgCkyInference.getDefault(100), ExpressionSimplifier.lambdaCalculus(), 10, 100);
+        CcgCkyInference.getDefault(100), ExpressionSimplifier.lambdaCalculus(), 10, 100, false);
     GroundedParserLoglikelihoodOracle oracle = new GroundedParserLoglikelihoodOracle(family, inf);
     // GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(1000,
     // 1, 1, true, true, Double.MAX_VALUE, 0.0, new DefaultLogFunction());
@@ -154,6 +157,30 @@ public class GroundedParserTrainingTest extends TestCase {
     GroundedParser parser = family.getModelFromParameters(parameters);
     System.out.println(family.getParameterDescription(parameters));
     
+    assertDistributionEquals(parser, inf, "foo", new Object[] {3}, new double[] {1.0});
+    assertDistributionEquals(parser, inf, "a even", new Object[] {2, 4}, new double[] {0.5, 0.5});
+    assertDistributionEquals(parser, inf, "a even plus 1", new Object[] {3, 5}, new double[] {0.5, 0.5});
+  }
+  
+  public void testNormalizedTraining() {
+    List<ValueGroundedParseExample> examples = parseExamples(sentences, labels);
+
+    // GroundedParserInference inf = new GroundedParserInterleavedInference(20, 3);
+    GroundedParserInference inf = new GroundedParserPipelinedInference(
+        CcgCkyInference.getDefault(100), ExpressionSimplifier.lambdaCalculus(), 10, 100, true);
+    GroundedParserNormalizedLoglikelihoodOracle oracle = new GroundedParserNormalizedLoglikelihoodOracle(
+        family, ExpressionSimplifier.lambdaCalculus(), 100, 100);
+    /*
+    GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(1000,
+        1, 1, true, true, Double.MAX_VALUE, 0.0, new DefaultLogFunction());
+        */
+    GradientOptimizer trainer = new Lbfgs(100, 10, 0.0, new DefaultLogFunction());
+
+    SufficientStatistics initialParameters = oracle.initializeGradient();
+    SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);
+    GroundedParser parser = family.getModelFromParameters(parameters);
+    System.out.println(family.getParameterDescription(parameters));
+
     assertDistributionEquals(parser, inf, "foo", new Object[] {3}, new double[] {1.0});
     assertDistributionEquals(parser, inf, "a even", new Object[] {2, 4}, new double[] {0.5, 0.5});
     assertDistributionEquals(parser, inf, "a even plus 1", new Object[] {3, 5}, new double[] {0.5, 0.5});
@@ -203,6 +230,19 @@ public class GroundedParserTrainingTest extends TestCase {
 
   private static class StateFeatureGen implements FeatureGenerator<StateFeatures, String> {
     private static final long serialVersionUID = 1L;
+    
+    public static IndexedList<String> getFeatureNames(List<String> predicates,
+        List<String> entities, List<String> values) {
+      IndexedList<String> names = IndexedList.create();
+      for (String predicate : predicates) {
+        for (String entity : entities) {
+          for (String value : values) {
+            names.add("(list " + predicate + " " + entity + ")=" + value);
+          }
+        }
+      }
+      return names;
+    }
 
     @Override
     public Map<String, Double> generateFeatures(StateFeatures item) {
@@ -216,10 +256,12 @@ public class GroundedParserTrainingTest extends TestCase {
         }
       }
 
+      /*
       if (item.getOtherArg() != null) {
         // Denotation features.
         features.put("denotation_" + item.getOtherArg() + "=" + item.getDenotation(), 1.0);
       }
+      */
 
       return features;
     }

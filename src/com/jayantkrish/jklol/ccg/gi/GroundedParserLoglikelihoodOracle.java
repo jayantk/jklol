@@ -9,6 +9,7 @@ import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
+import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.GradientOracle;
@@ -51,7 +52,7 @@ public class GroundedParserLoglikelihoodOracle implements
     // Get a distribution on executions conditioned on the label of the example.
     // Do this first because it's faster, so search errors take less time to process.
     log.startTimer("update_gradient/output_marginal");
-    GroundedParseCost labelCost = example.getLabelCost();
+    IncEvalCost labelCost = example.getLabelCost();
     ChartCost chartFilter = example.getChartFilter();
     System.out.println("conditional evaluations:");
     List<GroundedCcgParse> conditionalParsesInit = inference.beamSearch(
@@ -78,7 +79,7 @@ public class GroundedParserLoglikelihoodOracle implements
     
     // Get a distribution over unconditional executions.
     log.startTimer("update_gradient/input_marginal");
-    GroundedParseCost marginCost = example.getMarginCost();
+    IncEvalCost marginCost = example.getMarginCost();
     System.out.println("unconditional evaluations:");
     List<GroundedCcgParse> unconditionalParses = inference.beamSearch(
         model, sentence, diagram, null, marginCost, log);

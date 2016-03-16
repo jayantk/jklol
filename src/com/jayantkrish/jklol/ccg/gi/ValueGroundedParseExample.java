@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.ccg.gi;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
+import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
 public class ValueGroundedParseExample implements GroundedParseExample {
@@ -30,12 +31,12 @@ public class ValueGroundedParseExample implements GroundedParseExample {
   }
 
   @Override
-  public GroundedParseCost getMarginCost() {
+  public IncEvalCost getMarginCost() {
     return null;
   }
 
   @Override
-  public GroundedParseCost getLabelCost() {
+  public IncEvalCost getLabelCost() {
     return null;
   }
 

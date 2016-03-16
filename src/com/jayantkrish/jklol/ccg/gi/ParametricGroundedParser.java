@@ -4,8 +4,10 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.inc.IncEval;
 import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 import com.jayantkrish.jklol.lisp.inc.ParametricIncEval;
@@ -68,5 +70,25 @@ public class ParametricGroundedParser implements ParametricFamily<GroundedParser
       evalFamily.incrementSufficientStatistics(gradientList.get(1), parameterList.get(1),
           parse.getLogicalForm(), state, count);
     }
+  }
+  
+  public void incrementParserStatistics(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, AnnotatedSentence sentence,
+      CcgParse parse, double count) {
+    List<SufficientStatistics> gradientList = gradient.coerceToList().getStatistics();
+    List<SufficientStatistics> parameterList = currentParameters.coerceToList().getStatistics();
+    
+    ccgFamily.incrementSufficientStatistics(gradientList.get(0), parameterList.get(0),
+        sentence, parse, count);
+  }
+  
+  public void incrementEvalStatistics(SufficientStatistics gradient,
+      SufficientStatistics currentParameters, Expression2 logicalForm,
+      IncEvalState state, double count) {
+    List<SufficientStatistics> gradientList = gradient.coerceToList().getStatistics();
+    List<SufficientStatistics> parameterList = currentParameters.coerceToList().getStatistics();
+
+    evalFamily.incrementSufficientStatistics(gradientList.get(1), parameterList.get(1),
+        logicalForm, state, count);
   }
 }

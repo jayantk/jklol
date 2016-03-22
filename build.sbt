@@ -4,7 +4,7 @@ name := "jklol"
 
 description := "Jayant Krishnamurthy's (machine) learning and optimization library"
 
-version := "1.1-SNAPSHOT"
+version := "1.1"
 
 scalaVersion := "2.11.7"
 

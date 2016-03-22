@@ -101,8 +101,14 @@ public class GroundedParserNormalizedLoglikelihoodOracle
           System.out.println("  " + conditionalState.getDenotation() + " " + lf + " " + conditionalState.getDiagram());
         }
       }
-
+      
       if (denotationCorrectStates.size() > 0) {
+        if (unconditionalStates.size() == 0) {
+          // Unconditional search failure
+          System.out.println("Search error (Predicted): " + sentence + " " + lf + " " + diagram);
+          throw new ZeroProbabilityError();
+        }
+
         unconditionalEvaluations.putAll(lf, unconditionalStates);
         conditionalEvaluations.putAll(lf, denotationCorrectStates);
         evaluationPartitionFunctions.put(lf, getPartitionFunction(unconditionalStates));
@@ -111,6 +117,7 @@ public class GroundedParserNormalizedLoglikelihoodOracle
     
     if (conditionalEvaluations.size() == 0) {
       // Search error.
+      System.out.println("Search error (Correct): " + sentence + " " + diagram);
       throw new ZeroProbabilityError();
     }
     
@@ -118,9 +125,14 @@ public class GroundedParserNormalizedLoglikelihoodOracle
     // gradient updates.
     double correctProbability = 0.0;
     for (Expression2 lf : conditionalEvaluations.keySet()) {
+      System.out.println("parse prob: "+ getParsePartitionFunction(lfParseMap.get(lf)));
+      System.out.println("parse partition function: " + parserPartitionFunction);
+      System.out.println("eval prob: "+ getPartitionFunction(conditionalEvaluations.get(lf)));
+      System.out.println("eval partition function: " + evaluationPartitionFunctions.get(lf));
       correctProbability += (getParsePartitionFunction(lfParseMap.get(lf)) / parserPartitionFunction)
           * (getPartitionFunction(conditionalEvaluations.get(lf)) / evaluationPartitionFunctions.get(lf));
     }
+    System.out.println("correct probability: "+ correctProbability);
     
     // Compute parser gradient
     for (Expression2 lf : conditionalEvaluations.keySet()) {

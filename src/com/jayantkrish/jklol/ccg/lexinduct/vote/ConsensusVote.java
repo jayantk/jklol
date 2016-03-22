@@ -47,7 +47,7 @@ public class ConsensusVote implements VotingStrategy {
         }
       }
 
-      PairCountAccumulator<List<String>, Lexeme> votes = VotingStrategy.aggregateVotes(exampleLexemes);
+      PairCountAccumulator<List<String>, Lexeme> votes = VoteAggregator.aggregateVotes(exampleLexemes);
 
       Set<Lexeme> allLexemes = Sets.newHashSet();
       for (Set<Lexeme> lexemes : exampleLexemes) {

@@ -16,7 +16,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.google.common.io.NullOutputStream;
+import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
@@ -1005,7 +1005,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testSerialization() throws IOException {
-    ObjectOutputStream oos = new ObjectOutputStream(new NullOutputStream());
+    ObjectOutputStream oos = new ObjectOutputStream(ByteStreams.nullOutputStream());
     oos.writeObject(parserWithUnary);
     oos.close();
   }

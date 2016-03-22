@@ -150,7 +150,12 @@ public class AmbEval {
         case NEW_FG_SCOPE_INDEX: return doNewFgScope(subexpressions, environment, builder, context);
         }
       }
-      return doFunctionApplication(subexpressions, environment, builder, context);
+      try {
+        return doFunctionApplication(subexpressions, environment, builder, context);
+      } catch (Exception e) {
+        System.out.println("Function: " + expression);
+        throw e;
+      }
     }
   }
 
@@ -375,7 +380,12 @@ public class AmbEval {
     Object value = eval(subexpressions.get(1), environment, builder, context).getValue();
 
     if (value instanceof AmbValue) {
-      DiscreteFactor varMarginal = ambToMarginals((AmbValue) value, builder, true);
+      DiscreteFactor varMarginal;
+      try {
+        varMarginal = ambToMarginals((AmbValue) value, builder, true);
+      } catch (Exception e) {
+        throw new RuntimeException("illegal factor graph", e);
+      }
       
       Iterator<Outcome> iter = varMarginal.outcomeIterator();
       List<Object> outcomes = Lists.newArrayList();

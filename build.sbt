@@ -34,6 +34,9 @@ libraryDependencies ++= Seq(
 
 publishMavenStyle := true
 
+// Don't prepend the scala version number
+crossPaths := false
+
 pomIncludeRepository := { _ => false }
 
 publishTo := {

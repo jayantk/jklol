@@ -25,16 +25,17 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
   private final VariableNumMap terminalVar;
   private final VariableNumMap ruleTypeVar;
 
+  private final ParametricFactor rootFactor;
   private final ParametricFactor nonterminalFactor;
   private final ParametricFactor terminalFactor;
 
   private final boolean canSkipTerminals;
 
-  private static final List<String> STATISTIC_NAMES = Arrays.asList("nonterminals", "terminals");
+  private static final List<String> STATISTIC_NAMES = Arrays.asList("root", "nonterminals", "terminals");
 
   public ParametricCfgParser(VariableNumMap parentVar, VariableNumMap leftVar,
       VariableNumMap rightVar, VariableNumMap terminalVar, VariableNumMap ruleTypeVar,
-      ParametricFactor nonterminalFactor, ParametricFactor terminalFactor,
+      ParametricFactor rootFactor, ParametricFactor nonterminalFactor, ParametricFactor terminalFactor,
       boolean canSkipTerminals) {
     this.parentVar = parentVar;
     this.leftVar = leftVar;
@@ -42,6 +43,7 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
     this.terminalVar = terminalVar;
     this.ruleTypeVar = ruleTypeVar;
 
+    this.rootFactor = rootFactor;
     this.nonterminalFactor = nonterminalFactor;
     this.terminalFactor = terminalFactor;
     this.canSkipTerminals = canSkipTerminals;
@@ -51,11 +53,13 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
   public CfgParser getModelFromParameters(SufficientStatistics parameters) {
     Preconditions.checkArgument(parameters instanceof ListSufficientStatistics);
     ListSufficientStatistics statisticsList = (ListSufficientStatistics) parameters;
-    Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
-    SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(0);
-    SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
+    Preconditions.checkArgument(statisticsList.getStatistics().size() == 3);
+    SufficientStatistics rootStatistics = statisticsList.getStatistics().get(0);
+    SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(1);
+    SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(2);
 
     CfgParser parser = new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar,
+        (DiscreteFactor) rootFactor.getModelFromParameters(rootStatistics),
         (DiscreteFactor) nonterminalFactor.getModelFromParameters(nonterminalStatistics),
         (DiscreteFactor) terminalFactor.getModelFromParameters(terminalStatistics),
         canSkipTerminals, null);
@@ -63,24 +67,9 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
   }
 
   @Override
-  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
-    Preconditions.checkArgument(parameters instanceof ListSufficientStatistics);
-    ListSufficientStatistics statisticsList = (ListSufficientStatistics) parameters;
-    Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
-    SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(0);
-    SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
-    
-    StringBuilder sb = new StringBuilder();
-    sb.append("nonterminal distribution: \n");
-    sb.append(nonterminalFactor.getParameterDescription(nonterminalStatistics, numFeatures));
-    sb.append("terminal distribution: \n");
-    sb.append(terminalFactor.getParameterDescription(terminalStatistics, numFeatures));
-    return sb.toString();
-  }
-
-  @Override
   public SufficientStatistics getNewSufficientStatistics() {
     List<SufficientStatistics> statisticsList = Lists.newArrayList();
+    statisticsList.add(rootFactor.getNewSufficientStatistics());
     statisticsList.add(nonterminalFactor.getNewSufficientStatistics());
     statisticsList.add(terminalFactor.getNewSufficientStatistics());
     return new ListSufficientStatistics(STATISTIC_NAMES, statisticsList);
@@ -91,15 +80,21 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
       double partitionFunction) {
     Preconditions.checkArgument(statistics instanceof ListSufficientStatistics);
     ListSufficientStatistics statisticsList = (ListSufficientStatistics) statistics;
-    Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
-    SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(0);
-    SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
+    Preconditions.checkArgument(statisticsList.getStatistics().size() == 3);
+    SufficientStatistics rootStatistics = statisticsList.getStatistics().get(0);
+    SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(1);
+    SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(2);
 
     Preconditions.checkArgument(currentParameters instanceof ListSufficientStatistics);
     ListSufficientStatistics parameterList = (ListSufficientStatistics) currentParameters;
-    Preconditions.checkArgument(parameterList.getStatistics().size() == 2);
-    SufficientStatistics nonterminalParameters = parameterList.getStatistics().get(0);
-    SufficientStatistics terminalParameters = parameterList.getStatistics().get(1);
+    Preconditions.checkArgument(parameterList.getStatistics().size() == 3);
+    SufficientStatistics rootParameters = parameterList.getStatistics().get(0);
+    SufficientStatistics nonterminalParameters = parameterList.getStatistics().get(1);
+    SufficientStatistics terminalParameters = parameterList.getStatistics().get(2);
+
+    Factor rootDistribution = chart.getMarginalEntries(0, chart.chartSize() - 1);
+    rootFactor.incrementSufficientStatisticsFromMarginal(rootStatistics, rootParameters,
+        rootDistribution, Assignment.EMPTY, count, partitionFunction);
 
     Factor binaryRuleDistribution = chart.getBinaryRuleExpectations();
     nonterminalFactor.incrementSufficientStatisticsFromMarginal(nonterminalStatistics,
@@ -114,15 +109,23 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
       SufficientStatistics currentParameters, CfgParseTree parse, double count) {
     Preconditions.checkArgument(statistics instanceof ListSufficientStatistics);
     ListSufficientStatistics statisticsList = (ListSufficientStatistics) statistics;
-    Preconditions.checkArgument(statisticsList.getStatistics().size() == 2);
-    SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(0);
-    SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(1);
+    Preconditions.checkArgument(statisticsList.getStatistics().size() == 3);
+    SufficientStatistics rootStatistics = statisticsList.getStatistics().get(0);
+    SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(1);
+    SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(2);
 
     Preconditions.checkArgument(currentParameters instanceof ListSufficientStatistics);
     ListSufficientStatistics parameterList = (ListSufficientStatistics) currentParameters;
-    Preconditions.checkArgument(parameterList.getStatistics().size() == 2);
-    SufficientStatistics nonterminalParameters = parameterList.getStatistics().get(0);
-    SufficientStatistics terminalParameters = parameterList.getStatistics().get(1);
+    Preconditions.checkArgument(parameterList.getStatistics().size() == 3);
+    SufficientStatistics rootParameters = parameterList.getStatistics().get(0);
+    SufficientStatistics nonterminalParameters = parameterList.getStatistics().get(1);
+    SufficientStatistics terminalParameters = parameterList.getStatistics().get(2);
+    
+    // Update root parameters
+    rootFactor.incrementSufficientStatisticsFromAssignment(rootStatistics, rootParameters,
+        parentVar.outcomeArrayToAssignment(parse.getRoot()), count);
+    
+    // Update rule parameters
     accumulateSufficientStatistics(parse, nonterminalStatistics, terminalStatistics, 
         nonterminalParameters, terminalParameters, count);
   }
@@ -162,15 +165,34 @@ public class ParametricCfgParser implements ParametricFamily<CfgParser> {
       nonterminalFactor.incrementSufficientStatisticsFromAssignment(nonterminalStatistics,
           terminalParameters, nonterminalRule, weight);
       // System.out.println(weight + " " + nonterminalRule);
-      accumulateSufficientStatistics(tree.getLeft(), nonterminalStatistics, terminalStatistics,
-          nonterminalParameters, terminalParameters, weight);
-      accumulateSufficientStatistics(tree.getRight(), nonterminalStatistics, terminalStatistics,
-          nonterminalParameters, terminalParameters, weight);
+      accumulateSufficientStatistics(tree.getLeft(), nonterminalStatistics,
+          terminalStatistics, nonterminalParameters, terminalParameters, weight);
+      accumulateSufficientStatistics(tree.getRight(), nonterminalStatistics,
+          terminalStatistics, nonterminalParameters, terminalParameters, weight);
     }
   }
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters) {
-    throw new UnsupportedOperationException("not implemented.");
+    return getParameterDescription(parameters, -1);
+  }
+
+  @Override
+  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
+    Preconditions.checkArgument(parameters instanceof ListSufficientStatistics);
+    ListSufficientStatistics statisticsList = (ListSufficientStatistics) parameters;
+    Preconditions.checkArgument(statisticsList.getStatistics().size() == 3);
+    SufficientStatistics rootStatistics = statisticsList.getStatistics().get(0);
+    SufficientStatistics nonterminalStatistics = statisticsList.getStatistics().get(1);
+    SufficientStatistics terminalStatistics = statisticsList.getStatistics().get(2);
+    
+    StringBuilder sb = new StringBuilder();
+    sb.append("root distribution: \n");
+    sb.append(rootFactor.getParameterDescription(rootStatistics, numFeatures));
+    sb.append("nonterminal distribution: \n");
+    sb.append(nonterminalFactor.getParameterDescription(nonterminalStatistics, numFeatures));
+    sb.append("terminal distribution: \n");
+    sb.append(terminalFactor.getParameterDescription(terminalStatistics, numFeatures));
+    return sb.toString();
   }
 }

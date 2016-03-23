@@ -43,6 +43,7 @@ import com.jayantkrish.jklol.util.Assignment;
 public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmentModel> {
   private static final long serialVersionUID = 1L;
 
+  private final ParametricFactor rootFactor;
   private final ParametricFactor ruleFactor;
   private final ParametricFactor nonterminalFactor;
   private final ParametricFactor terminalFactor;
@@ -63,9 +64,11 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   public static final ExpressionNode SKIP_EXPRESSION = new ExpressionNode(Expression2.constant(SKIP_CONSTANT),
       Type.createAtomic(SKIP_CONSTANT), 0);
 
-  public ParametricCfgAlignmentModel(ParametricFactor ruleFactor, ParametricFactor nonterminalFactor,
-      ParametricFactor terminalFactor, VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar,
+  public ParametricCfgAlignmentModel(ParametricFactor rootFactor, ParametricFactor ruleFactor,
+      ParametricFactor nonterminalFactor, ParametricFactor terminalFactor,
+      VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar,
       VariableNumMap parentVar, VariableNumMap ruleVar, int nGramLength, boolean loglinear) {
+    this.rootFactor = Preconditions.checkNotNull(rootFactor);
     this.ruleFactor = Preconditions.checkNotNull(ruleFactor);
     this.nonterminalFactor = Preconditions.checkNotNull(nonterminalFactor);
     this.terminalFactor = Preconditions.checkNotNull(terminalFactor);
@@ -162,7 +165,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     System.out.println("nonterminal sparsity: " + nonterminalSparsityFactor.size());
     System.out.println("terminal sparsity: " + sparsityFactor.size());
 
-    // Learn the nonterminal probabilities
+    ParametricFactor rootFactor = null;
     ParametricFactor ruleFactor = null;
     ParametricFactor nonterminalFactor = null;
     ParametricFactor terminalFactor = null;
@@ -203,10 +206,13 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
       // terminalFactor = new CombiningParametricFactor(terminalFeatureFactor.getVars(), factorNames,
       // Arrays.asList(terminalIndicatorFactor, terminalFeatureFactor), false);
 
+      rootFactor = new ConstantParametricFactor(parentVar, TableFactor.unity(parentVar));
       ruleFactor = ruleFeatureFactor;
       nonterminalFactor = nonterminalFeatureFactor;
       terminalFactor = terminalFeatureFactor;
     } else {
+      // Uniform distribution over root symbols
+      rootFactor = new ConstantParametricFactor(parentVar, TableFactor.unity(parentVar));
       // Assign all binary rules probability 1
       nonterminalFactor = new ConstantParametricFactor(nonterminalVars, nonterminalSparsityFactor);
       // Constant probability of invoking a rule or not.
@@ -222,7 +228,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
           terminalVar, sparsityFactor, constantFactor);
     }
 
-    return new ParametricCfgAlignmentModel(ruleFactor, nonterminalFactor, terminalFactor,
+    return new ParametricCfgAlignmentModel(rootFactor, ruleFactor, nonterminalFactor, terminalFactor,
         terminalVar, leftVar, rightVar, parentVar, ruleVar, nGramLength, loglinear);
   }
   
@@ -241,7 +247,11 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   public VariableNumMap getTerminalVar() {
     return terminalVar;
   }
-  
+
+  public ParametricFactor getRootFactor() {
+    return rootFactor;
+  }
+
   public ParametricFactor getRuleFactor() {
     return ruleFactor;
   }
@@ -256,8 +266,8 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
-    return new ListSufficientStatistics(Arrays.asList("rules", "nonterminals", "terminals"),
-        Arrays.asList(ruleFactor.getNewSufficientStatistics(),
+    return new ListSufficientStatistics(Arrays.asList("root", "rules", "nonterminals", "terminals"),
+        Arrays.asList(rootFactor.getNewSufficientStatistics(), ruleFactor.getNewSufficientStatistics(),
             nonterminalFactor.getNewSufficientStatistics(), terminalFactor.getNewSufficientStatistics()));
   }
 
@@ -265,15 +275,18 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   public CfgAlignmentModel getModelFromParameters(SufficientStatistics parameters) {
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
 
-    DiscreteFactor rules = ruleFactor.getModelFromParameters(parameterList.get(0))
+    DiscreteFactor root = rootFactor.getModelFromParameters(parameterList.get(0))
         .coerceToDiscrete();
-    DiscreteFactor ntf = nonterminalFactor.getModelFromParameters(parameterList.get(1))
+    DiscreteFactor rules = ruleFactor.getModelFromParameters(parameterList.get(1))
         .coerceToDiscrete();
-    DiscreteFactor tf = terminalFactor.getModelFromParameters(parameterList.get(2))
+    DiscreteFactor ntf = nonterminalFactor.getModelFromParameters(parameterList.get(2))
+        .coerceToDiscrete();
+    DiscreteFactor tf = terminalFactor.getModelFromParameters(parameterList.get(3))
         .coerceToDiscrete();
 
     if (loglinear) {
       // Normalize each distribution.
+      root = root.product(root.marginalize(parentVar).inverse());
       rules = rules.product(rules.marginalize(ruleVar).inverse());
       ntf = ntf.product(ntf.marginalize(ntf.getVars().removeAll(ruleVar.union(parentVar))).inverse());
       tf = tf.product(tf.marginalize(tf.getVars().removeAll(ruleVar.union(parentVar))).inverse());
@@ -283,17 +296,27 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     ntf = ntf.product(rules);
     tf = tf.product(rules);
     
-    return new CfgAlignmentModel(ntf, tf, terminalVar, leftVar, rightVar, parentVar, ruleVar,
+    return new CfgAlignmentModel(root, ntf, tf, terminalVar, leftVar, rightVar, parentVar, ruleVar,
         nGramLength);
   }
   
-  public void incrementExpectations(CfgExpectation expectations, DiscreteFactor nonterminalExpectations,
-      DiscreteFactor terminalExpectations, double count, double partitionFunction) {
+  public void incrementExpectations(CfgExpectation expectations, DiscreteFactor rootExpectations,
+      DiscreteFactor nonterminalExpectations, DiscreteFactor terminalExpectations,
+      double count, double partitionFunction) {
+    TableFactorBuilder rootBuilder = expectations.getRootBuilder();
     TableFactorBuilder ruleBuilder = expectations.getRuleBuilder();
     TableFactorBuilder terminalBuilder = expectations.getTerminalBuilder();
     TableFactorBuilder nonterminalBuilder = expectations.getNonterminalBuilder();
     
-    Iterator<Outcome> iter = terminalExpectations.outcomeIterator();
+    Iterator<Outcome> iter = rootExpectations.outcomeIterator();
+    while (iter.hasNext()) {
+      Outcome o = iter.next();
+      Assignment a = o.getAssignment();
+      double amount = count * o.getProbability() / partitionFunction;
+      rootBuilder.incrementWeight(a, amount);
+    }
+    
+    iter = terminalExpectations.outcomeIterator();
     while (iter.hasNext()) {
       Outcome o = iter.next();
       Assignment a = o.getAssignment();
@@ -315,11 +338,18 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
   }
   
   public void incrementExpectations(CfgExpectation expectations, CfgParseChart chart, double count) {
-    incrementExpectations(expectations, chart.getBinaryRuleExpectations().coerceToDiscrete(),
+    incrementExpectations(expectations, chart.getMarginalEntriesRoot().coerceToDiscrete(),
+        chart.getBinaryRuleExpectations().coerceToDiscrete(),
         chart.getTerminalRuleExpectations().coerceToDiscrete(), count, chart.getPartitionFunction());
   }
   
   public void incrementExpectations(CfgExpectation expectations, CfgParseTree tree, double count) {
+    TableFactorBuilder rootBuilder = expectations.getRootBuilder();
+    rootBuilder.incrementWeight(parentVar.outcomeArrayToAssignment(tree.getRoot()), count);
+    incrementExpectationsHelper(expectations, tree, count);
+  }
+
+  private void incrementExpectationsHelper(CfgExpectation expectations, CfgParseTree tree, double count) {
     TableFactorBuilder ruleBuilder = expectations.getRuleBuilder();
     TableFactorBuilder terminalBuilder = expectations.getTerminalBuilder();
     TableFactorBuilder nonterminalBuilder = expectations.getNonterminalBuilder();
@@ -357,12 +387,14 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     List<SufficientStatistics> statisticList = statistics.coerceToList().getStatistics();
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
     
-    ruleFactor.incrementSufficientStatisticsFromMarginal(statisticList.get(0),
-        parameterList.get(0), expectations.getRuleBuilder().build(), Assignment.EMPTY, 1, 1.0);
-    nonterminalFactor.incrementSufficientStatisticsFromMarginal(statisticList.get(1),
-        parameterList.get(1), expectations.getNonterminalBuilder().build(), Assignment.EMPTY, 1, 1.0);
-    terminalFactor.incrementSufficientStatisticsFromMarginal(statisticList.get(2),
-        parameterList.get(2), expectations.getTerminalBuilder().build(), Assignment.EMPTY, 1, 1.0);
+    rootFactor.incrementSufficientStatisticsFromMarginal(statisticList.get(0),
+        parameterList.get(0), expectations.getRootBuilder().build(), Assignment.EMPTY, 1, 1.0);
+    ruleFactor.incrementSufficientStatisticsFromMarginal(statisticList.get(1),
+        parameterList.get(1), expectations.getRuleBuilder().build(), Assignment.EMPTY, 1, 1.0);
+    nonterminalFactor.incrementSufficientStatisticsFromMarginal(statisticList.get(2),
+        parameterList.get(2), expectations.getNonterminalBuilder().build(), Assignment.EMPTY, 1, 1.0);
+    terminalFactor.incrementSufficientStatisticsFromMarginal(statisticList.get(3),
+        parameterList.get(3), expectations.getTerminalBuilder().build(), Assignment.EMPTY, 1, 1.0);
   }
 
   @Override
@@ -375,12 +407,14 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
 
     StringBuilder sb = new StringBuilder();
+    sb.append("root:\n");
+    sb.append(rootFactor.getParameterDescription(parameterList.get(0), numFeatures));
     sb.append("rules:\n");
-    sb.append(ruleFactor.getParameterDescription(parameterList.get(0), numFeatures));
+    sb.append(ruleFactor.getParameterDescription(parameterList.get(1), numFeatures));
     sb.append("nonterminals:\n");
-    sb.append(nonterminalFactor.getParameterDescription(parameterList.get(1), numFeatures));
+    sb.append(nonterminalFactor.getParameterDescription(parameterList.get(2), numFeatures));
     sb.append("terminals:\n");
-    sb.append(terminalFactor.getParameterDescription(parameterList.get(2), numFeatures));
+    sb.append(terminalFactor.getParameterDescription(parameterList.get(3), numFeatures));
     return sb.toString();
   }
   

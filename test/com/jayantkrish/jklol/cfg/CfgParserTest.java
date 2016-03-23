@@ -10,6 +10,7 @@ import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
+import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
@@ -17,6 +18,7 @@ import com.jayantkrish.jklol.util.Assignment;
 
 public class CfgParserTest extends TestCase {
 
+  DiscreteFactor root;
   DiscreteFactor binary;
   DiscreteFactor terminal;
 	CfgParser p, p2;
@@ -37,6 +39,7 @@ public class CfgParserTest extends TestCase {
 	  parentVar = new VariableNumMap(Ints.asList(3), Arrays.asList("v3"), Arrays.asList(nonterm));	  
 	  ruleVar = new VariableNumMap(Ints.asList(4), Arrays.asList("v4"), Arrays.asList(ruleTypes));
 	  
+	  // TableFactorBuilder rootBuilder = new TableFactorBuilder(parentVar, DenseTensorBuilder.getFactory());
 	  VariableNumMap binaryFactorVars = VariableNumMap.unionAll(parentVar, leftVar, rightVar, ruleVar);
 	  TableFactorBuilder binaryBuilder = new TableFactorBuilder(binaryFactorVars, SparseTensorBuilder.getFactory());
 	  VariableNumMap terminalFactorVars = VariableNumMap.unionAll(parentVar, termVar, ruleVar);
@@ -66,10 +69,12 @@ public class CfgParserTest extends TestCase {
 		addTerminal(terminalBuilder, "A", "b", "rule1", 0.25);
 		addTerminal(terminalBuilder, "A", "c", "rule1", 0.25);
 
+		root = TableFactor.unity(parentVar).add(
+		    TableFactor.pointDistribution(parentVar, parentVar.outcomeArrayToAssignment("S2")).product(-0.5));
 		binary = binaryBuilder.build();
 		terminal = terminalBuilder.build();
 		p = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, 
-		    binary, terminal, false, null);
+		    root, binary, terminal, false, null);
 
 		Assignment skipAssignment = parentVar.outcomeArrayToAssignment("**skip**")
 		    .union(ruleVar.outcomeArrayToAssignment("rule1"));
@@ -79,7 +84,7 @@ public class CfgParserTest extends TestCase {
 		}
 		
 		p2 = new CfgParser(parentVar, leftVar, rightVar, termVar, ruleVar, 
-		    binaryBuilder.build(), terminalBuilder.build(), true, skipAssignment);
+		    root, binaryBuilder.build(), terminalBuilder.build(), true, skipAssignment);
 	}
 	
 	private void addTerminal(TableFactorBuilder terminalBuilder, String nonterm, 
@@ -143,6 +148,16 @@ public class CfgParserTest extends TestCase {
 
 		Factor nProductions = c.getMarginalEntries(2, 3);
 		assertEquals(1.0, nProductions.getUnnormalizedProbability("N") / c.getPartitionFunction());
+	}
+
+	public void testParseMarginalRootProbs() {
+	  CfgParseChart c = p.parseMarginal(Arrays.asList("gretzky", "plays", "ice", "hockey"), true);
+
+	  Factor rootProductions = c.getMarginalEntries(0, 3);
+	  double partitionFunction = rootProductions.getTotalUnnormalizedProbability();
+	  assertEquals(2, rootProductions.coerceToDiscrete().getNonzeroAssignments().size());
+	  assertEquals(2.0 / 3, rootProductions.getUnnormalizedProbability("S") / partitionFunction, 0.001);
+	  assertEquals(1.0 / 3, rootProductions.getUnnormalizedProbability("S2") / partitionFunction, 0.001);
 	}
 
 	public void testParseMarginalWordSkip() {

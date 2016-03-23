@@ -69,8 +69,10 @@ public class ParametricCfgParserTest extends TestCase {
     VariableNumMap terminalVars = VariableNumMap.unionAll(terminal, parent, ruleType);
     ParametricFactor terminalFactor = DiscreteLogLinearFactor.createIndicatorFactor(terminalVars);
     
+    ParametricFactor rootFactor = DiscreteLogLinearFactor.createIndicatorFactor(parent);
+    
     cfgFactor = new ParametricCfgParser(parent, left, right, terminal, ruleType, 
-        nonterminalFactor, terminalFactor, false);
+        rootFactor, nonterminalFactor, terminalFactor, false);
     
     // Create some training data.
     trainingData = Lists.newArrayList();
@@ -134,6 +136,7 @@ public class ParametricCfgParserTest extends TestCase {
 
     SufficientStatistics parameters = trainer.train(oracle,
         oracle.initializeGradient(), trainingData);
+    System.out.println(cfgModel.getParameterDescription(parameters));
     return cfgModel.getModelFromParameters(parameters);
   }
 }

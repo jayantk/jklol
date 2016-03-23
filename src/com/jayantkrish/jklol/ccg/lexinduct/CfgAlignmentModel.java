@@ -38,6 +38,7 @@ import com.jayantkrish.jklol.util.PairCountAccumulator;
 public class CfgAlignmentModel implements Serializable {
   private static final long serialVersionUID = 1L;
 
+  private final DiscreteFactor rootFactor;
   private final DiscreteFactor nonterminalFactor;
   private final DiscreteFactor terminalFactor;
 
@@ -49,9 +50,12 @@ public class CfgAlignmentModel implements Serializable {
   
   private final int nGramLength;
   
-  public CfgAlignmentModel(DiscreteFactor nonterminalFactor, DiscreteFactor terminalFactor,
-      VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar,
+  public CfgAlignmentModel(DiscreteFactor rootFactor, DiscreteFactor nonterminalFactor,
+      DiscreteFactor terminalFactor, VariableNumMap terminalVar,
+      VariableNumMap leftVar, VariableNumMap rightVar,
       VariableNumMap parentVar, VariableNumMap ruleVar, int nGramLength) {
+    this.rootFactor = Preconditions.checkNotNull(rootFactor);
+    Preconditions.checkArgument(rootFactor.getVars().equals(parentVar));
     this.nonterminalFactor = Preconditions.checkNotNull(nonterminalFactor);
     Preconditions.checkArgument(nonterminalFactor.getVars().equals(
         VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar)));
@@ -263,6 +267,7 @@ public class CfgAlignmentModel implements Serializable {
     VariableNumMap newParentVar = VariableNumMap.singleton(parentVar.getOnlyVariableNum(), parentVar.getOnlyVariableName(), expressionVar);
     VariableNumMap newTerminalVar = VariableNumMap.singleton(terminalVar.getOnlyVariableNum(), terminalVar.getOnlyVariableName(), wordVar);
 
+    // Populate the binary rule distribution
     VariableNumMap binaryRuleVars = VariableNumMap.unionAll(newLeftVar, newRightVar, newParentVar, ruleVar);
     TableFactorBuilder binaryRuleBuilder = new TableFactorBuilder(binaryRuleVars,
         SparseTensorBuilder.getFactory());
@@ -276,11 +281,18 @@ public class CfgAlignmentModel implements Serializable {
 
     populateTerminalDistribution(example.getWords(), expressions, terminalFactor,
         newTerminalFactor);
+    
+    // Populate the root distribution
+    TableFactorBuilder rootBuilder = new TableFactorBuilder(newParentVar, DenseTensorBuilder.getFactory());
+    for (Object expression : expressions) {
+      double weight = rootFactor.getUnnormalizedProbability(expression);
+      rootBuilder.incrementWeight(newParentVar.outcomeArrayToAssignment(expression), weight);
+    }
 
     // Generate a CFG parser. Note that the parser does not uniqueify parses  
     // that skip the same set of words.
     return new CfgParser(newParentVar, newLeftVar, newRightVar, newTerminalVar, ruleVar,
-        binaryDistribution, newTerminalFactor.build(), false, null);
+        rootBuilder.build(), binaryDistribution, newTerminalFactor.build(), false, null);
   }
   
   public void populateTerminalDistribution(List<String> exampleWords, Collection<?> expressions,

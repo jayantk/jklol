@@ -50,8 +50,7 @@ public class CfgLoglikelihoodOracle implements GradientOracle<CfgParser, CfgExam
     log.stopTimer("update_gradient/increment_gradient");
     
     double inputLogPartitionFunction = Math.log(unconditionalPartitionFunction);
-    double outputLogPartitionFunction = Math.log(instantiatedModel.getProbability(
-        example.getWords(), example.getParseTree()));
+    double outputLogPartitionFunction = Math.log(instantiatedModel.getProbability(example.getParseTree()));
     
     return outputLogPartitionFunction - inputLogPartitionFunction;
   }

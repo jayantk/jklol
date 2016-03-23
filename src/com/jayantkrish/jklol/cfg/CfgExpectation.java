@@ -4,15 +4,21 @@ import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.models.TableFactorBuilder;
 
 public class CfgExpectation {
+  private final TableFactorBuilder rootBuilder;
   private final TableFactorBuilder ruleBuilder;
   private final TableFactorBuilder nonterminalBuilder;
   private final TableFactorBuilder terminalBuilder;
 
-  public CfgExpectation(TableFactorBuilder ruleBuilder, TableFactorBuilder nonterminalBuilder,
-      TableFactorBuilder terminalBuilder) {
+  public CfgExpectation(TableFactorBuilder rootBuilder, TableFactorBuilder ruleBuilder,
+      TableFactorBuilder nonterminalBuilder, TableFactorBuilder terminalBuilder) {
+    this.rootBuilder = Preconditions.checkNotNull(rootBuilder);
     this.ruleBuilder = Preconditions.checkNotNull(ruleBuilder);
     this.nonterminalBuilder = Preconditions.checkNotNull(nonterminalBuilder);
     this.terminalBuilder = Preconditions.checkNotNull(terminalBuilder);
+  }
+
+  public TableFactorBuilder getRootBuilder() {
+    return rootBuilder;
   }
 
   public TableFactorBuilder getRuleBuilder() {

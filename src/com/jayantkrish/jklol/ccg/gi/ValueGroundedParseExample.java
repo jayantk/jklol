@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.ccg.gi;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
@@ -46,7 +47,7 @@ public class ValueGroundedParseExample implements GroundedParseExample {
   }
   
   @Override
-  public boolean isCorrectDenotation(Object denotation, Object diagram) {
+  public boolean isCorrect(Expression2 lf, Object denotation, Object diagram) {
     return denotationLabel.equals(denotation);
   }
 }

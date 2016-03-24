@@ -96,7 +96,7 @@ public class GroundedParserNormalizedLoglikelihoodOracle
       
       List<IncEvalState> denotationCorrectStates = Lists.newArrayList();
       for (IncEvalState conditionalState : conditionalStates) {
-        if (example.isCorrectDenotation(conditionalState.getDenotation(), conditionalState.getDiagram())) {
+        if (example.isCorrect(lf, conditionalState.getDenotation(), conditionalState.getDiagram())) {
           denotationCorrectStates.add(conditionalState);
           System.out.println("  " + conditionalState.getDenotation() + " " + lf + " " + conditionalState.getDiagram());
         }

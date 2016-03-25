@@ -65,7 +65,7 @@ public class GroundedParserLoglikelihoodOracle implements
         lf = simplifier.apply(lf);
       }
 
-      if (example.isCorrectDenotation(parse.getDenotation(), parse.getDiagram())) {
+      if (example.isCorrect(lf, parse.getDenotation(), parse.getDiagram())) {
         conditionalParses.add(parse);
         // System.out.println(parse.getSubtreeProbability() + " " + lf + " " + parse.getSyntacticParse());
       }

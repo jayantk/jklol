@@ -21,7 +21,7 @@ import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
 import com.jayantkrish.jklol.cfg.CfgExpectation;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
-import com.jayantkrish.jklol.experiments.geoquery.LexiconInductionCrossValidation;
+import com.jayantkrish.jklol.experiments.geoquery.GeoqueryInduceLexicon;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -123,7 +123,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     for (ExpressionNode expression : expressions) {
       // TODO: this is terrible.
       for (int i = 0; i < 2; i++) {
-        Expression2 template = expression.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i);
+        Expression2 template = expression.getExpressionTemplate(GeoqueryInduceLexicon.typeReplacements, i);
         templateExpressionMap.put(template, expression);
       }
     }
@@ -456,8 +456,8 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
       
       if (func != null) {
         for (int i = 0; i < 2; i++) {
-          Expression2 rootTemplate = root.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i);
-          Expression2 funcTemplate = func.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i);
+          Expression2 rootTemplate = root.getExpressionTemplate(GeoqueryInduceLexicon.typeReplacements, i);
+          Expression2 funcTemplate = func.getExpressionTemplate(GeoqueryInduceLexicon.typeReplacements, i);
           String featureName = baseFeatureName + " + " + rootTemplate + " -> " + funcTemplate;
           featureVals.put(featureName, 1.0);
         }
@@ -485,7 +485,7 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
       Map<String, Double> featureVals = Maps.newHashMap();
       featureVals.put(approximateSyntax + " " + ruleName, 1.0);
       for (int i = 0; i < 2; i++) {
-        Expression2 template = expressionNode.getExpressionTemplate(LexiconInductionCrossValidation.typeReplacements, i);
+        Expression2 template = expressionNode.getExpressionTemplate(GeoqueryInduceLexicon.typeReplacements, i);
         featureVals.put(approximateSyntax + " " + template + " " + ruleName, 1.0);
       }
       return featureVals;

@@ -62,7 +62,7 @@ import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IoUtils;
 import com.jayantkrish.jklol.util.PairCountAccumulator;
 
-public class LexiconInductionCrossValidation extends AbstractCli {
+public class GeoqueryInduceLexicon extends AbstractCli {
 
   private OptionSpec<String> trainingDataFolds;
   private OptionSpec<String> outputDir;
@@ -98,7 +98,7 @@ public class LexiconInductionCrossValidation extends AbstractCli {
     typeReplacements.put("p", "e");
   }
   
-  public LexiconInductionCrossValidation() {
+  public GeoqueryInduceLexicon() {
     super(CommonOptions.MAP_REDUCE);
   }
 
@@ -461,6 +461,6 @@ public class LexiconInductionCrossValidation extends AbstractCli {
   }
 
   public static void main(String[] args) {
-    new LexiconInductionCrossValidation().run(args);
+    new GeoqueryInduceLexicon().run(args);
   }
 }

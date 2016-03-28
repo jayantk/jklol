@@ -112,7 +112,7 @@ public class TrainGeoqueryParser extends AbstractCli {
     CcgBeamSearchInference inferenceAlgorithm = new CcgBeamSearchInference(null, comparator,
         options.valueOf(beamSize), -1, Integer.MAX_VALUE, 1, false);
 
-    CcgParser ccgParser = LexiconInductionCrossValidation.trainSemanticParser(trainingExamples, lexiconLines,
+    CcgParser ccgParser = GeoqueryInduceLexicon.trainSemanticParser(trainingExamples, lexiconLines,
         unknownLexiconLines, ruleEntries, featureFactory, inferenceAlgorithm, comparator,
         options.valueOf(parserIterations), options.valueOf(l2Regularization));
 

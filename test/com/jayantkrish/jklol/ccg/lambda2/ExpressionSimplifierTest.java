@@ -102,8 +102,8 @@ public class ExpressionSimplifierTest extends TestCase {
   }
   
   public void testConjunction6() {
-    runTest(conjunction, "(lambda $0 (lambda $1 (and:<t*,t> (river:<r,t> $1) ($0 $1))))",
-        "(lambda $0 (lambda $1 (and:<t*,t> ($0 $1) (river:<r,t> $1))))");
+    runTest(conjunction, "(lambda ($0) (lambda ($1) (and:<t*,t> (river:<r,t> $1) ($0 $1))))",
+        "(lambda ($0) (lambda ($1) (and:<t*,t> ($0 $1) (river:<r,t> $1))))");
   }
 
   private void runTest(ExpressionSimplifier simp, String input, String expected) {

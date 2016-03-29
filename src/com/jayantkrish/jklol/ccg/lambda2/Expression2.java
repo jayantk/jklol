@@ -8,6 +8,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 
 public class Expression2 implements Serializable, Comparable<Expression2> {
   private static final long serialVersionUID = 1L;
@@ -26,11 +27,23 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
   public static Expression2 constant(String constantName) {
     return new Expression2(constantName, null, 1);
   }
+  
+  public static Expression2 stringValue(String value) {
+    return new Expression2("\"" + value.replaceAll("\"", "\\\\\"") + "\"", null, 1);
+  }
 
   public static List<Expression2> constants(List<String> constantNames) {
     List<Expression2> constants = Lists.newArrayList();
     for (String constantName : constantNames) {
       constants.add(Expression2.constant(constantName));
+    }
+    return constants;
+  }
+  
+  public static List<Expression2> stringValues(List<String> values) {
+    List<Expression2> constants = Lists.newArrayList();
+    for (String value : values) {
+      constants.add(Expression2.stringValue(value));
     }
     return constants;
   }
@@ -47,6 +60,14 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
 
     return new Expression2(null, ImmutableList.copyOf(subexpressions), size);
   }
+  
+  public static Expression2 lambda(List<String> argNames, Expression2 body) {
+    List<Expression2> lambdaBody = Lists.newArrayList();
+    lambdaBody.add(Expression2.constant(StaticAnalysis.LAMBDA));
+    lambdaBody.add(Expression2.nested(Expression2.constants(argNames)));
+    lambdaBody.add(body);
+    return Expression2.nested(lambdaBody);
+  }
 
   public boolean isConstant() {
     return constantName != null;
@@ -54,6 +75,18 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
 
   public String getConstant() {
     return constantName;
+  }
+
+  public boolean isStringValue() {
+    return constantName != null && constantName.matches("\".*\"");
+  }
+
+  public String getStringValue() {
+    if (isStringValue()) {
+      return constantName.substring(1, constantName.length()-1).replaceAll("\\\\\"", "\"");
+    } else {
+      return null;
+    }
   }
 
   public List<Expression2> getSubexpressions() {
@@ -289,6 +322,18 @@ public class Expression2 implements Serializable, Comparable<Expression2> {
    */
   public int find(Expression2 expression) {
     return findHelper(expression, 0);
+  }
+  
+  public int[] findAll(Expression2 expression) {
+    List<Integer> indexes = Lists.newArrayList();
+    
+    for (int i = 0; i < size(); i++) {
+      Expression2 sub = getSubexpression(i);
+      if (sub.equals(expression)) {
+        indexes.add(i);
+      }
+    }
+    return Ints.toArray(indexes);
   }
   
   private int findHelper(Expression2 expression, int index) {

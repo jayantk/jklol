@@ -33,7 +33,7 @@ public class Type implements Serializable {
   }
   
   public static Type parseFrom(String spec) {
-    return ExpressionParser.typeParser().parseSingleExpression(spec);
+    return ExpressionParser.typeParser().parse(spec);
   }
 
   public boolean isAtomic() {

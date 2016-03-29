@@ -41,10 +41,10 @@ public class ClassifierFunctions {
    */
   public static class MakeIndicatorClassifier implements AmbFunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
-      Preconditions.checkArgument(argumentValues.get(0) instanceof AmbValue || argumentValues.get(0) instanceof ConsValue);
-      Preconditions.checkArgument(argumentValues.get(1) instanceof SpecAndParameters);
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder builder) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
+      LispUtil.checkArgument(argumentValues.get(0) instanceof AmbValue || argumentValues.get(0) instanceof ConsValue);
+      LispUtil.checkArgument(argumentValues.get(1) instanceof SpecAndParameters);
 
       SpecAndParameters parameters = (SpecAndParameters) argumentValues.get(1);
 
@@ -79,8 +79,8 @@ public class ClassifierFunctions {
 
   public static class MakeIndicatorClassifierParameters implements AmbFunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder builder) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       List<Object> varValueLists = ConsValue.consListToList(argumentValues.get(0), Object.class);
       
       VariableNumMap vars = VariableNumMap.EMPTY;
@@ -108,11 +108,11 @@ public class ClassifierFunctions {
    */
   public static class MakeFeaturizedClassifier implements AmbFunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
-      Preconditions.checkArgument(argumentValues.size() == 3);
-      Preconditions.checkArgument(argumentValues.get(0) instanceof AmbValue || argumentValues.get(0) instanceof ConsValue);
-      Preconditions.checkArgument(argumentValues.get(1) instanceof Tensor);
-      Preconditions.checkArgument(argumentValues.get(2) instanceof SpecAndParameters);
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder builder) {
+      LispUtil.checkArgument(argumentValues.size() == 3);
+      LispUtil.checkArgument(argumentValues.get(0) instanceof AmbValue || argumentValues.get(0) instanceof ConsValue);
+      LispUtil.checkArgument(argumentValues.get(1) instanceof Tensor);
+      LispUtil.checkArgument(argumentValues.get(2) instanceof SpecAndParameters);
 
       Tensor featureVector = (Tensor) argumentValues.get(1);
       SpecAndParameters parameters = (SpecAndParameters) argumentValues.get(2);
@@ -150,6 +150,10 @@ public class ClassifierFunctions {
 
       DiscreteVariable featureDictionary = ((ParametricLinearClassifierFactor)
           ((FactorParameterSpec) parameters.getParameterSpec()).getFactor()).getFeatureDictionary();
+      Preconditions.checkArgument(featureDictionary.numValues() == featureVector.getDimensionSizes()[0],
+                                  "feature vector and classifier dimension don't match (" +
+                                  featureVector.getDimensionSizes()[0] + " vs. " +
+                                  featureDictionary.numValues() +")");
       ParametricFactor pf = new ParametricLinearClassifierFactor(relabeledFeatureVectorVar,
           relabeledVars, VariableNumMap.EMPTY, featureDictionary, null, false);
 
@@ -165,8 +169,8 @@ public class ClassifierFunctions {
 
   public static class MakeFeaturizedClassifierParameters implements AmbFunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder builder) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
       List<Object> varValueLists = ConsValue.consListToList(argumentValues.get(0), Object.class);
       List<Object> featureNames = ConsValue.consListToList(argumentValues.get(1), Object.class);
       DiscreteVariable featureDictionary = new DiscreteVariable("foo", featureNames);
@@ -194,8 +198,8 @@ public class ClassifierFunctions {
 
   public static class MakeFeatureFactory implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       List<Object> values = ConsValue.consListToList(argumentValues.get(0), Object.class);
 
       return new WrappedBuiltinFunction(new FeatureFactory(new DiscreteVariable("foo", values)));
@@ -214,8 +218,8 @@ public class ClassifierFunctions {
     }
 
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       List<Object> values = ConsValue.consListToList(argumentValues.get(0), Object.class);
       
       TensorBuilder builder = new SparseTensorBuilder(new int[] {0}, new int[] {dictionary.numValues()});
@@ -241,16 +245,16 @@ public class ClassifierFunctions {
    */
   public static class MakeInnerProductClassifier implements AmbFunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder builder) {
       // Argument spec: 1st arg is the variable to add weight to
       // 2nd arg is the value of that variable to weight
       // 3rd and 4th args are the parameter vectors whose inner product
       // determines the weight.
-      Preconditions.checkArgument(argumentValues.size() == 4);
-      Preconditions.checkArgument(argumentValues.get(0) instanceof AmbValue);
-      Preconditions.checkArgument(argumentValues.get(2) instanceof SpecAndParameters,
+      LispUtil.checkArgument(argumentValues.size() == 4);
+      LispUtil.checkArgument(argumentValues.get(0) instanceof AmbValue);
+      LispUtil.checkArgument(argumentValues.get(2) instanceof SpecAndParameters,
           "Third argument to make-inner-product-classifier must be a parameter vector");
-      Preconditions.checkArgument(argumentValues.get(3) instanceof SpecAndParameters,
+      LispUtil.checkArgument(argumentValues.get(3) instanceof SpecAndParameters,
           "Fourth argument to make-inner-product-classifier must be a parameter vector");
 
       SpecAndParameters parameters1 = (SpecAndParameters) argumentValues.get(2);
@@ -280,19 +284,19 @@ public class ClassifierFunctions {
   
   public static class MakeRankingInnerProductClassifier implements AmbFunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder builder) {
       // Argument spec: 1st arg is the variable to add weight to
       // 2nd arg is the value of that variable to weight
       // 3rd arg is the parameter vector.
       // 4th and 5th args are the parameter vectors whose difference is
       // multiplied by the 3rd arg to determine the weight. 4th is positive, 5th is negative.
-      Preconditions.checkArgument(argumentValues.size() == 5);
-      Preconditions.checkArgument(argumentValues.get(0) instanceof AmbValue);
-      Preconditions.checkArgument(argumentValues.get(2) instanceof SpecAndParameters,
+      LispUtil.checkArgument(argumentValues.size() == 5);
+      LispUtil.checkArgument(argumentValues.get(0) instanceof AmbValue);
+      LispUtil.checkArgument(argumentValues.get(2) instanceof SpecAndParameters,
           "Third argument to make-inner-product-classifier must be a parameter vector");
-      Preconditions.checkArgument(argumentValues.get(3) instanceof SpecAndParameters,
+      LispUtil.checkArgument(argumentValues.get(3) instanceof SpecAndParameters,
           "Fourth argument to make-inner-product-classifier must be a parameter vector");
-      Preconditions.checkArgument(argumentValues.get(4) instanceof SpecAndParameters,
+      LispUtil.checkArgument(argumentValues.get(4) instanceof SpecAndParameters,
           "Fifth argument to make-inner-product-classifier must be a parameter vector");
 
       SpecAndParameters parameters1 = (SpecAndParameters) argumentValues.get(2);
@@ -323,8 +327,8 @@ public class ClassifierFunctions {
   
   public static class MakeVectorParameters implements AmbFunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder builder) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       int dimensionality = (Integer) argumentValues.get(0);
 
       String name = "vector-features-" + dimensionality;
@@ -340,8 +344,8 @@ public class ClassifierFunctions {
 
   public static class MakeParameterList implements AmbFunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder builder) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       List<SpecAndParameters> childParameterList = ConsValue.consListOrArrayToList(
           argumentValues.get(0), SpecAndParameters.class);
       List<ParameterSpec> specs = Lists.newArrayList();
@@ -360,8 +364,8 @@ public class ClassifierFunctions {
 
   public static class GetIthParameter implements AmbFunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder builder) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
       SpecAndParameters parameters = (SpecAndParameters) argumentValues.get(0);
       int index = (Integer) argumentValues.get(1);
 
@@ -375,8 +379,8 @@ public class ClassifierFunctions {
   
   public static class PerturbFunction implements AmbFunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder builder) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
       SpecAndParameters parameters = (SpecAndParameters) argumentValues.get(0);
       double stddev = (Double) argumentValues.get(1);
       parameters.getParameters().perturb(stddev);
@@ -387,8 +391,8 @@ public class ClassifierFunctions {
 
   public static class Serialize implements AmbFunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder builder) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
       Object object = argumentValues.get(0);
       String filename = (String) argumentValues.get(1);
       IoUtils.serializeObjectToFile(object, filename);
@@ -398,8 +402,8 @@ public class ClassifierFunctions {
 
   public static class Deserialize implements AmbFunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder builder) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       String filename = (String) argumentValues.get(0);
       return IoUtils.readSerializedObject(filename, Object.class);
     }
@@ -407,9 +411,9 @@ public class ClassifierFunctions {
   
   public static class ParametersToString implements AmbFunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder builder) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
-      Preconditions.checkArgument(argumentValues.get(0) instanceof SpecAndParameters);
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder builder) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
+      LispUtil.checkArgument(argumentValues.get(0) instanceof SpecAndParameters);
       
       TensorSufficientStatistics tensorStats = (TensorSufficientStatistics) ((SpecAndParameters)
           argumentValues.get(0)).getParameters();

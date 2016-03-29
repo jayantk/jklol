@@ -21,6 +21,7 @@ import com.jayantkrish.jklol.util.IoUtils;
 public class TestSequenceModel extends AbstractCli {
 
   private OptionSpec<String> model;
+  private OptionSpec<String> cliInput;
 
   public TestSequenceModel() {
     super();
@@ -29,6 +30,8 @@ public class TestSequenceModel extends AbstractCli {
   @Override
   public void initializeOptions(OptionParser parser) {
     model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
+    
+    cliInput = parser.nonOptions().ofType(String.class);
   }
 
   @Override
@@ -39,7 +42,7 @@ public class TestSequenceModel extends AbstractCli {
     DynamicFactorGraph sequenceModel = trainedModel.getInstantiatedModel();
 
     // Read in the words to tag.
-    List<String> wordsToTag = options.nonOptionArguments();
+    List<String> wordsToTag = options.valuesOf(cliInput);
     List<String> labels = SequenceModelUtils.testSequenceModel(wordsToTag, sequenceModel);
 
     StringBuilder sb = new StringBuilder();

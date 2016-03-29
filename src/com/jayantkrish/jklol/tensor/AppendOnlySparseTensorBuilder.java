@@ -138,6 +138,12 @@ public class AppendOnlySparseTensorBuilder extends AbstractTensorBase implements
       double multiplier) {
     throw new UnsupportedOperationException("Not implemented");
   }
+  
+  @Override
+  public void incrementInnerProductWithMultiplier(Tensor leftTensor, Tensor rightTensor,
+      double multiplier) {
+    throw new UnsupportedOperationException("Not implemented");
+  }
 
   @Override
   public void incrementEntry(double amount, int... key) {

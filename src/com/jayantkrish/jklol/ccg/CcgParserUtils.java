@@ -127,7 +127,7 @@ public class CcgParserUtils {
       Collection<CcgExample> examples) {
     MapReduceExecutor executor = MapReduceConfiguration.getMapReduceExecutor();
 
-    CcgInference inference = new CcgExactInference(null, -1, Integer.MAX_VALUE, 1);
+    CcgInference inference = CcgCkyInference.getDefault(100);
     Reducer<CcgExample, SufficientStatistics> reducer = new FeatureCountReducer(family, inference);
     return executor.mapReduce(examples, Mappers.<CcgExample>identity(), reducer);
   }
@@ -166,8 +166,10 @@ public class CcgParserUtils {
 
     @Override
     public SufficientStatistics reduce(CcgExample example, SufficientStatistics featureCounts) {
-      CcgParse bestParse = inference.getBestConditionalParse(parser, example.getSentence(), null,
-          log, example.getSyntacticParse(), example.getDependencies(), example.getLogicalForm());
+      Preconditions.checkArgument(example.getLogicalForm() == null,
+          "FeatureCountReducer cannot condition on logical form");
+      CcgParse bestParse = CcgPerceptronOracle.getBestConditionalParse(inference, parser, null,
+          example, log);
 
       if (bestParse != null) {
         ccgFamily.incrementSufficientStatistics(featureCounts, parserZeroParameters,

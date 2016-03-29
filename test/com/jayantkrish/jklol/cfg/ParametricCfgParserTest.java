@@ -69,8 +69,10 @@ public class ParametricCfgParserTest extends TestCase {
     VariableNumMap terminalVars = VariableNumMap.unionAll(terminal, parent, ruleType);
     ParametricFactor terminalFactor = DiscreteLogLinearFactor.createIndicatorFactor(terminalVars);
     
+    ParametricFactor rootFactor = DiscreteLogLinearFactor.createIndicatorFactor(parent);
+    
     cfgFactor = new ParametricCfgParser(parent, left, right, terminal, ruleType, 
-        nonterminalFactor, terminalFactor, 10, false);
+        rootFactor, nonterminalFactor, terminalFactor, false);
     
     // Create some training data.
     trainingData = Lists.newArrayList();
@@ -121,7 +123,7 @@ public class ParametricCfgParserTest extends TestCase {
     
     for (int i = 0; i < TEST_DATA.length; i++) {
       CfgParseTree expected = parseTreeFromString(TEST_DATA[i].replaceAll("milk", "<OOV>"), 0);
-      CfgParseTree predicted = parser.beamSearch(expected.getTerminalProductions()).get(0);
+      CfgParseTree predicted = parser.beamSearch(expected.getTerminalProductions(), 10).get(0);
       assertEquals(expected, predicted);
     }
   }
@@ -130,10 +132,11 @@ public class ParametricCfgParserTest extends TestCase {
       GradientOracle<CfgParser, CfgExample> oracle) {
 
     StochasticGradientTrainer trainer = new StochasticGradientTrainer(
-        10 * TRAINING_DATA.length, 1, 1.0, true, false, new DefaultLogFunction());
+        10 * TRAINING_DATA.length, 1, 1.0, true, false, Double.MAX_VALUE, new DefaultLogFunction());
 
     SufficientStatistics parameters = trainer.train(oracle,
         oracle.initializeGradient(), trainingData);
+    System.out.println(cfgModel.getParameterDescription(parameters));
     return cfgModel.getModelFromParameters(parameters);
   }
 }

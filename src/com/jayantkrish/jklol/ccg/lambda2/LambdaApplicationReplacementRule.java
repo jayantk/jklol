@@ -36,11 +36,7 @@ public class LambdaApplicationReplacementRule implements ExpressionReplacementRu
       }
 
       if (applicationArgs.size() < lambdaArgs.size()) {
-        List<Expression2> terms = Lists.newArrayList();
-        terms.add(Expression2.constant("lambda"));
-        terms.addAll(Expression2.constants(lambdaArgs.subList(applicationArgs.size(), lambdaArgs.size())));
-        terms.add(body);
-        return Expression2.nested(terms);
+        return Expression2.lambda(lambdaArgs.subList(applicationArgs.size(), lambdaArgs.size()), body);
       } else if (applicationArgs.size() > lambdaArgs.size()) {
         List<Expression2> terms = Lists.newArrayList();
         terms.add(body);

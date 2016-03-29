@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.experiments.geoquery;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 
@@ -18,14 +17,15 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
 import com.jayantkrish.jklol.ccg.CcgCategory;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
@@ -83,9 +83,12 @@ public class GeoqueryTrainParser extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
+    TypeDeclaration typeDeclaration = GeoqueryUtil.getTypeDeclaration();
+    
     List<String> foldNames = Lists.newArrayList();
     List<List<AlignmentExample>> folds = Lists.newArrayList();
-    GeoqueryInduceLexicon.readFolds(options.valueOf(trainingDataFolds), foldNames, folds, options.has(testOpt));
+    GeoqueryInduceLexicon.readFolds(options.valueOf(trainingDataFolds), foldNames, folds,
+        options.has(testOpt), typeDeclaration);
     
     List<String> additionalLexiconEntries = IoUtils.readLines(options.valueOf(additionalLexicon));
 
@@ -120,7 +123,7 @@ public class GeoqueryTrainParser extends AbstractCli {
       List<String> unknownLexiconEntryLines = Lists.newArrayList();
 
       if (options.has(factorLexiconEntries)) {
-        lexiconEntryLines = factorLexiconEntries(lexiconEntryLines);
+        lexiconEntryLines = factorLexiconEntries(lexiconEntryLines, typeDeclaration);
         String factoredLexiconFilename = outputDirString + "/factored_lexicon." + foldName + ".txt";
         IoUtils.writeLines(factoredLexiconFilename, lexiconEntryLines);
       }
@@ -148,7 +151,7 @@ public class GeoqueryTrainParser extends AbstractCli {
     System.out.println("LEXICON RECALL: " + overall.getLexiconRecall());
   }
   
-  private List<String> factorLexiconEntries(List<String> lexiconEntryLines) {
+  private List<String> factorLexiconEntries(List<String> lexiconEntryLines, TypeDeclaration typeDeclaration) {
     List<LexiconEntry> lexiconEntries = LexiconEntry.parseLexiconEntries(lexiconEntryLines);
     List<String> finalEntries = Lists.newArrayList();
     ExpressionSimplifier simplifier = GeoqueryUtil.getExpressionSimplifier();
@@ -178,7 +181,7 @@ public class GeoqueryTrainParser extends AbstractCli {
       
       List<Integer> locs = Lists.newArrayList(locVarMap.keySet());
       List<String> items = Lists.newArrayList(locVarMap.values());
-      List<String> newVarNames = StaticAnalysis.getNewVariableNames(lf, locVarMap.size());
+      List<String> newVarNames = StaticAnalysis.getNewVariableNames(locVarMap.size(), lf);
       Expression2 lfTemplateBody = lf;
       for (int i = 0; i < locs.size(); i++) {
         lfTemplateBody = lfTemplateBody.substitute(locs.get(i), newVarNames.get(i));
@@ -195,7 +198,7 @@ public class GeoqueryTrainParser extends AbstractCli {
       // System.out.println("  " + lfTemplate);
       
       Lexeme lexeme = new Lexeme(items);
-      List<Type> typeSignature = lexeme.getTypeSignature(GeoqueryInduceLexicon.typeReplacements);
+      List<Type> typeSignature = lexeme.getTypeSignature(typeDeclaration);
       Template template = new Template(entry.getCategory().getSyntax(), typeSignature, lfTemplate);
       wordLexemeMap.put(entry.getWords(), lexeme);
       typeTemplateMap.put(typeSignature, template);
@@ -204,7 +207,7 @@ public class GeoqueryTrainParser extends AbstractCli {
     for (List<String> words : wordLexemeMap.keySet()) {
       for (Lexeme lexeme : wordLexemeMap.get(words)) {
         // System.out.println(words + " " + lexeme.getPredicates());
-        List<Type> typeSig = lexeme.getTypeSignature(GeoqueryInduceLexicon.typeReplacements);
+        List<Type> typeSig = lexeme.getTypeSignature(typeDeclaration);
         for (Template template : typeTemplateMap.get(typeSig)) {
           List<Expression2> app = Lists.newArrayList();
           app.add(template.getLfTemplate());
@@ -270,8 +273,7 @@ public class GeoqueryTrainParser extends AbstractCli {
             new CommutativeReplacementRule("and:<t*,t>")));
     ExpressionComparator comparator = new SimplificationComparator(simplifier);
 
-    CcgBeamSearchInference inferenceAlgorithm = new CcgBeamSearchInference(null, comparator, beamSize,
-        -1, Integer.MAX_VALUE, 1, false);
+    CcgCkyInference inferenceAlgorithm = CcgCkyInference.getDefault(beamSize);
 
     CcgParser ccgParser = GeoqueryInduceLexicon.trainSemanticParser(ccgTrainingExamples, lexiconEntryLines,
         unknownLexiconEntryLines, ruleEntries, featureFactory, inferenceAlgorithm, comparator,
@@ -281,14 +283,14 @@ public class GeoqueryTrainParser extends AbstractCli {
     
     List<SemanticParserExampleLoss> trainingExampleLosses = Lists.newArrayList();    
     SemanticParserUtils.testSemanticParser(ccgTrainingExamples, ccgParser,
-        inferenceAlgorithm, simplifier, comparator, trainingExampleLosses);
+        inferenceAlgorithm, simplifier, comparator, trainingExampleLosses, true);
     SemanticParserExampleLoss.writeJsonToFile(trainingErrorOutputFilename, trainingExampleLosses);
 
     List<CcgExample> ccgTestExamples = GeoqueryInduceLexicon.alignmentExamplesToCcgExamples(testData);
     ccgTestExamples = SemanticParserUtils.annotateFeatures(ccgTestExamples, featureGen, GeoqueryUtil.FEATURE_ANNOTATION_NAME);
     List<SemanticParserExampleLoss> testExampleLosses = Lists.newArrayList();    
     SemanticParserLoss testLoss = SemanticParserUtils.testSemanticParser(ccgTestExamples, ccgParser,
-        inferenceAlgorithm, simplifier, comparator, testExampleLosses);
+        inferenceAlgorithm, simplifier, comparator, testExampleLosses, true);
     SemanticParserExampleLoss.writeJsonToFile(testErrorOutputFilename, testExampleLosses);
 
     return testLoss;
@@ -309,10 +311,10 @@ public class GeoqueryTrainParser extends AbstractCli {
       return predicates;
     }
     
-    public List<Type> getTypeSignature(Map<String, String> typeReplacements) {
+    public List<Type> getTypeSignature(TypeDeclaration typeDeclaration) {
       List<Type> typeSig = Lists.newArrayList();
       for (String predicate : predicates) {
-        typeSig.add(StaticAnalysis.inferType(Expression2.constant(predicate), typeReplacements));
+        typeSig.add(StaticAnalysis.inferType(Expression2.constant(predicate), typeDeclaration));
       }
       return typeSig;
     }

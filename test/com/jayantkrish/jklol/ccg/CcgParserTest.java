@@ -16,7 +16,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.google.common.io.NullOutputStream;
+import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
@@ -29,8 +29,6 @@ import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.ccg.lexicon.CcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.LexiconScorer;
-import com.jayantkrish.jklol.ccg.lexicon.SkipLexicon;
-import com.jayantkrish.jklol.ccg.lexicon.SkipLexicon.SkipTrigger;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.StringLexicon.CategorySpanConfig;
 import com.jayantkrish.jklol.ccg.lexicon.SyntaxLexiconScorer;
@@ -62,13 +60,13 @@ public class CcgParserTest extends TestCase {
       "berries,N{0},berries,0 berries",
       "apple,N{0},apple,0 apple",
       "houses,N{0},houses,0 houses",
-      "eat,((S[b]{0}\\N{1}){0}/N{2}){0},(lambda $2 $1 (exists a b (and ($1 a) ($2 b) (eat a b)))),0 eat,eat 1 1,eat 2 2",
-      "that,((N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0},(lambda $2 $1 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
-      "that,((N{1}\\N{1}){0}/(S[0]{2}/N{3}){2}){0},(lambda $2 $1 (lambda x (and ($1 x) ($2 (lambda y (equals y x)))))),0 that,that 1 1,that 2 2",
-      "quickly,(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0},(lambda $1 $1),0 quickly,quickly 1 1",
-      "in,((N{1}\\N{1}){0}/N{2}){0},(lambda $2 $1 (lambda c (exists d (and ($1 c) ($2 d) (in c d))))),0 in,in 1 1,in 2 2",
+      "eat,((S[b]{0}\\N{1}){0}/N{2}){0},(lambda ($2 $1) (exists a b (and ($1 a) ($2 b) (eat a b)))),0 eat,eat 1 1,eat 2 2",
+      "that,((N{1}\\N{1}){0}/(S[0]{2}\\N{1}){2}){0},(lambda ($2 $1) (lambda (x) (and ($1 x) ($2 (lambda (y) (equals y x)))))),0 that,that 1 1,that 2 2",
+      "that,((N{1}\\N{1}){0}/(S[0]{2}/N{3}){2}){0},(lambda ($2 $1) (lambda (x) (and ($1 x) ($2 (lambda (y) (equals y x)))))),0 that,that 1 1,that 2 2",
+      "quickly,(((S[1]{1}\\N{2}){1}/N{3}){1}/((S[1]{1}\\N{2}){1}/N{3}){1}){0},(lambda ($1) $1),0 quickly,quickly 1 1",
+      "in,((N{1}\\N{1}){0}/N{2}){0},(lambda ($2 $1) (lambda (c) (exists d (and ($1 c) ($2 d) (in c d))))),0 in,in 1 1,in 2 2",
       "amazingly,((N{1}/N{1}){2}/(N{1}/N{1}){2}){0},,0 amazingly,amazingly 1 2",
-      "tasty,(N{1}/N{1}){0},(lambda $1 (lambda e (and (tasty e) ($1 e)))),0 tasty,tasty 1 1",
+      "tasty,(N{1}/N{1}){0},(lambda ($1) (lambda (e) (and (tasty e) ($1 e)))),0 tasty,tasty 1 1",
       "in,(((S[1]{1}\\N{2}){1}\\(S[1]{1}\\N{2}){1}){0}/N{3}){0},,0 in,in 1 1,in 2 3",
       "and,((N{1}\\N{1}){0}/N{1}){0},,0 and",
       "almost,(((N{1}\\N{1}){2}/N{3}){2}/((N{1}\\N{1}){2}/N{3}){2}){0},,0 almost,almost 1 2",
@@ -79,10 +77,10 @@ public class CcgParserTest extends TestCase {
       "about,(NP{0}/(S[1]{1}\\N{2}){1}){0},,0 about,about 1 1",
       "eating,((S[ng]{0}\\N{1}){0}/N{2}){0},,0 eat,eat 1 1,eat 2 2",
       "rapidly,((S[1]{1}\\N{2}){1}/(S[1]{1}\\N{2}){1}){0},,0 rapidly,rapidly 1 1",
-      "colorful,(N{1}/N{1}){0},(lambda $1 (lambda e (and (colorful e) ($1 e)))),0 colorful,colorful 1 1",
+      "colorful,(N{1}/N{1}){0},(lambda ($1) (lambda (e) (and (colorful e) ($1 e)))),0 colorful,colorful 1 1",
       "*not_a_word*,(NP{0}/N{1}){0},,0 *not_a_word*",
       "near,((S[1]{1}/(S[1]{1}\\N{0}){1}){0}/N{2}){0},,0 near,near 2 2",
-      "the,(N{0}/N{0}){1},(lambda $1 $1),1 the,the 1 0",
+      "the,(N{0}/N{0}){1},(lambda ($1) $1),1 the,the 1 0",
       "exactly,(S[1]{1}/S[1]{1}){0},,0 exactly,exactly 1 1",
       "green,(N{0}/N{0}){1},,1 green,green_(N{0}/N{0}){1} 1 0",
       "blue,N{0},blue,0 blue",
@@ -90,7 +88,8 @@ public class CcgParserTest extends TestCase {
       "backward,(N{1}\\N{1}){0},backward,0 backward,backward 1 1",
       "a,(NP{1}/N{1}){0},,0 a,a 1 1",
       "#,#{0},#,0 #",
-      "stringfunc,(S{0}/String{1}){0},(lambda $1 (stringFunc $1)),0 stringfunc,stringfunc 1 1",
+      "stringfunc,(S{0}/String{1}){0},(lambda ($1) (stringFunc $1)),0 stringfunc,stringfunc 1 1",
+      "people backward,N{0},people_backward,0 people_backward",
       };
   
   private static final String[] unknownLexicon = {
@@ -108,16 +107,16 @@ public class CcgParserTest extends TestCase {
       1.0, 0.5,
       1.0, 1.0,
       0.5, 1.0,
-      1.0, 1.0, 1.0, 1.0, 0.75, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+      1.0, 1.0, 1.0, 1.0, 0.75, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
 
   private static final double[] unknownWeights = { 3.0 };
 
-  private static final String[] binaryRuleArray = { ";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda $L $R $L)",
+  private static final String[] binaryRuleArray = { ";{1} N{0} N{0}", "N{0} ;{1} N{0},(lambda ($L $R) $L)",
       ";{2} (S[0]{0}\\N{1}){0} (N{0}\\N{1}){0}", "\",{2} N{0} (N{0}\\N{0}){1}\"",
-      "conj{1} N{0} (N{0}\\N{0}){1},(lambda $L $R (lambda $0 (lambda x (forall (pred (set $R $0)) (pred x))))),CONJUNCTION",
+      "conj{1} N{0} (N{0}\\N{0}){1},(lambda ($L $R) (lambda ($0) (lambda (x) (forall (pred (set $R $0)) (pred x))))),CONJUNCTION",
       "conj{2} (S[0]{0}\\N{1}){0} ((S[0]{0}\\N{1}){0}\\(S[0]{0}\\N{1}){0}){2},,CONJUNCTION",
-      "\"N{0} N{1} N{1}\",\"(lambda $L $R (lambda j (exists k (and ($L k) ($R j) (special:compound k j)))))\",\"OTHER\",\"special:compound 1 0\",\"special:compound 2 1\"",
-      "#{5} N{1} (N{0}\\N{0}){1},(lambda $C $R (lambda $L (lambda x (exists y (and ($L x) ($R y) (compound y x)))))),OTHER,special:compound 1 0,special:compound 2 1"
+      "\"N{0} N{1} N{1}\",\"(lambda ($L $R) (lambda (j) (exists k (and ($L k) ($R j) (special:compound k j)))))\",\"OTHER\",\"special:compound 1 0\",\"special:compound 2 1\"",
+      "#{5} N{1} (N{0}\\N{0}){1},(lambda ($C $R) (lambda ($L) (lambda (x) (exists y (and ($L x) ($R y) (compound y x)))))),OTHER,special:compound 1 0,special:compound 2 1"
   };
 
   private static final String[] unaryRuleArray = { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1}",
@@ -143,10 +142,11 @@ public class CcgParserTest extends TestCase {
     {"green_(N{0}/N{0}){1}", "(N{1}/N{1}){0}", "1", "people", DEFAULT_POS, DEFAULT_POS},
     {"tasty", "(N{1}/N{1}){0}", "1", "berries", "JJ", "NN"},
     {"stringfunc", "(S{0}/N{1}){0}", "1", "special:string", DEFAULT_POS, DEFAULT_POS},
+    {"special:compound", "N{0}", "2", "people", DEFAULT_POS, DEFAULT_POS},
   };
 
   private static final double[] dependencyWeightIncrements = {
-    1.0, 1.0, 3.0, 1.0, 1.0, 1.0, 3.0, 1.0,
+    1.0, 1.0, 3.0, 1.0, 1.0, 1.0, 3.0, 1.0, 1.0,
   };
 
   private VariableNumMap terminalVar;
@@ -164,11 +164,11 @@ public class CcgParserTest extends TestCase {
     parserWithCompositionNormalForm = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, unknownWeights, true, false, true, false);
     parserWithUnary = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, unaryRuleArray, weights, unknownWeights, false, false, false, false);
     parserWithUnaryAndComposition = parseLexicon(lexicon, unknownLexicon, binaryRuleArray,
-        new String[] { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1},(lambda $0 (lambda $1 ($1 $0)))" }, weights, unknownWeights, true, false, false, false);
+        new String[] { "N{0} (S[1]{1}/(S[1]{1}\\N{0}){1}){1},(lambda ($0) (lambda ($1) ($1 $0)))" }, weights, unknownWeights, true, false, false, false);
 
     parserWordSkip = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "FOO{0} FOO{0}" }, weights, unknownWeights, false, true, false, false);
     
-    parserWithString = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "String{0} N{0},(lambda x x)" }, weights, unknownWeights, false, true, false, true);
+    parserWithString = parseLexicon(lexicon, unknownLexicon, binaryRuleArray, new String[] { "String{0} N{0},(lambda (x) x)" }, weights, unknownWeights, false, true, false, true);
 
     exp = ExpressionParser.expression2();
     simplifier = new ExpressionSimplifier(Arrays.
@@ -210,10 +210,14 @@ public class CcgParserTest extends TestCase {
     List<CcgParse> parses = beamSearch(parser, Arrays.asList("blue"), 10);
     assertEquals(2, parses.size());
     CcgParse best = parses.get(0);
+    CcgParse second = parses.get(1);
+    System.out.println(best.getSubtreeProbability());
+    System.out.println(second.getSubtreeProbability());
+    
     assertEquals(3.0, best.getSubtreeProbability());
     assertEquals(SyntacticCategory.parseFrom("N"), best.getSyntacticCategory());
     
-    CcgParse second = parses.get(1);
+    
     assertEquals(1.0, second.getSubtreeProbability());
     assertEquals(SyntacticCategory.parseFrom("N/N"), second.getSyntacticCategory());
   }
@@ -223,7 +227,8 @@ public class CcgParserTest extends TestCase {
     assertEquals(1, parses.size());
     CcgParse parse = parses.get(0);
     // CcgParse parse = parse(parser, Arrays.asList("I", "quickly", "eat", "amazingly", "tasty", "berries"));
-    
+
+    System.out.println(parse);
     System.out.println(parse.getAllDependencies());
 
     assertEquals(2.0, parse.getNodeProbability());
@@ -279,11 +284,12 @@ public class CcgParserTest extends TestCase {
 
   public void testBeamSearch2() {
     List<CcgParse> parses = beamSearch(parser, 
-        Arrays.asList("people", "that", "quickly", "eat", "berries", "in", "houses"), 10);
+        Arrays.asList("people", "that", "quickly", "eat", "berries", "in", "houses"), 100);
 
     for (CcgParse parse : parses) {
       System.out.println(parse);
       System.out.println(parse.getAllDependencies());
+      System.out.println(parse.getSubtreeProbability());
     }
 
     assertEquals(3, parses.size());
@@ -354,12 +360,12 @@ public class CcgParserTest extends TestCase {
 
   public void testParseLogicalFormApplication2() {
     runLogicalFormTest(parser, Arrays.asList("i", "that", "eat", "berries"),
-        "(lambda x (and (i x) (exists a b (and (equals a x) (berries b) (eat a b)))))");
+        "(lambda (x) (and (i x) (exists a b (and (equals a x) (berries b) (eat a b)))))");
   }
 
   public void testParseLogicalFormComposition() {
     runLogicalFormTest(parserWithComposition, Arrays.asList("the", "colorful", "tasty"), 
-        "(lambda $1 (lambda e (and (colorful e) (and (tasty e) ($1 e)))))");
+        "(lambda ($1) (lambda (e) (and (colorful e) (and (tasty e) ($1 e)))))");
   }
 
   public void testParseLogicalFormBinaryRule() {
@@ -375,7 +381,7 @@ public class CcgParserTest extends TestCase {
 
   public void testParseLogicalFormBinaryRule3() {
     runLogicalFormTest(parserWithComposition, Arrays.asList("people", "berries"),
-        "(lambda j (exists k (and (people k) (berries j) (special:compound k j))))");
+        "(lambda (j) (exists k (and (people k) (berries j) (special:compound k j))))");
   }
 
   public void testParseLogicalFormConjunction() {
@@ -387,8 +393,8 @@ public class CcgParserTest extends TestCase {
     List<CcgParse> parses = beamSearch(parserWithUnaryAndComposition,
         Arrays.asList("berries", "that", "i", "eat"), 10);
 
-    Expression2 expectedLf = exp.parseSingleExpression(
-        "(lambda x (and (berries x) (exists a b (and (i a) (equals b x) (eat a b)))))");
+    Expression2 expectedLf = exp.parse(
+        "(lambda (x) (and (berries x) (exists a b (and (i a) (equals b x) (eat a b)))))");
     boolean foundN = false;
     for (CcgParse parse : parses) {
       String root = parse.getSyntacticCategory().getValue();
@@ -405,7 +411,7 @@ public class CcgParserTest extends TestCase {
     List<CcgParse> parses = beamSearch(parser, words, 10);
     // assertEquals(1, parses.size());
     assertTrue(parses.size() > 0);
-    Expression2 expectedLf = exp.parseSingleExpression(expectedExpression);
+    Expression2 expectedLf = exp.parse(expectedExpression);
     for (CcgParse parse : parses) {
       assertEquals(simplifier.apply(expectedLf), simplifier.apply(parse.getLogicalForm()));
     }
@@ -537,6 +543,7 @@ public class CcgParserTest extends TestCase {
     double[] probs = new double[parses.size()];
     for (int i = 0; i < parses.size(); i++) {
       CcgParse parse = parses.get(i);
+      System.out.println(parse);
       probs[i] = parse.getSubtreeProbability();
     }
 
@@ -551,6 +558,35 @@ public class CcgParserTest extends TestCase {
 
     assertEquals(11, parses.size());
   }
+  
+  public void testParseWordSkip2() {
+    List<String> words = Arrays.asList("areugsntgh", "anstheunsb", "i");
+    List<CcgParse> parses = beamSearch(parserWordSkip, words, 10);
+
+    assertEquals(1, parses.size());
+  }
+  
+  public void testParseWordSkip3() {
+    List<String> words = Arrays.asList("i", "backward", "quickly");
+    List<CcgParse> parses = beamSearch(parserWordSkip, words, 10);
+    
+    /*
+     * The expected parses in order of probability are:
+     * 3 i
+     * 3 i backward
+     * 2 backward
+     * 1 quickly
+     */
+    List<Double> expectedProbs = Arrays.asList(3.0, 3.0, 2.0, 1.0);
+    List<Double> actualProbs = Lists.newArrayList();
+    for (CcgParse parse : parses) {
+      System.out.println(parse.getSubtreeProbability() + " " + parse);
+      actualProbs.add(parse.getSubtreeProbability());
+    }
+
+    assertEquals(4, parses.size());
+    assertEquals(expectedProbs, actualProbs);
+  }
 
   public void testParseWordSkipExact() {
     List<String> words = Arrays.asList("green", "green", "i");
@@ -562,15 +598,13 @@ public class CcgParserTest extends TestCase {
     
     assertEquals(0, bestParse.getSpanStart());
     assertEquals(2, bestParse.getSpanEnd());
-    // This fails because the features aren't applied to the same spans
-    // anymore with word skipping.
-    assertEquals(Arrays.asList("i"), ((SkipTrigger) bestParse.getLexiconEntry().getLexiconTrigger()).getTrigger());
+    assertEquals(Arrays.asList("i"), bestParse.getLexiconEntry().getLexiconTrigger());
     assertEquals(1.5, bestParse.getSubtreeProbability());
 
     // TODO: test that dependencies are projected from the spans of the original
     // lexicon entries.
   }
-
+  
   public void testParseHeadedSyntaxWeights() {
     List<CcgParse> parses = beamSearch(parser, Arrays.asList("tasty", "apple"), 10);
     assertEquals(1, parses.size());
@@ -821,7 +855,7 @@ public class CcgParserTest extends TestCase {
         Arrays.asList("people", "berries", "and", "people"), 10);
 
     assertEquals(2, parses.size());
-    CcgParse parse = parses.get(1);
+    CcgParse parse = parses.get(0);
     Set<DependencyStructure> deps = Sets.newHashSet(parse.getAllDependencies());
 
     Set<DependencyStructure> expected = Sets.newHashSet(
@@ -850,7 +884,7 @@ public class CcgParserTest extends TestCase {
   public void testLargeConjunction() {
     List<CcgParse> parses = beamSearch(parserWithCompositionNormalForm, 
         Arrays.asList("people", "or", "berries", "or", "people", "or", "people", "or", "people",
-            "or", "people"), 100);
+            "or", "people"), 1000);
     // "eat", "berries", "or", "eat", "people"
     
     System.out.println(parses.size());
@@ -971,7 +1005,7 @@ public class CcgParserTest extends TestCase {
   }
 
   public void testSerialization() throws IOException {
-    ObjectOutputStream oos = new ObjectOutputStream(new NullOutputStream());
+    ObjectOutputStream oos = new ObjectOutputStream(ByteStreams.nullOutputStream());
     oos.writeObject(parserWithUnary);
     oos.close();
   }
@@ -979,7 +1013,7 @@ public class CcgParserTest extends TestCase {
   public void testStringLexicon() {
     List<CcgParse> parses = beamSearch(parserWithString, Arrays.asList("stringfunc", "bar"), 20);
     assertTrue(parses.size() > 0);
-    Expression2 expected = ExpressionParser.expression2().parseSingleExpression("(stringFunc \"bar\")");
+    Expression2 expected = ExpressionParser.expression2().parse("(stringFunc \"bar\")");
     CcgParse theSentence = null;
     for (CcgParse parse : parses) {
       if (parse.getHeadedSyntacticCategory().equals(HeadedSyntacticCategory.parseFrom("S{0}"))) {
@@ -995,7 +1029,7 @@ public class CcgParserTest extends TestCase {
   public void testStringLexiconWholeSentence() {
     List<CcgParse> parses = beamSearch(parserWithString, Arrays.asList("stringfunc", "bar"), 20);
     assertTrue(parses.size() > 0);
-    Expression2 expected = ExpressionParser.expression2().parseSingleExpression("unknownCommand");
+    Expression2 expected = ExpressionParser.expression2().parse("unknownCommand");
     CcgParse theSentence = null;
     int numUnknown = 0;
     for (CcgParse parse : parses) {
@@ -1027,21 +1061,24 @@ public class CcgParserTest extends TestCase {
     assertTrue(foundN);
     assertTrue(foundString);
   }
-
-  private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
-      int beamSize) {
-    return parser.beamSearch(new AnnotatedSentence(words,
-        Collections.nCopies(words.size(), DEFAULT_POS)), beamSize, null, new NullLogFunction(),
-        -1, Integer.MAX_VALUE, 16);
+  
+  public void testMultiwordLexiconEntry() {
+    List<CcgParse> parses = beamSearch(parser, Arrays.asList("people", "backward"), 20);
+    assertEquals(2, parses.size());
   }
 
-  private List<CcgParse> beamSearch(CcgParser parser, List<String> words,
+  public List<CcgParse> beamSearch(CcgParser parser, List<String> words,
+      int beamSize) {
+    return beamSearch(parser, words, Collections.nCopies(words.size(), DEFAULT_POS), beamSize);
+  }
+
+  public List<CcgParse> beamSearch(CcgParser parser, List<String> words,
       List<String> posTags, int beamSize) {
     return parser.beamSearch(new AnnotatedSentence(words, 
         posTags), beamSize, null, new NullLogFunction(), -1, Integer.MAX_VALUE, 16);
   }
 
-  private CcgParse parse(CcgParser parser, List<String> words) {
+  public CcgParse parse(CcgParser parser, List<String> words) {
     return parser.parse(new AnnotatedSentence(words,
         Collections.nCopies(words.size(), DEFAULT_POS)), null, null, -1L, Integer.MAX_VALUE, 16);
   }
@@ -1062,7 +1099,7 @@ public class CcgParserTest extends TestCase {
     Set<String> semanticPredicates = Sets.newHashSet();
     for (int i = 0; i < lexicon.length; i++) {
       int commaInd = lexicon[i].indexOf(",");
-      words.add(Arrays.asList(lexicon[i].substring(0, commaInd)));
+      words.add(Arrays.asList(lexicon[i].substring(0, commaInd).split(" ")));
 
       CcgCategory category = CcgCategory.parseFrom(lexicon[i].substring(commaInd + 1));
       categories.add(category);
@@ -1122,7 +1159,7 @@ public class CcgParserTest extends TestCase {
     TableFactorBuilder terminalBuilder = new TableFactorBuilder(vars, SparseTensorBuilder.getFactory());
     for (int i = 0; i < lexicon.length; i++) {
       int commaInd = lexicon[i].indexOf(",");
-      List<String> wordList = Arrays.asList(lexicon[i].substring(0, commaInd));
+      List<String> wordList = Arrays.asList(lexicon[i].substring(0, commaInd).split(" "));
       CcgCategory category = CcgCategory.parseFrom(lexicon[i].substring(commaInd + 1));
       terminalBuilder.setWeight(vars.outcomeArrayToAssignment(wordList, category), weights[i]);
     }
@@ -1139,8 +1176,8 @@ public class CcgParserTest extends TestCase {
     }
 
     // Distribution over CCG combinators, i.e., binary combination rules.
-    DiscreteVariable syntaxType = new DiscreteVariable("syntacticCategories", CcgParser.getSyntacticCategoryClosure(syntacticCategories));
-    DiscreteFactor syntaxDistribution = CcgParser.buildUnrestrictedBinaryDistribution(syntaxType, binaryRules, allowComposition);
+    DiscreteVariable syntaxType = new DiscreteVariable("syntacticCategories", CcgGrammarUtils.getSyntacticCategoryClosure(syntacticCategories));
+    DiscreteFactor syntaxDistribution = CcgGrammarUtils.buildUnrestrictedBinaryDistribution(syntaxType, binaryRules, allowComposition);
     VariableNumMap leftSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.LEFT_SYNTAX_VAR_NAME);
     VariableNumMap rightSyntaxVar = syntaxDistribution.getVars().getVariablesByName(CcgParser.RIGHT_SYNTAX_VAR_NAME);
     VariableNumMap inputSyntaxVars = leftSyntaxVar.union(rightSyntaxVar);
@@ -1180,12 +1217,12 @@ public class CcgParserTest extends TestCase {
     TableFactor dependencyFactor = dependencyFactorBuilder.buildSparseInLogSpace();
 
     // Distribution over unary rules.
-    DiscreteFactor unaryRuleDistribution = CcgParser.buildUnaryRuleDistribution(unaryRules,
+    DiscreteFactor unaryRuleDistribution = CcgGrammarUtils.buildUnaryRuleDistribution(unaryRules,
         leftSyntaxVar.getDiscreteVariables().get(0));
     VariableNumMap unaryRuleInputVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_INPUT_VAR_NAME);
     VariableNumMap unaryRuleVar = unaryRuleDistribution.getVars().getVariablesByName(CcgParser.UNARY_RULE_VAR_NAME);
 
-    DiscreteFactor compiledSyntaxDistribution = CcgParser.compileUnaryAndBinaryRules(unaryRuleDistribution,
+    DiscreteFactor compiledSyntaxDistribution = CcgGrammarUtils.compileUnaryAndBinaryRules(unaryRuleDistribution,
         syntaxDistribution, syntaxType);
     VariableNumMap searchMoveVar = compiledSyntaxDistribution.getVars().getVariablesByName(
         CcgParser.PARENT_MOVE_SYNTAX_VAR_NAME);
@@ -1272,17 +1309,21 @@ public class CcgParserTest extends TestCase {
         ccgCategoryVar, unknownTerminalBuilder.build());
 
     List<CcgLexicon> lexicons = Lists.newArrayList();
+    lexicons.add(lexiconFactor);
+    lexicons.add(unknownWordLexicon);
+    
+    VariableNumMap wordSkipWordVar = null;
+    DiscreteFactor wordSkipFactor = null;
     if (allowWordSkipping) {
-      lexicons.add(new SkipLexicon(lexiconFactor, TableFactor.unity(terminalVar)));
-      lexicons.add(new SkipLexicon(unknownWordLexicon, TableFactor.unity(terminalVar)));
-    } else {
-      lexicons.add(lexiconFactor);
-      lexicons.add(unknownWordLexicon);
-    }
+      wordSkipWordVar = terminalVar;
+      Assignment quickly = terminalVar.outcomeArrayToAssignment(Arrays.asList("quickly"));
+      wordSkipFactor = TableFactor.unity(terminalVar).add(
+          TableFactor.pointDistribution(terminalVar, quickly));
+    } 
 
     if (useStringLexicon) {
-      CcgCategory stringCategory = CcgCategory.parseFrom("String{0},(lambda $0 $0),0 special:string");
-      CcgCategory unknownCategory = CcgCategory.parseFrom("Unknown{0},(lambda $0 unknownCommand),0 special:unknown");
+      CcgCategory stringCategory = CcgCategory.parseFrom("String{0},(lambda ($0) $0),0 special:string");
+      CcgCategory unknownCategory = CcgCategory.parseFrom("Unknown{0},(lambda ($0) unknownCommand),0 special:unknown");
       CcgLexicon stringLexicon = new StringLexicon(terminalVar, Arrays.asList(stringCategory, unknownCategory),
           Arrays.asList(CategorySpanConfig.ALL_SPANS, CategorySpanConfig.WHOLE_SENTENCE),
           StringLexicon.getDefaultDetokenizer());
@@ -1294,7 +1335,7 @@ public class CcgParserTest extends TestCase {
     scorers.add(new SyntaxLexiconScorer(terminalVar, posTagVar, terminalSyntaxVar, posDistribution,
         terminalSyntaxDistribution));
 
-    return new CcgParser(lexicons, scorers, semanticHeadVar, semanticSyntaxVar,
+    return new CcgParser(lexicons, scorers, wordSkipWordVar, wordSkipFactor, semanticHeadVar, semanticSyntaxVar,
         semanticArgNumVar, semanticArgVar, semanticHeadPosVar, semanticArgPosVar, dependencyFactor,
         wordDistanceVar, wordDistanceFactor, puncDistanceVar, puncDistanceFactor, puncTagSet,
         verbDistanceVar, verbDistanceFactor, verbTagSet,

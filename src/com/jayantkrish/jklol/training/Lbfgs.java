@@ -238,9 +238,9 @@ public class Lbfgs implements GradientOptimizer {
       LogFunction log) {
     // Create the factor graph (or whatever else) from the parameter
     // vector.
-    log.startTimer("factor_graph_from_parameters");
+    log.startTimer("instantiate_model");
     M nextModel = oracle.instantiateModel(parameters);
-    log.stopTimer("factor_graph_from_parameters");
+    log.stopTimer("instantiate_model");
 
     // In parallel, compute the gradient from the entire training
     // set. Note that this computation does not include the added

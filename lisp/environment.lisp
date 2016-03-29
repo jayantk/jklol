@@ -4,6 +4,14 @@
 (define map (lambda (f seq) (begin (if (nil? seq) (list) (cons (f (car seq)) (map f (cdr seq)))))))
 (define lifted-map (lambda (f seq) (if (nil? seq) (lifted-list) (lifted-cons (f (lifted-car seq)) (lifted-map f (lifted-cdr seq))))))
 
+(define filter (f seq) (if (nil? seq)
+			   (list)
+			 (let ((first (car seq))
+			       (filtered-rest (filter f (cdr seq))))
+			   (if (f first)
+			       (cons first filtered-rest)
+			     filtered-rest))))
+
 ;; Combines the elements of seq using f.
 (define foldr (lambda (f seq init)
                 (if (nil? seq)

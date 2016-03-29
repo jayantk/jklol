@@ -14,12 +14,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
-import com.jayantkrish.jklol.ccg.CcgInference;
+import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.ccg.CcgPerceptronOracle;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
@@ -110,14 +109,10 @@ public class TrainSemanticParser extends AbstractCli {
             new CommutativeReplacementRule("and:<t*,t>")));
     ExpressionComparator comparator = new SimplificationComparator(simplifier);
 
-    CcgInference inferenceAlgorithm = new CcgBeamSearchInference(null, comparator, options.valueOf(beamSize),
-        -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors(), false);
-    GradientOracle<CcgParser, CcgExample> oracle = new CcgPerceptronOracle(family,
-        inferenceAlgorithm, 0.0);
-    /*
+    CcgCkyInference inference = new CcgCkyInference(null, options.valueOf(beamSize),
+        -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors());
     GradientOracle<CcgParser, CcgExample> oracle = new CcgLoglikelihoodOracle(family,
-        comparator, options.valueOf(beamSize));
-        */ 
+        comparator, inference);
 
     GradientOptimizer trainer = createGradientOptimizer(trainingExamples.size());
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),
@@ -145,7 +140,7 @@ public class TrainSemanticParser extends AbstractCli {
         String targetFormula = exampleNode.get("targetFormula").asText();
 
         List<String> words = Arrays.asList(utterance.split("\\s"));
-        Expression2 lf = lfParser.parseSingleExpression(targetFormula);
+        Expression2 lf = lfParser.parse(targetFormula);
 
         // Parts-of-speech are assumed to be unknown.
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
@@ -171,7 +166,7 @@ public class TrainSemanticParser extends AbstractCli {
         words = null;
         expression = null;
       } else if (line.startsWith("(")) {
-        expression = parser.parseSingleExpression(line);
+        expression = parser.parse(line);
 
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
         AnnotatedSentence supertaggedSentence = new AnnotatedSentence(words, posTags);

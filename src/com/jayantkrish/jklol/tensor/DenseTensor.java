@@ -51,6 +51,12 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   public double[] getValues() {
     return super.values;
   }
+  
+  @Override
+  public TensorHash toHash() {
+    // Dense tensors already support fast random access.
+    return this;
+  }
 
   @Override
   public Tensor slice(int[] dimensionNumbers, int[] key) {
@@ -172,7 +178,7 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
       long maxKeyNum = getMaxKeyNum();
       long keyNumIncrement = (maxDimIndex < 0) ? maxKeyNum : getDimensionOffsets()[maxDimIndex];
       
-      for (int i = 1; i < otherSizes.length; i++) {
+      for (int i = 1; i <= otherSizes.length; i++) {
         Preconditions.checkArgument(mySizes[mySizes.length - i] == otherSizes[otherSizes.length - i],
             "Tensor dimension sizes do not agree: %s and %s", Ints.asList(mySizes), 
             Ints.asList(otherSizes));

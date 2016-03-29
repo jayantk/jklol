@@ -4,10 +4,8 @@ import java.util.List;
 
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
-import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
-import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IntMultimap;
 
 public interface CcgChart {
@@ -78,58 +76,33 @@ public interface CcgChart {
 
   public int[] getVerbDistances();
 
-  /**
-   * Caches the subset of the parser's semantic dependencies which may
-   * get used during the parse of this sentence. This cache improves
-   * the speed of weight lookups during parsing.
-   * 
-   * @param tensor
-   */
-  public void setDependencyTensor(Tensor tensor);
+  public void setAssignmentVarIndexAccumulator(int[][] assignmentVarIndexAccumulator);
+  
+  public void setAssignmentAccumulator(long[][] assignmentAccumulator);
+  
+  public void setFilledDepAccumulator(long[][] filledDepAccumulator);
+  
+  public void setUnfilledDepVarIndexAccumulator(int[][] unfilledDepVarIndexAccumulator);
+  
+  public void setUnfilledDepAccumulator(long[][] unfilledDepAccumulator);
+  
+  public void setDepLongCache(long[] depCache);
+  
+  public void setDepProbCache(double[] depProb);
 
-  public void setWordDistanceTensor(Tensor tensor);
-
-  public void setPuncDistanceTensor(Tensor tensor);
-
-  public void setVerbDistanceTensor(Tensor tensor);
-
-  public void setSyntaxDistribution(DiscreteFactor syntaxDistribution);
+  public int[][] getAssignmentVarIndexAccumulator();
   
-  public void setAssignmentVarIndexAccumulator(int[] assignmentVarIndexAccumulator);
+  public long[][] getAssignmentAccumulator();
   
-  public void setAssignmentAccumulator(long[] assignmentAccumulator);
+  public long[][] getFilledDepAccumulator();
   
-  public void setFilledDepAccumulator(long[] filledDepAccumulator);
+  public int[][] getUnfilledDepVarIndexAccumulator();
   
-  public void setUnfilledDepVarIndexAccumulator(int[] unfilledDepVarIndexAccumulator);
+  public long[][] getUnfilledDepAccumulator();
   
-  public void setUnfilledDepAccumulator(long[] unfilledDepAccumulator);
-
-  /**
-   * Gets the subset of all parser weights which may be used in this
-   * parse.
-   * 
-   * @return
-   */
-  public Tensor getDependencyTensor();
-
-  public Tensor getWordDistanceTensor();
-
-  public Tensor getPuncDistanceTensor();
-
-  public Tensor getVerbDistanceTensor();
-
-  public DiscreteFactor getSyntaxDistribution();
+  public long[] getDepLongCache();
   
-  public int[] getAssignmentVarIndexAccumulator();
-  
-  public long[] getAssignmentAccumulator();
-  
-  public long[] getFilledDepAccumulator();
-  
-  public int[] getUnfilledDepVarIndexAccumulator();
-  
-  public long[] getUnfilledDepAccumulator();
+  public double[] getDepProbCache();
 
   /**
    * Gets the chart entries spanning the words {@code spanStart}-

@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.util;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -10,8 +11,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.ccg.CcgExample;
-import com.jayantkrish.jklol.ccg.DependencyStructure;
-import com.jayantkrish.jklol.ccg.LexiconEntryInfo;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.util.IoUtils;
 
@@ -26,9 +25,6 @@ import com.jayantkrish.jklol.util.IoUtils;
 public class SemanticParserExampleLoss {
   private final CcgExample example;
   private final Expression2 predictedLf;
-  private final List<DependencyStructure> predictedDeps;
-
-  private final List<LexiconEntryInfo> lexiconEntries; 
 
   private final Expression2 correctLf;
   private final boolean parsable;
@@ -36,14 +32,10 @@ public class SemanticParserExampleLoss {
   private final boolean correctLfPossible;
 
   public SemanticParserExampleLoss(CcgExample example, Expression2 predictedLf,
-      List<DependencyStructure> predictedDeps, List<LexiconEntryInfo> lexiconEntries,
       Expression2 correctLf, boolean parsable, boolean correct, boolean correctLfPossible) {
     this.example = Preconditions.checkNotNull(example);
 
     this.predictedLf = predictedLf;
-    this.predictedDeps = Preconditions.checkNotNull(predictedDeps);
-
-    this.lexiconEntries = Preconditions.checkNotNull(lexiconEntries);
 
     this.correctLf = Preconditions.checkNotNull(correctLf);
     this.parsable = parsable;
@@ -57,7 +49,18 @@ public class SemanticParserExampleLoss {
    * 
    * @param filename
    * @param losses
+   * @param annotations
    */
+  public static void writeJsonToFile(String filename,
+      List<SemanticParserExampleLoss> losses, List<Map<String, Object>> annotations) {
+    Preconditions.checkArgument(annotations.size() == losses.size());
+    List<String> lines = Lists.newArrayList();
+    for (int i = 0; i < losses.size(); i++) {
+      lines.add(losses.get(i).toJson(annotations.get(i)));
+    }
+    IoUtils.writeLines(filename, lines);
+  }
+
   public static void writeJsonToFile(String filename, List<SemanticParserExampleLoss> losses) {
     List<String> lines = Lists.newArrayList();
     for (SemanticParserExampleLoss loss : losses) {
@@ -72,14 +75,6 @@ public class SemanticParserExampleLoss {
 
   public Expression2 getPredictedLf() {
     return predictedLf;
-  }
-
-  public List<DependencyStructure> getPredictedDeps() {
-    return predictedDeps;
-  }
-
-  public List<LexiconEntryInfo> getLexiconEntries() {
-    return lexiconEntries;
   }
 
   public Expression2 getCorrectLf() {
@@ -98,37 +93,20 @@ public class SemanticParserExampleLoss {
     return correctLfPossible;
   }
 
-  public String toJson() {
+  public String toJson() { return toJson(Collections.<String, Object>emptyMap()); }
+
+  public String toJson(Map<String, Object> annotations) {
     Map<String, Object> jsonDict = Maps.newHashMap();
     jsonDict.put("sentence", Joiner.on(" ").join(example.getSentence().getWords()));
     jsonDict.put("pos", Joiner.on(" ").join(example.getSentence().getPosTags()));
     jsonDict.put("predicted_lf", predictedLf == null ? null : predictedLf.toString());
 
-    List<String> depStrings = Lists.newArrayList();
-    for (DependencyStructure dep : predictedDeps) {
-      depStrings.add(dep.toString());
-    }
-    jsonDict.put("predicted_deps", depStrings);
-
-    List<Map<String, Object>> lexiconDicts = Lists.newArrayList();
-    for (LexiconEntryInfo entry : lexiconEntries) {
-      Map<String, Object> lexiconDict = Maps.newHashMap();
-      
-      lexiconDict.put("index", entry.getLexiconIndex());
-      lexiconDict.put("span_start", entry.getTriggerSpanStart());
-      lexiconDict.put("span_end", entry.getTriggerSpanEnd());
-      lexiconDict.put("trigger", entry.getLexiconTrigger());
-      // TODO: this needs a toJson method.
-      lexiconDict.put("entry", entry.getCategory().toCsvString());
-
-      lexiconDicts.add(lexiconDict);
-    }
-    jsonDict.put("lexicon_entries", lexiconDicts);
-
     jsonDict.put("correct_lf", correctLf.toString());
     jsonDict.put("parsable", parsable ? 1 : 0);
     jsonDict.put("correct", correct ? 1 : 0);
     jsonDict.put("correct_lf_possible", correctLfPossible ? 1 : 0);
+
+    jsonDict.putAll(annotations);
 
     ObjectMapper mapper = new ObjectMapper();
     String s = null;

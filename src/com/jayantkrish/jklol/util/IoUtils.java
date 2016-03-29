@@ -169,6 +169,14 @@ public class IoUtils {
       throw new RuntimeException(ex);
     } catch(ClassNotFoundException ex) {
       throw new RuntimeException(ex);
+    } finally {
+      if (in != null) {
+        try {
+          in.close();
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
     }
     return object;
   }

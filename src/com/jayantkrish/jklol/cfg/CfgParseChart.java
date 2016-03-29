@@ -277,12 +277,9 @@ public class CfgParseChart {
   public Factor getMarginalEntries(int spanStart, int spanEnd) {
     return getOutsideEntries(spanStart, spanEnd).product(getInsideEntries(spanStart, spanEnd));
   }
-
-  /**
-   * Get the inside distribution over the productions at the root of the tree.
-   */
-  public Factor getRootDistribution() {
-    return getInsideEntries(0, chartSize() - 1);
+  
+  public Factor getMarginalEntriesRoot() {
+    return getMarginalEntries(0, numTerminals - 1);
   }
 
   /**

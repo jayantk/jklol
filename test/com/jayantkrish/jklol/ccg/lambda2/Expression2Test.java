@@ -18,7 +18,7 @@ public class Expression2Test extends TestCase {
   public void setUp() {
     ExpressionParser<Expression2> parser = ExpressionParser.expression2();
     for (int i = 0; i < expressionStrings.length; i++) {
-      expressions[i] = parser.parseSingleExpression(expressionStrings[i]);
+      expressions[i] = parser.parse(expressionStrings[i]);
     }
   }
   

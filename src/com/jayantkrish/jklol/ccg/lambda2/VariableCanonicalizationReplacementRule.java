@@ -29,6 +29,7 @@ public class VariableCanonicalizationReplacementRule implements ExpressionReplac
           Expression2 body = StaticAnalysis.getLambdaBody(input, i);
           int[] indexes = input.getChildIndexes(i);
           int bodyIndex = indexes[indexes.length - 1];
+          int firstArgIndex = indexes[1] + 1;
           int startNum = scope.getNumBindings();
           
           for (int j = 0; j < args.size(); j++) {
@@ -42,7 +43,7 @@ public class VariableCanonicalizationReplacementRule implements ExpressionReplac
             // Substitute the new name for the occurrence in the lambda 
             // declaration
             changed = true;
-            result = result.substitute(indexes[j + 1], newVarName);
+            result = result.substitute(firstArgIndex + j, newVarName);
 
             // Substitute the new name for free occurrences in the body of 
             // the lambda.

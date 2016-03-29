@@ -11,6 +11,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 
 /**
  * Static analysis of lambda calculus expressions. Computes
@@ -120,14 +121,19 @@ public class StaticAnalysis {
         if (constant.equals(LAMBDA)) {
           // Read off the variables and add them to a static scope.
           Expression2 lambdaExpression = expression.getSubexpression(i - 1);
-          List<Expression2> subexpressions = lambdaExpression.getSubexpressions();
-
-          // First expression is LAMBDA, last is body.
+          // The nested expression after the lambda keyword contains the arguments.
+          int argExpressionIndex = i + 1;
+          Expression2 argExpression = expression.getSubexpression(argExpressionIndex);
+          Preconditions.checkState(!argExpression.isConstant(),
+              "Ill-formed lambda expression: %s", lambdaExpression);
+          
+          List<Expression2> subexpressions = argExpression.getSubexpressions();
+          
           Map<String, Integer> bindings = Maps.newHashMap();
-          for (int j = 1; j < subexpressions.size() - 1; j++) {
+          for (int j = 0; j < subexpressions.size(); j++) {
             Preconditions.checkState(subexpressions.get(j).isConstant(),
                 "Illegal lambda expression %s", lambdaExpression);
-            bindings.put(subexpressions.get(j).getConstant(), i + j);
+            bindings.put(subexpressions.get(j).getConstant(), argExpressionIndex + j + 1);
           }
 
           int scopeStart = i;
@@ -141,45 +147,55 @@ public class StaticAnalysis {
 
     return new ScopeSet(allCreatedScopes);
   }
-  
+
+  public static boolean isLambda(Expression2 expression) {
+    return isLambda(expression, 0);
+  }
+
   public static boolean isLambda(Expression2 expression, int index) {
     Expression2 subexpression = expression.getSubexpression(index);
     return !subexpression.isConstant() && subexpression.getSubexpression(1).isConstant() && 
         subexpression.getSubexpression(1).getConstant().equals(LAMBDA);
   }
   
+  public static List<String> getLambdaArguments(Expression2 expression) {
+    return getLambdaArguments(expression, 0);
+  }
+  
   public static List<String> getLambdaArguments(Expression2 expression, int index) {
-    int[] children = expression.getChildIndexes(index);
+    Preconditions.checkArgument(isLambda(expression, index));
+
+    // index + 2 is the nested expression containing argument names.
+    int[] children = expression.getChildIndexes(index + 2);
     List<String> args = Lists.newArrayList();
-    for (int i = 1; i < children.length - 1; i++){
+    for (int i = 0; i < children.length; i++) {
       args.add(expression.getSubexpression(children[i]).getConstant());
     }
     return args;
+  }
+
+  public static Expression2 getLambdaBody(Expression2 expression) {
+    return getLambdaBody(expression, 0);
   }
 
   public static Expression2 getLambdaBody(Expression2 expression, int index) {
     int[] children = expression.getChildIndexes(index);
     return expression.getSubexpression(children[children.length - 1]);
   }
-
-  public static boolean isPartOfSpecialForm(Expression2 expression, int index) {
-    int parentIndex = expression.getParentExpressionIndex(index);
-    if (parentIndex == -1) {
+  
+  public static boolean isPartOfSpecialForm(Expression2 expression, Scope scope, int index) {
+    if (scope.getParent() == null) {
       return false;
     } else {
-      Expression2 parent = expression.getSubexpression(parentIndex);
-      
-      Expression2 sub = parent.getSubexpression(1);
-      if (sub.isConstant() && sub.getConstant().equals(LAMBDA)) {
-        int bodyIndex = parentIndex + parent.getSubexpressions().size();
-        return index < bodyIndex;
-      }
-      return false;
+      // This is a hacky way to detect if index points to a lambda or its arguments
+      int lambdaIndex = scope.getStart() - 1;
+      int[] childIndexes = expression.getChildIndexes(lambdaIndex);
+      return index < childIndexes[childIndexes.length - 1];
     }
   }
-  
-  public static Type inferType(Expression2 expression, Map<String, String> typeReplacements) {
-    return inferType(expression, Type.createAtomic("unknown"), typeReplacements);
+
+  public static Type inferType(Expression2 expression, TypeDeclaration typeDeclaration) {
+    return inferType(expression, TypeDeclaration.TOP, typeDeclaration);
   }
 
   /**
@@ -187,24 +203,21 @@ public class StaticAnalysis {
    * as an argument an expression where constants have the form
    * constant_name:type_spec.
    * 
-   * TODO: return TypedExpression
-   * TODO: implement unification lattice for atomic types. Fix
-   * hardcoded constants in the process. Get rid of typeReplacements.
-   * 
    * @param expression
    * @param type
    * @param typeReplacements
    * @return
    */
-  public static Type inferType(Expression2 expression, Type type, Map<String, String> typeReplacements) {
-    Map<Integer, Type> subexpressionTypeMap = inferTypeMap(expression, type, typeReplacements);
+  public static Type inferType(Expression2 expression, Type type, TypeDeclaration typeDeclaration) {
+    Map<Integer, Type> subexpressionTypeMap = inferTypeMap(expression, type, typeDeclaration);
     return subexpressionTypeMap.get(0);
   }
 
-  public static Map<Integer, Type> inferTypeMap(Expression2 expression, Type type, Map<String, String> typeReplacements) {
+  public static Map<Integer, Type> inferTypeMap(Expression2 expression, Type type,
+      TypeDeclaration typeDeclaration) {
     Map<Integer, Type> subexpressionTypeMap = Maps.newHashMap();
     initializeSubexpressionTypeMap(expression, subexpressionTypeMap);
-    updateType(0, type, subexpressionTypeMap, expression);
+    updateType(0, type, subexpressionTypeMap, typeDeclaration, expression);
     ScopeSet scopes = getScopes(expression);
 
     boolean updated = true;
@@ -213,14 +226,10 @@ public class StaticAnalysis {
       for (int index : subexpressionTypeMap.keySet()) {
         Expression2 subexpression = expression.getSubexpression(index);
         if (subexpression.isConstant()) {
-          String[] parts = subexpression.getConstant().split(":");
-          if (parts.length > 1) {
-            // The expression has a type declaration
-            String typeString = parts[1];
-            Type newType = doTypeReplacements(Type.parseFrom(typeString), typeReplacements);
-            updated = updated || updateType(index, newType, subexpressionTypeMap, expression);
-          }
-          
+          // Get the type of this constant if it is declared. 
+          Type newType = typeDeclaration.getType(subexpression.getConstant());
+          updated = updateType(index, newType, subexpressionTypeMap, typeDeclaration, expression) || updated;
+
           Scope scope = scopes.getScope(index);
           int bindingIndex = scope.getBindingIndex(subexpression.getConstant());
           if (bindingIndex != -1) {
@@ -228,37 +237,36 @@ public class StaticAnalysis {
             Type myType = subexpressionTypeMap.get(index);
             Type bindingType = subexpressionTypeMap.get(bindingIndex);
             
-            updated = updated || updateType(index, bindingType, subexpressionTypeMap, expression);
-            updated = updated || updateType(bindingIndex, myType, subexpressionTypeMap, expression);
+            updated = updateType(index, bindingType, subexpressionTypeMap, typeDeclaration, expression) || updated;
+            updated = updateType(bindingIndex, myType, subexpressionTypeMap, typeDeclaration, expression) || updated;
           }
 
-        } else if (subexpression.getSubexpressions().size() > 1 && 
-            subexpression.getSubexpression(1).isConstant() && 
-            subexpression.getSubexpression(1).getConstant().equals(LAMBDA)) {
+        } else if (isLambda(subexpression)) {
           // Lambda expression. Propagate argument / body types to the whole expression,
           // and the expressions type back to the arguments / body.
           int[] childIndexes = expression.getChildIndexes(index);
           int bodyIndex = childIndexes[childIndexes.length - 1];
-          
+          int[] argIndexes = expression.getChildIndexes(childIndexes[1]);
+
           Type newType = subexpressionTypeMap.get(bodyIndex);
-          for (int i = childIndexes.length - 2; i >= 1; i--) {
-            newType = newType.addArgument(subexpressionTypeMap.get(childIndexes[i]));
+          for (int i = argIndexes.length - 1; i >= 0; i--) {
+            newType = newType.addArgument(subexpressionTypeMap.get(argIndexes[i]));
           }
 
-          updated = updated || updateType(index, newType, subexpressionTypeMap, expression);
+          updated = updateType(index, newType, subexpressionTypeMap, typeDeclaration, expression) || updated;
           
           // Propagate the expression's type back to the arguments / body
           Type lambdaType = subexpressionTypeMap.get(index);
-          for (int i = 1; i < childIndexes.length - 1; i++) {
+
+          for (int i = 0; i < argIndexes.length; i++) {
             Type argType = lambdaType.getArgumentType();
-            updated = updated || updateType(childIndexes[i], argType, subexpressionTypeMap, expression);
+            updated = updateType(argIndexes[i], argType, subexpressionTypeMap, typeDeclaration, expression) || updated;
             lambdaType = lambdaType.getReturnType();
           }
-          
-          updated = updated || updateType(childIndexes[childIndexes.length - 1], lambdaType,
-              subexpressionTypeMap, expression);
 
-        } else {
+          updated = updateType(bodyIndex, lambdaType,
+              subexpressionTypeMap, typeDeclaration, expression) || updated;
+        } else if (true) {
           // Application
           int[] childIndexes = expression.getChildIndexes(index);
           int functionIndex = childIndexes[0];
@@ -266,7 +274,7 @@ public class StaticAnalysis {
           Type applicationType = subexpressionTypeMap.get(index);
           Type functionType = subexpressionTypeMap.get(functionIndex);
 
-          if (!functionType.toString().equals("unknown")) {
+          if (!functionType.equals(TypeDeclaration.TOP)) {
             Type rest = functionType;
             
             for (int i = 1; i < childIndexes.length; i++) {
@@ -274,16 +282,16 @@ public class StaticAnalysis {
               if (!rest.acceptsRepeatedArguments()) {
                 rest = rest.getReturnType();
               }
-              updated = updated || updateType(childIndexes[i], argType,
-                  subexpressionTypeMap, expression);
+              updated = updateType(childIndexes[i], argType, subexpressionTypeMap,
+                  typeDeclaration, expression) || updated;
             }
 
             if (rest.acceptsRepeatedArguments()) {
               rest = rest.getReturnType();
             }
 
-            updated = updated || updateType(index, rest, subexpressionTypeMap,
-                expression);
+            updated = updateType(index, rest, subexpressionTypeMap, typeDeclaration, expression) 
+                || updated;
           }
 
           // Propagate type information on arguments and return value
@@ -293,44 +301,36 @@ public class StaticAnalysis {
             Type argType = subexpressionTypeMap.get(childIndexes[i]);
             functionType = functionType.addArgument(argType);
           }
-          updated = updated || updateType(functionIndex, functionType, subexpressionTypeMap,
-              expression);
+          updated = updateType(functionIndex, functionType, subexpressionTypeMap,
+              typeDeclaration, expression) || updated;
         }
       }
     }
     return subexpressionTypeMap;
   }
 
-  private static Type doTypeReplacements(Type type, Map<String, String> typeReplacements) {
-    if (type.isFunctional()) {
-      Type newArg = doTypeReplacements(type.getArgumentType(), typeReplacements);
-      Type newReturn = doTypeReplacements(type.getReturnType(), typeReplacements);
-      type = Type.createFunctional(newArg, newReturn, type.acceptsRepeatedArguments());
-    }
-
-    String typeString = type.toString();
-
-    if (typeReplacements.containsKey(typeString)) {
-      return Type.parseFrom(typeReplacements.get(typeString));
-    } else {
-      return type; 
-    }
-  }
-
   private static void initializeSubexpressionTypeMap(Expression2 expression,
       Map<Integer, Type> subexpressionTypeMap) {
     for (int i = 0; i < expression.size(); i++) {
-      if (!(expression.isConstant() && expression.getConstant().equals(LAMBDA))) {
-        // Don't include the lambda part of lambda expressions.
-        subexpressionTypeMap.put(i, Type.createAtomic("unknown"));
+      int parentIndex = expression.getParentExpressionIndex(i);
+      
+      if (parentIndex != -1 && StaticAnalysis.isLambda(expression, parentIndex)) {
+        // Don't include "lambda" or the nested expression containing lambda arguments
+        int[] childIndexes = expression.getChildIndexes(parentIndex);
+        if (i == childIndexes[0] || i == childIndexes[1]) {
+          continue;
+        }
       }
+      subexpressionTypeMap.put(i, TypeDeclaration.TOP);
     }
   }
 
-  private static boolean updateType(int index, Type type,
-      Map<Integer, Type> typeMap, Expression2 expression) {
+  private static boolean updateType(int index, Type type, Map<Integer, Type> typeMap,
+      TypeDeclaration typeDeclaration, Expression2 expression) {
     Type oldType = typeMap.get(index);
-    Type newType = unify(oldType, type);
+    Type newType = typeDeclaration.unify(oldType, type);
+    
+    // System.out.println("old: " + oldType + " update: " + type + " new: " + newType);
 
     if (!newType.equals(oldType)) {
       // System.out.println(index + " " + expression.getSubexpression(index) + " " + oldType + " " + type + " -> " + newType);
@@ -341,54 +341,22 @@ public class StaticAnalysis {
     }
   }
 
-  public static Type unify(Type t1, Type t2) {
-    if (t1.toString().equals("unknown")) {
-      return t2;
-    } else if (t2.toString().equals("unknown")) {
-      return t1;
-    } else if (t1.equals(t2)) {
-      return t1;
-    } if (t1.isFunctional() && t2.isFunctional()) {
-      if (t1.acceptsRepeatedArguments() == t2.acceptsRepeatedArguments()) {
-        // If the argument repeats, its repeated for both, so unify that type.
-        // If it doesn't repeat, then 
-        Type argumentType = unify(t1.getArgumentType(), t2.getArgumentType()); 
-        Type returnType = unify(t1.getReturnType(), t2.getReturnType());
-        return Type.createFunctional(argumentType, returnType, t1.acceptsRepeatedArguments());
-      } else {
-        // Repeats for one and not the other.
-        Type repeated = t1.acceptsRepeatedArguments() ? t1 : t2;
-        Type unrepeated = t1.acceptsRepeatedArguments() ? t2 : t1;
-
-        // TODO: this doesn't work if the return type of the type with
-        // the repeated arguments is non-atomic.
-        if (!unrepeated.getReturnType().isAtomic()) {
-          Type argumentType = unify(repeated.getArgumentType(), unrepeated.getArgumentType()); 
-          Type returnType = unify(repeated, unrepeated.getReturnType());
-          return Type.createFunctional(argumentType, returnType, false);
-        } else {
-          Type argumentType = unify(repeated.getArgumentType(), unrepeated.getArgumentType()); 
-          Type returnType = unify(repeated.getReturnType(), unrepeated.getReturnType());
-          return Type.createFunctional(argumentType, returnType, false);
-        }
-      }
-    } else {
-      return Type.createAtomic("bottom");
-    }
+  public static String getNewVariableName(Expression2... expressions) {
+    return getNewVariableNames(1, expressions).get(0);
   }
 
-  public static String getNewVariableName(Expression2 expression) {
-    // TODO: do this in a canonical way
-    int random = (int) (Math.random() * 1000000.0);
-    return "var" + random;
-  }
-  
-  public static List<String> getNewVariableNames(Expression2 expression, int num) {
-    // TODO: warning, this may break if the above generates a single
-    // canonical name for expression.
+  public static List<String> getNewVariableNames(int num, Expression2... expressions) {
     List<String> names = Lists.newArrayList();
+    Expression2 combined = Expression2.nested(expressions);
+
+    // TODO: do this in a canonical way.
+    String varName = null;
     for (int i = 0; i < num; i++) {
-      names.add(getNewVariableName(expression));
+      do {
+        int random = (int) (Math.random() * 1000000.0);
+        varName = "var" + random;
+      } while (combined.hasSubexpression(Expression2.constant(varName)) || names.contains(varName));
+      names.add(varName);
     }
     return names;
   }
@@ -396,8 +364,8 @@ public class StaticAnalysis {
   public static class Scope {
     // Index in the program of the first expression within an
     // expression that defines a new scope. For example, in:
-    // (foo (lambda x body))
-    // a scope would start at index 3 and end at 6.
+    // (foo (lambda (x) body))
+    // a scope would start at index 3 and end at 7.
     private final int start;
     // End of the expression that defines a new scope.
     // Exclusive index.

@@ -120,7 +120,7 @@ public class ParametricLinearClassifierFactor extends AbstractParametricFactor {
   }
 
   @Override
-  public ClassifierFactor getModelFromParameters(SufficientStatistics parameters) {
+  public LinearClassifierFactor getModelFromParameters(SufficientStatistics parameters) {
     return new LinearClassifierFactor(inputVar, outputVars, conditionalVars, featureDictionary, 
         getWeightTensorFromStatistics(parameters));
   }
@@ -195,6 +195,11 @@ public class ParametricLinearClassifierFactor extends AbstractParametricFactor {
       ((TensorSufficientStatistics) statistics).incrementOuterProduct(inputTensor,
           outputMarginal.getWeights(), count / partitionFunction);
     }
+  }
+
+  public void incrementSufficientStatisticsFromFeatureCounts(SufficientStatistics statistics,
+      SufficientStatistics currentParameters, Tensor featureCounts, double count, double partitionFunction) {
+    ((TensorSufficientStatistics) statistics).increment(featureCounts, count / partitionFunction);
   }
 
   private Tensor getWeightTensorFromStatistics(SufficientStatistics stats) {

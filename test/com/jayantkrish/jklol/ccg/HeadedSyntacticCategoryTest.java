@@ -22,6 +22,7 @@ public class HeadedSyntacticCategoryTest extends TestCase {
   String verbModCanonical = "(((S[0]{0}\\N[1]{1}){0}/N{2}){0}/((S[0]{0}\\N[1]{1}){0}/N{2}){0}){3}";
   
   String noParens = "S[ng]{0}\\N[num]{1}";
+  String noParens2 = "S[ng]{0}\\N[num]{1}/N[num]{2}";
   
   String prep = "((NP{1}\\NP{1}){0}/NP{2}){0}";
   String prepCanonical = "((NP{0}\\NP{0}){1}/NP{2}){1}";
@@ -45,6 +46,7 @@ public class HeadedSyntacticCategoryTest extends TestCase {
   
   public void testParseFrom2() {
     HeadedSyntacticCategory cat = HeadedSyntacticCategory.parseFrom(verbMod);
+    System.out.println(cat);
     
     assertEquals(3, cat.getHeadVariable());
     assertEquals(1, cat.getArgumentType().getHeadVariable());
@@ -62,6 +64,13 @@ public class HeadedSyntacticCategoryTest extends TestCase {
     assertEquals("S", cat2.getReturnType().getSyntax().getValue());
     assertEquals("ng", cat2.getReturnType().getSyntax().getRootFeature());
     assertEquals("num", cat2.getArgumentType().getSyntax().getRootFeature());
+    
+    cat2 = HeadedSyntacticCategory.parseFrom(noParens2);
+    System.out.println(cat2);
+    assertFalse(cat2.isAtomic());
+    assertEquals("S", cat2.getReturnType().getReturnType().getSyntax().getValue());
+    assertEquals("ng", cat2.getReturnType().getReturnType().getSyntax().getRootFeature());
+    assertEquals("num", cat2.getReturnType().getArgumentType().getSyntax().getRootFeature());
   }
   
   public void testParseFrom4() {

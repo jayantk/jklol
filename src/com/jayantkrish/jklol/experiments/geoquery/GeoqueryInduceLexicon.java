@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import joptsimple.OptionParser;
@@ -13,16 +12,17 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
+import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
-import com.jayantkrish.jklol.ccg.cli.AlignmentLexiconInduction;
+import com.jayantkrish.jklol.ccg.cli.TrainSemanticParser;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
@@ -32,22 +32,15 @@ import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.SimplificationComparator;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.ccg.lexicon.StringContext;
-import com.jayantkrish.jklol.ccg.lexinduct.AlignedExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.AlignmentExample;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentEmOracle;
 import com.jayantkrish.jklol.ccg.lexinduct.CfgAlignmentModel;
-import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder;
-import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentDecoder.LagrangianDecodingResult;
-import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer;
-import com.jayantkrish.jklol.ccg.lexinduct.LagrangianAlignmentTrainer.ParametersAndLagrangeMultipliers;
+import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.util.SemanticParserExampleLoss;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils.SemanticParserLoss;
-import com.jayantkrish.jklol.cfg.CfgParseTree;
 import com.jayantkrish.jklol.cli.AbstractCli;
-import com.jayantkrish.jklol.models.DiscreteFactor;
-import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
@@ -83,20 +76,6 @@ public class GeoqueryInduceLexicon extends AbstractCli {
   private OptionSpec<Integer> beamSize;
   private OptionSpec<Double> l2Regularization;
   private OptionSpec<String> additionalLexicon;
-
-  // TODO: this shouldn't be hard coded. Replace with 
-  // an input unification lattice for types.
-  public static final Map<String, String> typeReplacements = Maps.newHashMap();
-  static {
-    typeReplacements.put("lo", "e");
-    typeReplacements.put("c", "e");
-    typeReplacements.put("co", "e");
-    typeReplacements.put("s", "e");
-    typeReplacements.put("r", "e");
-    typeReplacements.put("l", "e");
-    typeReplacements.put("m", "e");
-    typeReplacements.put("p", "e");
-  }
   
   public GeoqueryInduceLexicon() {
     super(CommonOptions.MAP_REDUCE);
@@ -120,7 +99,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     emIterations = parser.accepts("emIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(0.01);
     nGramLength = parser.accepts("nGramLength").withRequiredArg().ofType(Integer.class).defaultsTo(1);
-    lexiconNumParses = parser.accepts("lexiconNumParses").withRequiredArg().ofType(Integer.class).defaultsTo(1);
+    lexiconNumParses = parser.accepts("lexiconNumParses").withRequiredArg().ofType(Integer.class).defaultsTo(-1);
     
     parserIterations = parser.accepts("parserIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
@@ -130,9 +109,11 @@ public class GeoqueryInduceLexicon extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
+    TypeDeclaration typeDeclaration = GeoqueryUtil.getTypeDeclaration();
+    
     List<String> foldNames = Lists.newArrayList();
     List<List<AlignmentExample>> folds = Lists.newArrayList();
-    readFolds(options.valueOf(trainingDataFolds), foldNames, folds, options.has(testOpt));
+    readFolds(options.valueOf(trainingDataFolds), foldNames, folds, options.has(testOpt), typeDeclaration);
     
     List<String> additionalLexiconEntries = IoUtils.readLines(options.valueOf(additionalLexicon));
 
@@ -164,7 +145,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
       String trainingErrorOutputFilename = outputDirString + "/training_error." + foldName + ".json";
       String testErrorOutputFilename = outputDirString + "/test_error." + foldName + ".json";
 
-      SemanticParserLoss loss = runFold(trainingData, heldOut, options.valueOf(emIterations),
+      SemanticParserLoss loss = runFold(trainingData, heldOut, typeDeclaration, options.valueOf(emIterations),
           options.valueOf(smoothingParam), options.valueOf(nGramLength), options.valueOf(lexiconNumParses),
           options.valueOf(parserIterations), options.valueOf(l2Regularization), options.valueOf(beamSize),
           options.valueOf(unknownWordThreshold), additionalLexiconEntries, 
@@ -189,9 +170,9 @@ public class GeoqueryInduceLexicon extends AbstractCli {
   }
   
   private static SemanticParserLoss runFold(List<AlignmentExample> trainingData, List<AlignmentExample> testData,
-      int emIterations, double smoothingAmount, int nGramLength, int lexiconNumParses, int parserIterations,
-      double l2Regularization, int beamSize, int unknownWordThreshold, List<String> additionalLexiconEntries, String lexiconOutputFilename,
-      String trainingErrorOutputFilename, String testErrorOutputFilename, String alignmentModelOutputFilename,
+      TypeDeclaration typeDeclaration, int emIterations, double smoothingAmount, int nGramLength, int lexiconNumParses,
+      int parserIterations, double l2Regularization, int beamSize, int unknownWordThreshold, List<String> additionalLexiconEntries,
+      String lexiconOutputFilename, String trainingErrorOutputFilename, String testErrorOutputFilename, String alignmentModelOutputFilename,
       String parserModelOutputFilename) {
 
     // Find all entity names in the given lexicon entries
@@ -199,10 +180,10 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     for (LexiconEntry lexiconEntry : LexiconEntry.parseLexiconEntries(additionalLexiconEntries)) {
       entityNames.add(lexiconEntry.getWords());
     }
-    
+
     // Train the alignment model and generate lexicon entries.
     PairCountAccumulator<List<String>, LexiconEntry> alignments = trainAlignmentModel(trainingData,
-        entityNames, smoothingAmount, emIterations, nGramLength, lexiconNumParses, false, false, true);
+        entityNames, typeDeclaration, smoothingAmount, emIterations, nGramLength, lexiconNumParses, true, false);
     
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (AlignmentExample trainingExample : trainingData) {
@@ -245,7 +226,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     
     // Initialize CCG parser components.
     List<CcgExample> ccgTrainingExamples = alignmentExamplesToCcgExamples(trainingData);
-    List<String> ruleEntries = Arrays.asList("\"DUMMY{0} DUMMY{0}\",\"(lambda $L $L)\"");
+    List<String> ruleEntries = Arrays.asList("\"DUMMY{0} DUMMY{0}\",\"(lambda ($L) $L)\"");
 
     // Generate a dictionary of string context features.
     List<StringContext> contexts = StringContext.getContextsFromExamples(ccgTrainingExamples);
@@ -261,8 +242,8 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     ExpressionSimplifier simplifier = GeoqueryUtil.getExpressionSimplifier();
     ExpressionComparator comparator = new SimplificationComparator(simplifier);
 
-    CcgBeamSearchInference inferenceAlgorithm = new CcgBeamSearchInference(null, comparator, beamSize,
-        -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors(), false);
+    CcgInference inferenceAlgorithm = new CcgCkyInference(null, beamSize,
+        -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors());
 
     CcgParser ccgParser = trainSemanticParser(ccgTrainingExamples, lexiconEntryLines,
         unknownLexiconEntryLines, ruleEntries, featureFactory, inferenceAlgorithm, comparator,
@@ -272,28 +253,23 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     
     List<SemanticParserExampleLoss> trainingExampleLosses = Lists.newArrayList();    
     SemanticParserUtils.testSemanticParser(ccgTrainingExamples, ccgParser,
-        inferenceAlgorithm, simplifier, comparator, trainingExampleLosses);
+        inferenceAlgorithm, simplifier, comparator, trainingExampleLosses, false);
     SemanticParserExampleLoss.writeJsonToFile(trainingErrorOutputFilename, trainingExampleLosses);
 
     List<CcgExample> ccgTestExamples = alignmentExamplesToCcgExamples(testData);
     ccgTestExamples = SemanticParserUtils.annotateFeatures(ccgTestExamples, featureGen, GeoqueryUtil.FEATURE_ANNOTATION_NAME);
     List<SemanticParserExampleLoss> testExampleLosses = Lists.newArrayList();    
     SemanticParserLoss testLoss = SemanticParserUtils.testSemanticParser(ccgTestExamples, ccgParser,
-        inferenceAlgorithm, simplifier, comparator, testExampleLosses);
+        inferenceAlgorithm, simplifier, comparator, testExampleLosses, false);
     SemanticParserExampleLoss.writeJsonToFile(testErrorOutputFilename, testExampleLosses);
 
     return testLoss;
   }
 
   public static PairCountAccumulator<List<String>, LexiconEntry> trainAlignmentModel(
-      List<AlignmentExample> trainingData, Set<List<String>> entityNames, double smoothingAmount,
-      int emIterations, int nGramLength, int lexiconNumParses, boolean useLagrangianRelaxation, boolean discriminative,
-      boolean loglinear) {
-    // Preprocess data to generate features.
-    FeatureVectorGenerator<Expression2> vectorGenerator = AlignmentLexiconInduction
-        .buildFeatureVectorGenerator(trainingData, Collections.<String>emptyList());
-    trainingData = AlignmentLexiconInduction.applyFeatureVectorGenerator(vectorGenerator, trainingData);
-
+      List<AlignmentExample> trainingData, Set<List<String>> entityNames, TypeDeclaration typeDeclaration,
+      double smoothingAmount, int emIterations, int nGramLength, int lexiconNumParses, 
+      boolean loglinear, boolean convex) {
     // Add all unigrams to the model.
     Set<List<String>> terminalVarValues = Sets.newHashSet();
     for (AlignmentExample example : trainingData) {
@@ -309,7 +285,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     terminalVarValues.addAll(attestedEntityNames);
 
     ParametricCfgAlignmentModel pam = ParametricCfgAlignmentModel.buildAlignmentModel(
-        trainingData, vectorGenerator, terminalVarValues, discriminative, loglinear);
+        trainingData, terminalVarValues, typeDeclaration, loglinear);
     SufficientStatistics smoothing = pam.getNewSufficientStatistics();
     smoothing.increment(smoothingAmount);
 
@@ -323,98 +299,37 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     }
 
     // Train the alignment model with EM.
-    if (!useLagrangianRelaxation) {
-      ExpectationMaximization em = new ExpectationMaximization(emIterations, new DefaultLogFunction(1, false));
-      SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, optimizer),
-          initial, trainingData);
+    ExpectationMaximization em = new ExpectationMaximization(emIterations, new DefaultLogFunction(1, false));
+    // Train a convex model.
+    SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, optimizer, true),
+        initial, trainingData);
 
-      System.out.println(pam.getParameterDescription(trainedParameters));
-      
-      CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
-
-      return AlignmentLexiconInduction.generateLexiconFromAlignmentModel(model, trainingData, lexiconNumParses, typeReplacements);
-    } else {
-      DiscreteFactor lexiconFactor = TableFactor.unity(pam.getNonterminalVar().union(pam.getTerminalVar()))
-          .product(Math.log(0.01));
-      LagrangianAlignmentTrainer trainer = new LagrangianAlignmentTrainer(emIterations,
-          new LagrangianAlignmentDecoder(20));
-      ParametersAndLagrangeMultipliers trainedParameters = trainer.train(pam, initial, smoothing,
-          trainingData, lexiconFactor);
-
-      // System.out.println(pam.getParameterDescription(trainedParameters));
-
-      // Get the trained model.
-      CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters.getParameters());
-      LagrangianDecodingResult result = trainedParameters.getLagrangeMultipliers();
-
-      /*
-      // EM trained model.
-      ExpectationMaximization em = new ExpectationMaximization(emIterations, new DefaultLogFunction(1, false));
-      SufficientStatistics trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing),
-          initial, trainingData);
-
-      CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
-      
-      LagrangianAlignmentDecoder decoder = new LagrangianAlignmentDecoder(1000);
-      DiscreteFactor lexiconFactor = TableFactor.unity(model.getParentVar().union(model.getTerminalVar()))
-          .product(Math.log(0.01));
-      VariableNumMap nonterminalVar = model.getParentVar();
-      DiscreteFactor skipIndicatorFactor = TableFactor.pointDistribution(nonterminalVar,
-          nonterminalVar.outcomeArrayToAssignment(ParametricCfgAlignmentModel.SKIP_EXPRESSION)); 
-      lexiconFactor = lexiconFactor.product(TableFactor.unity(nonterminalVar).add(skipIndicatorFactor.product(-1.0)));
-
-      LagrangianDecodingResult result = decoder.decode(model, trainingData, lexiconFactor);
-       */
-
-      PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
-      for (int i = 0; i < trainingData.size(); i++) {
-        CfgParseTree parse = result.getParseTrees().get(i);
-        AlignedExpressionTree tree = model.decodeCfgParse(parse);
-
-        for (LexiconEntry entry : tree.generateLexiconEntries(typeReplacements)) {
-          alignments.incrementOutcome(entry.getWords(), entry, 1);
-        }
-      }
-
-      return alignments;
+    if (!convex) {
+      // Train a nonconvex model initializing the parameters using the convex model.
+      trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, optimizer, convex),
+          trainedParameters, trainingData);
     }
+    CfgAlignmentModel model = pam.getModelFromParameters(trainedParameters);
+
+    return model.generateLexicon(trainingData, lexiconNumParses, typeDeclaration);
   }
 
   public static CcgParser trainSemanticParser(List<CcgExample> trainingExamples,
       List<String> lexiconEntryLines, List<String> unknownLexiconEntryLines,
       List<String> ruleEntries, CcgFeatureFactory featureFactory,
-      CcgBeamSearchInference inferenceAlgorithm, ExpressionComparator comparator,
+      CcgInference inferenceAlgorithm, ExpressionComparator comparator,
       int iterations, double l2Penalty) {
     ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntryLines,
-        unknownLexiconEntryLines, ruleEntries, featureFactory, null, true, null, true);
+        unknownLexiconEntryLines, ruleEntries, featureFactory, CcgExample.getPosTagVocabulary(trainingExamples),
+        true, null, true);
 
-    /*
-    GradientOracle<CcgParser, CcgExample> oracle = new CcgPerceptronOracle(family,
-        inferenceAlgorithm, 0.0);
-        */
     GradientOracle<CcgParser, CcgExample> oracle = new CcgLoglikelihoodOracle(family, comparator, inferenceAlgorithm);
 
     int numIterations = trainingExamples.size() * iterations;
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(numIterations, 1,
-        1.0, true, true, l2Penalty, new DefaultLogFunction(100, false));
+        1.0, true, true, Double.MAX_VALUE, l2Penalty, new DefaultLogFunction(100, false));
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),
         trainingExamples);
-
-    /*
-    GradientOptimizer sgdTrainer = StochasticGradientTrainer.createWithL2Regularization(
-        trainingExamples.size(), 1, 1.0, true, true, l2Penalty, new DefaultLogFunction(100, false));
-    SufficientStatistics sgdParameters = sgdTrainer.train(oracle, oracle.initializeGradient(),
-        trainingExamples);
-
-    SufficientStatistics parameters = null;
-    try {
-      GradientOptimizer trainer = new Lbfgs(iterations, 50, l2Penalty, 1e-4,
-          0.005, new DefaultLogFunction(1, false));
-      parameters = trainer.train(oracle, sgdParameters, trainingExamples);
-    } catch (LbfgsConvergenceError e) {
-      parameters = e.getFinalParameters();
-    }
-    */
 
     System.out.println("final parameters:");
     System.out.println(family.getParameterDescription(parameters));
@@ -438,7 +353,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
   }
 
   public static void readFolds(String foldDir, List<String> foldNames, List<List<AlignmentExample>> folds,
-      boolean test) {
+      boolean test, TypeDeclaration typeDeclaration) {
     File dir = new File(foldDir);
     File[] files = dir.listFiles();
     
@@ -447,17 +362,37 @@ public class GeoqueryInduceLexicon extends AbstractCli {
       if (!test && name.startsWith("fold")) {
         foldNames.add(name);
         
-        List<AlignmentExample> foldData = AlignmentLexiconInduction
-            .readTrainingData(files[i].getAbsolutePath());
+        List<AlignmentExample> foldData = readTrainingData(files[i].getAbsolutePath(), typeDeclaration);
         folds.add(foldData);
       } else if (test && (name.startsWith("all_folds") || name.startsWith("test"))) {
         foldNames.add(name);
         
-        List<AlignmentExample> foldData = AlignmentLexiconInduction
-            .readTrainingData(files[i].getAbsolutePath());
+        List<AlignmentExample> foldData = readTrainingData(files[i].getAbsolutePath(), typeDeclaration);
         folds.add(foldData);
       }
     }
+  }
+
+  public static List<AlignmentExample> readTrainingData(String trainingDataFile, TypeDeclaration typeDeclaration) {
+    List<CcgExample> ccgExamples = TrainSemanticParser.readCcgExamples(trainingDataFile);
+    List<AlignmentExample> examples = Lists.newArrayList();
+
+    ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
+        <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
+            new VariableCanonicalizationReplacementRule(),
+            new CommutativeReplacementRule("and:<t*,t>")));
+    Set<String> constantsToIgnore = Sets.newHashSet("and:<t*,t>");
+
+    System.out.println(trainingDataFile);
+    int totalTreeSize = 0; 
+    for (CcgExample ccgExample : ccgExamples) {
+      ExpressionTree tree = ExpressionTree.fromExpression(ccgExample.getLogicalForm(),
+          simplifier, typeDeclaration, constantsToIgnore, 0, 2, 3);
+      examples.add(new AlignmentExample(ccgExample.getSentence().getWords(), tree));
+      totalTreeSize += tree.size();
+    }
+    System.out.println("Average tree size: " + (totalTreeSize / examples.size()));
+    return examples;
   }
 
   public static void main(String[] args) {

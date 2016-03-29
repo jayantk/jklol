@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.lisp;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultimap;
@@ -34,7 +35,7 @@ public class ParametricBfgBuilder {
   protected Multimap<Integer, Integer> variableFactorMap;
   protected Multimap<Integer, Integer> factorVariableMap;
   
-  private static int nextVarNum;
+  private static AtomicInteger nextVarNum = new AtomicInteger(0);
 
   public ParametricBfgBuilder(boolean isRoot) {
     this.variables = VariableNumMap.EMPTY;
@@ -53,7 +54,7 @@ public class ParametricBfgBuilder {
   }
 
   public static int getUniqueVarNum() {
-    return nextVarNum++;
+    return nextVarNum.incrementAndGet();
   }
 
   public void addVariables(VariableNumMap newVariables) {

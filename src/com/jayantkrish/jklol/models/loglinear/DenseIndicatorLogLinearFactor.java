@@ -53,7 +53,7 @@ public class DenseIndicatorLogLinearFactor extends AbstractParametricFactor {
     List<Assignment> biggestAssignments = featureValues.product(featureValues)
         .getMostLikelyAssignments(numFeatures);
     
-    return featureValues.describeAssignments(biggestAssignments);
+    return featureValues.describeAssignments(biggestAssignments, false);
   }
 
   @Override

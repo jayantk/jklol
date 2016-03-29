@@ -69,6 +69,10 @@ public class ConsValue {
       return ConsValue.consListToList(consList, clazz);
     }
   }
+  
+  public static List<Object> consListToList(Object consList) {
+    return consListToList(consList, Object.class);
+  }
 
   public static <T> List<T> consListToList(Object consList, Class<T> clazz) {
     List<T> accumulator = Lists.newArrayList();

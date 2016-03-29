@@ -105,7 +105,7 @@ public class TestCvsm extends AbstractCli {
     } else if (options.has(vectorDumpFilename)) {
       ExpressionParser<Expression2> parser = ExpressionParser.expression2(); 
       for (String line : IoUtils.readLines(options.valueOf(vectorDumpFilename))) {
-        Expression2 lf = parser.parseSingleExpression(line);
+        Expression2 lf = parser.parse(line);
         Tensor tensor = trainedModel.getInterpretationTree(lf).getValue().getTensor();
         Preconditions.checkState(tensor.getDimensionNumbers().length == 1);
 
@@ -116,7 +116,7 @@ public class TestCvsm extends AbstractCli {
         System.out.print("\n");
       }
     } else {
-      Expression2 lf = ExpressionParser.expression2().parseSingleExpression(
+      Expression2 lf = ExpressionParser.expression2().parse(
           Joiner.on(" ").join(options.nonOptionArguments()));
 
       Tensor tensor = trainedModel.getInterpretationTree(lf).getValue().getTensor();

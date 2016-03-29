@@ -70,7 +70,7 @@ public class CcgExampleFormat extends LineDataFormat<CcgExample> {
     // Parse out a logical form, if one is provided.
     Expression2 logicalForm = null;
     if (parts.length >= 4 && parts[3].length() > 0) {
-      logicalForm = ExpressionParser.expression2().parseSingleExpression(parts[3]);
+      logicalForm = ExpressionParser.expression2().parse(parts[3]);
     }
 
     if (!ignoreSemantics) {

@@ -30,7 +30,7 @@ public class FeatureGenerators {
    * same feature, the returned generator sums their counts.
    */
   public static <A, B> FeatureGenerator<A, B> combinedFeatureGenerator(
-      Iterable<FeatureGenerator<A, ? extends B>> generators) {
+      Iterable<FeatureGenerator<A, B>> generators) {
     return new CombinedFeatureGenerator<A, B>(generators);
   }
 
@@ -41,7 +41,7 @@ public class FeatureGenerators {
    * @return
    */
   public static <A, B> FeatureGenerator<A, B> combinedFeatureGenerator(
-      FeatureGenerator<A, ? extends B>... generators) {
+      FeatureGenerator<A, B>... generators) {
     return FeatureGenerators.combinedFeatureGenerator(Arrays.asList(generators));
   }
 
@@ -55,7 +55,7 @@ public class FeatureGenerators {
    * @return
    */
   public static <A, B> FeatureGenerator<A, List<B>> productFeatureGenerator(
-      Iterable<FeatureGenerator<A, ? extends B>> generators) {
+      Iterable<FeatureGenerator<A, B>> generators) {
     return new ProductFeatureGenerator<A, B>(generators);
   }
 
@@ -66,7 +66,7 @@ public class FeatureGenerators {
    * @return
    */
   public static <A, B> FeatureGenerator<A, List<B>> productFeatureGenerator(
-      FeatureGenerator<A, ? extends B>... generators) {
+      FeatureGenerator<A, B>... generators) {
     return FeatureGenerators.productFeatureGenerator(Arrays.asList(generators));
   }
   
@@ -81,6 +81,19 @@ public class FeatureGenerators {
   public static <A, B, C> FeatureGenerator<A, C> convertingFeatureGenerator(
       FeatureGenerator<B, C> generator, Function<A, B> converter) {
     return new ConvertingFeatureGenerator<A, B, C>(generator, converter);
+  }
+  
+  /**
+   * Gets a feature generator that applies a generator, then
+   * applies a converter to the generated feature names. 
+   *  
+   * @param generator
+   * @param converter
+   * @return
+   */
+  public static <A, B, C> FeatureGenerator<A, C> postConvertingFeatureGenerator(
+      FeatureGenerator<A, B> generator, Function<B, C> converter) {
+    return new PostConvertingFeatureGenerator<A, B, C>(generator, converter);
   }
 
   /**
@@ -111,16 +124,16 @@ public class FeatureGenerators {
   private static class CombinedFeatureGenerator<A, B> implements FeatureGenerator<A, B> {
     private static final long serialVersionUID = 1L;
     
-    private final Iterable<FeatureGenerator<A, ? extends B>> generators;
+    private final Iterable<FeatureGenerator<A, B>> generators;
 
-    public CombinedFeatureGenerator(Iterable<FeatureGenerator<A, ? extends B>> generators) {
+    public CombinedFeatureGenerator(Iterable<FeatureGenerator<A, B>> generators) {
       this.generators = generators;
     }
 
     @Override
     public Map<B, Double> generateFeatures(A item) {
       CountAccumulator<B> featureCounts = CountAccumulator.create();
-      for (FeatureGenerator<A, ? extends B> generator : generators) {
+      for (FeatureGenerator<A, B> generator : generators) {
         featureCounts.increment(generator.generateFeatures(item));
       }
       return featureCounts.getCountMap();
@@ -130,9 +143,9 @@ public class FeatureGenerators {
   private static class ProductFeatureGenerator<A, B> implements FeatureGenerator<A, List<B>> {
     private static final long serialVersionUID = 1L;
 
-    private final List<FeatureGenerator<A, ? extends B>> generators;
+    private final List<FeatureGenerator<A, B>> generators;
 
-    public ProductFeatureGenerator(Iterable<FeatureGenerator<A, ? extends B>> generators) {
+    public ProductFeatureGenerator(Iterable<FeatureGenerator<A, B>> generators) {
       this.generators = Lists.newArrayList(generators);
     }
 
@@ -141,7 +154,7 @@ public class FeatureGenerators {
       // Generate features for each wrapped generator.
       List<Map<? extends B, Double>> generatedFeatures = Lists.newArrayList();
       List<B> currentKey = Lists.newArrayList();
-      for (FeatureGenerator<A, ? extends B> generator : generators) {
+      for (FeatureGenerator<A, B> generator : generators) {
         generatedFeatures.add(generator.generateFeatures(item));
         currentKey.add(null);
       }
@@ -181,6 +194,29 @@ public class FeatureGenerators {
     @Override
     public Map<C, Double> generateFeatures(A item) {
       return generator.generateFeatures(converter.apply(item));
+    }
+  }
+  
+  private static class PostConvertingFeatureGenerator<A, B, C> implements FeatureGenerator<A, C> {
+    private static final long serialVersionUID = 1L;
+
+    private final FeatureGenerator<A, B> generator;
+    private final Function<B, C> converter;
+
+    public PostConvertingFeatureGenerator(FeatureGenerator<A, B> generator, Function<B, C> converter) {
+      this.generator = Preconditions.checkNotNull(generator);
+      this.converter = Preconditions.checkNotNull(converter);
+    }
+
+    @Override
+    public Map<C, Double> generateFeatures(A item) {
+      Map<B, Double> features = generator.generateFeatures(item);
+      
+      Map<C, Double> convertedFeatures = Maps.newHashMap();
+      for (B key : features.keySet()) {
+        convertedFeatures.put(converter.apply(key), features.get(key));
+      }
+      return convertedFeatures;
     }
   }
   

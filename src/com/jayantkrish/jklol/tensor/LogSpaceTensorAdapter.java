@@ -238,6 +238,11 @@ public class LogSpaceTensorAdapter extends AbstractTensor {
   }
 
   @Override
+  public TensorHash toHash() {
+    return new LogTensorHashAdapter(logWeights.toHash());
+  }
+
+  @Override
   public long[] getLargestValues(int n) {
     return logWeights.getLargestValues(n);
   }

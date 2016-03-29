@@ -30,7 +30,7 @@ public class CcgParse {
 
   // The words spanned by this portion of the parse tree.
   // Non-null only when this is a terminal.
-  private final List<String> spannedWords;
+  private final List<String> words;
   // The POS tag assigned to the words spanned by this tree.
   // Non-null only when this is a terminal.
   private final List<String> posTags;
@@ -64,13 +64,13 @@ public class CcgParse {
   private final int spanStart;
   private final int spanEnd;
 
-  private CcgParse(HeadedSyntacticCategory syntax, LexiconEntryInfo lexiconEntry,
+  protected CcgParse(HeadedSyntacticCategory syntax, LexiconEntryInfo lexiconEntry,
       List<String> spannedWords, List<String> posTags, Set<IndexedPredicate> heads,
       List<DependencyStructure> dependencies, double probability, CcgParse left, CcgParse right,
       Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd) {
     this.syntax = Preconditions.checkNotNull(syntax);
     this.lexiconEntry = lexiconEntry;
-    this.spannedWords = spannedWords;
+    this.words = spannedWords;
     this.posTags = posTags;
     this.heads = Preconditions.checkNotNull(heads);
     this.dependencies = Preconditions.checkNotNull(dependencies);
@@ -204,7 +204,7 @@ public class CcgParse {
 
     if (isTerminal()) {
       return CcgSyntaxTree.createTerminal(syntax.getSyntax(), originalSyntax.getSyntax(),
-          spanStart, spanEnd, spannedWords, posTags, originalSyntax);
+          spanStart, spanEnd, words, posTags, originalSyntax);
     } else {
       CcgSyntaxTree leftTree = left.getSyntacticParse();
       CcgSyntaxTree rightTree = right.getSyntacticParse();
@@ -294,55 +294,55 @@ public class CcgParse {
       Expression2 leftLogicalForm = left.getLogicalForm();
       Expression2 rightLogicalForm = right.getLogicalForm();
 
-      if (leftLogicalForm == null || rightLogicalForm == null) {
-        return null;
-      }
-
-      if (combinator.getBinaryRule() != null) {
-        // Binary rules have a two-argument function that is applied to the 
-        // left and right logical forms to produce the answer.
-        Expression2 combinatorExpression = combinator.getBinaryRule().getLogicalForm();
-        if (combinatorExpression != null) {
-          return Expression2.nested(Expression2.nested(combinatorExpression, leftLogicalForm),
-              rightLogicalForm);
-        }
-
-      } else if (leftLogicalForm != null && rightLogicalForm != null) {
-        // Function application or composition.
-        Expression2 functionLogicalForm = null;
-        Expression2 argumentLogicalForm = null;
-        if (combinator.isArgumentOnLeft()) {
-          functionLogicalForm = rightLogicalForm;
-          argumentLogicalForm = leftLogicalForm;
-        } else {
-          functionLogicalForm = leftLogicalForm;
-          argumentLogicalForm = rightLogicalForm;
-        }
-
-        int numArgsToKeep = combinator.getArgumentReturnDepth();
-        if (numArgsToKeep == 0) {
-          // Function application
-          return Expression2.nested(functionLogicalForm, argumentLogicalForm);
-        } else {
-          // Composition.
-          List<String> remainingArgsRenamed = StaticAnalysis.getNewVariableNames(argumentLogicalForm, numArgsToKeep);
-          List<Expression2> remainingArgExpressions = Expression2.constants(remainingArgsRenamed);
-          List<Expression2> applicationExpressions = Lists.newArrayList(argumentLogicalForm);
-          applicationExpressions.addAll(remainingArgExpressions);
-          Expression2 argumentApplication = Expression2.nested(applicationExpressions);
-
-          Expression2 body = Expression2.nested(functionLogicalForm, argumentApplication);
-          List<Expression2> functionExpressions = Lists.newArrayList();
-          functionExpressions.add(Expression2.constant("lambda"));
-          functionExpressions.addAll(remainingArgExpressions);
-          functionExpressions.add(body);
-          return Expression2.nested(functionExpressions);
-        }
-      }
-
-      // Unknown combinator.
+      return getCombinatorLogicalForm(leftLogicalForm, rightLogicalForm);
+    }
+  }
+  
+  protected Expression2 getCombinatorLogicalForm(Expression2 leftLf, Expression2 rightLf) {
+    if (leftLf == null || rightLf == null) {
       return null;
     }
+
+    if (combinator.getBinaryRule() != null) {
+      // Binary rules have a two-argument function that is applied to the 
+      // left and right logical forms to produce the answer.
+      Expression2 combinatorExpression = combinator.getBinaryRule().getLogicalForm();
+      if (combinatorExpression != null) {
+        return Expression2.nested(Expression2.nested(combinatorExpression, leftLf),
+            rightLf);
+      }
+
+    } else if (leftLf != null && rightLf != null) {
+      // Function application or composition.
+      Expression2 functionLogicalForm = null;
+      Expression2 argumentLogicalForm = null;
+      if (combinator.isArgumentOnLeft()) {
+        functionLogicalForm = rightLf;
+        argumentLogicalForm = leftLf;
+      } else {
+        functionLogicalForm = leftLf;
+        argumentLogicalForm = rightLf;
+      }
+
+      int numArgsToKeep = combinator.getArgumentReturnDepth();
+      if (numArgsToKeep == 0) {
+        // Function application
+        return Expression2.nested(functionLogicalForm, argumentLogicalForm);
+      } else {
+        // Composition.
+        List<String> remainingArgsRenamed = StaticAnalysis.getNewVariableNames(numArgsToKeep, argumentLogicalForm);
+        List<Expression2> remainingArgExpressions = Expression2.constants(remainingArgsRenamed);
+        List<Expression2> applicationExpressions = Lists.newArrayList(argumentLogicalForm);
+        applicationExpressions.addAll(remainingArgExpressions);
+        Expression2 argumentApplication = Expression2.nested(applicationExpressions);
+
+        Expression2 body = Expression2.nested(functionLogicalForm, argumentApplication);
+        return Expression2.lambda(remainingArgsRenamed, body);
+      }
+    }
+
+    // Unknown combinator.
+    return null;
   }
 
   /**
@@ -359,7 +359,7 @@ public class CcgParse {
    * @return
    */
   public List<String> getWords() {
-    return spannedWords;
+    return words;
   }
 
   /**
@@ -385,7 +385,7 @@ public class CcgParse {
    */
   public List<String> getSpannedWords() {
     if (isTerminal()) {
-      return spannedWords;
+      return words;
     } else {
       List<String> words = Lists.newArrayList();
       words.addAll(left.getSpannedWords());
@@ -611,7 +611,7 @@ public class CcgParse {
   }
 
   public CcgParse addUnaryRule(UnaryCombinator rule, HeadedSyntacticCategory newSyntax) {
-    return new CcgParse(newSyntax, lexiconEntry, spannedWords, posTags, heads, dependencies,
+    return new CcgParse(newSyntax, lexiconEntry, words, posTags, heads, dependencies,
         probability, left, right, combinator, rule, spanStart, spanEnd);
   }
 
@@ -661,7 +661,7 @@ public class CcgParse {
     } else {
       sb.append("<div class=\"terminalNode\">");
       sb.append("<p class=\"terminalWords\">");
-      sb.append(Joiner.on(" ").join(spannedWords));
+      sb.append(Joiner.on(" ").join(words));
       sb.append("</p>");
 
       sb.append("<p class=\"terminalSyntax\">");

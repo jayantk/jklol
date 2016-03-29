@@ -18,7 +18,7 @@ public class SExpressionPatternTest extends TestCase {
   public void setUp() {
     for (int i = 0; i < expressionStrings.length; i++) {
       expressions[i] = ExpressionParser.expression2()
-          .parseSingleExpression(expressionStrings[i]);
+          .parse(expressionStrings[i]);
     }
   }
 

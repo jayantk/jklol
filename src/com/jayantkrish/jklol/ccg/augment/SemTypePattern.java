@@ -43,7 +43,7 @@ public class SemTypePattern implements CategoryPattern {
     String[] patterns = parts[0].split("\\s+");
 
     return new SemTypePattern(patterns, SyntacticCategory.parseFrom(parts[1]),
-        ExpressionParser.expression2().parseSingleExpression(parts[2]),
+        ExpressionParser.expression2().parse(parts[2]),
         parts[3].equals("T"));
   }
 

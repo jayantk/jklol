@@ -1,13 +1,15 @@
 package com.jayantkrish.jklol.ccg.lexinduct;
 
 import java.io.Serializable;
-import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.LexiconEntry;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree.ExpressionNode;
 import com.jayantkrish.jklol.cfg.CfgParseChart;
 import com.jayantkrish.jklol.cfg.CfgParseTree;
@@ -21,10 +23,22 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.PairCountAccumulator;
 
-public class CfgAlignmentModel implements AlignmentModelInterface, Serializable {
+/**
+ * Lexicon learning model based on a context-free grammar. This model
+ * produces a set of lexicon entries given an {@code AlignmentExample}, 
+ * along with a logical form derivation as a {@code AlignedExpressionTree}
+ * that describes how the lexicon entries combine to produce the correct
+ * logical form.
+ * 
+ * @author jayantk
+ *
+ */
+public class CfgAlignmentModel implements Serializable {
   private static final long serialVersionUID = 1L;
 
+  private final DiscreteFactor rootFactor;
   private final DiscreteFactor nonterminalFactor;
   private final DiscreteFactor terminalFactor;
 
@@ -36,9 +50,12 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
   
   private final int nGramLength;
   
-  public CfgAlignmentModel(DiscreteFactor nonterminalFactor, DiscreteFactor terminalFactor,
-      VariableNumMap terminalVar, VariableNumMap leftVar, VariableNumMap rightVar,
+  public CfgAlignmentModel(DiscreteFactor rootFactor, DiscreteFactor nonterminalFactor,
+      DiscreteFactor terminalFactor, VariableNumMap terminalVar,
+      VariableNumMap leftVar, VariableNumMap rightVar,
       VariableNumMap parentVar, VariableNumMap ruleVar, int nGramLength) {
+    this.rootFactor = Preconditions.checkNotNull(rootFactor);
+    Preconditions.checkArgument(rootFactor.getVars().equals(parentVar));
     this.nonterminalFactor = Preconditions.checkNotNull(nonterminalFactor);
     Preconditions.checkArgument(nonterminalFactor.getVars().equals(
         VariableNumMap.unionAll(leftVar, rightVar, parentVar, ruleVar)));
@@ -66,16 +83,7 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     }
     return values;
   }
-  
-  public void printStuffOut() {
-    for (List<String> terminalVarValue : getTerminalVarValues()) {
-      DiscreteFactor conditional = terminalFactor.conditional(terminalVar.outcomeArrayToAssignment(terminalVarValue));
-      String description = conditional.describeAssignments(conditional.getMostLikelyAssignments(10));
-      System.out.println(terminalVarValue);
-      System.out.println(description);
-    }
-  }
-  
+    
   public VariableNumMap getParentVar() {
     return parentVar;
   }
@@ -83,13 +91,24 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
   public VariableNumMap getTerminalVar() {
     return terminalVar;
   }
-
-  public AlignedExpressionTree getBestAlignment(AlignmentExample example) {
-    return getBestAlignment(example, TableFactor.logUnity(parentVar));
+  
+  public DiscreteFactor getNonterminalFactor() {
+    return nonterminalFactor;
+  }
+  
+  public DiscreteFactor getTerminalFactor() {
+    return terminalFactor;
   }
 
-  public AlignedExpressionTree getBestAlignment(AlignmentExample example, TableFactor expressionTerminalWeights) {
-    CfgParser parser = getCfgParser(example, expressionTerminalWeights);
+  /**
+   * Get the highest-scoring logical form derivation for {@code example}
+   * according to this model. 
+   * 
+   * @param example
+   * @return
+   */
+  public AlignedExpressionTree getBestAlignment(AlignmentExample example) {
+    CfgParser parser = getCfgParser(example);
     ExpressionTree tree = example.getTree();
     
     Factor rootFactor = getRootFactor(tree, parser.getParentVariable());
@@ -98,25 +117,39 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
 
     return decodeCfgParse(parseTree, 0);
   }
-  
-  public List<AlignedExpressionTree> getBestAlignments(AlignmentExample example, int num) {
-    TableFactor expressionTerminalWeights = TableFactor.logUnity(parentVar);
 
-    CfgParser parser = getCfgParser(example, expressionTerminalWeights);
+  /**
+   * Gets the {@code beamSize} highest-scoring logical form derivations
+   * for {@code example} according to this model. The returned list is 
+   * approximate (because it is produced by a beam search over CFG parses).
+   *  
+   * @param example
+   * @param beamSize
+   * @return
+   */
+  public List<AlignedExpressionTree> getBestAlignments(AlignmentExample example, int beamSize) {
+    CfgParser parser = getCfgParser(example);
     ExpressionTree tree = example.getTree();
     
     Factor rootFactor = getRootFactor(tree, parser.getParentVariable());
-    CfgParseChart chart = parser.parseMarginal(example.getWords(), rootFactor, false);
-    CfgParseTree parseTree = chart.getBestParseTree();
-
-    return Arrays.asList(decodeCfgParse(parseTree, 0));
+    
+    List<CfgParseTree> parseTrees = parser.beamSearch(example.getWords(), beamSize);
+    List<AlignedExpressionTree> expressionTrees = Lists.newArrayList();
+    for (CfgParseTree parseTree : parseTrees) {
+      if (rootFactor.getUnnormalizedProbability(parseTree.getRoot()) > 0) {
+        expressionTrees.add(decodeCfgParse(parseTree, 0));
+      }
+    }
+    return expressionTrees;
   }
 
-
-  public AlignedExpressionTree decodeCfgParse(CfgParseTree t) {
-    return decodeCfgParse(t, 0);
-  }
-  
+  /**
+   * Converts the CFG parse tree {@code t} into an {@code AlignedExpressionTree}.
+   *  
+   * @param t
+   * @param numAppliedArguments
+   * @return
+   */
   private AlignedExpressionTree decodeCfgParse(CfgParseTree t, int numAppliedArguments) {
     Preconditions.checkArgument(!t.getRoot().equals(ParametricCfgAlignmentModel.SKIP_EXPRESSION));
 
@@ -168,11 +201,56 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     }
   }
 
-  public CfgParser getCfgParser(AlignmentExample example) {
-    return getCfgParser(example, TableFactor.logUnity(parentVar.union(terminalVar)));
+  /**
+   * Generates a CCG lexicon from a collection of alignment examples.
+   * Returns a collection of pairs containing the number of times
+   * each lexicon entry was generated. This method simply aggregates
+   * lexicon entries from the best logical form derivations (according to
+   * {@code getBestAlignment} or {@code getBestAlignments}.
+   * 
+   * @param examples
+   * @param lexiconNumParses
+   * @param typeDeclaration
+   * @return
+   */
+  public PairCountAccumulator<List<String>, LexiconEntry> generateLexicon(
+      Collection<AlignmentExample> examples, int lexiconNumParses,
+      TypeDeclaration typeDeclaration) {
+    PairCountAccumulator<List<String>, LexiconEntry> alignments = PairCountAccumulator.create();
+    for (AlignmentExample example : examples) {
+      List<AlignedExpressionTree> trees = Lists.newArrayList();
+      
+      if (lexiconNumParses <= 0) {
+        trees.add(getBestAlignment(example));
+      } else {
+        trees.addAll(getBestAlignments(example, lexiconNumParses));
+      }
+
+      System.out.println(example.getWords());
+      for (AlignedExpressionTree tree : trees) {
+        System.out.println(tree);
+
+        for (LexiconEntry entry : tree.generateLexiconEntries(typeDeclaration)) {
+          alignments.incrementOutcome(entry.getWords(), entry, 1);
+          System.out.println("   " + entry);
+        }
+        System.out.println("");
+      }
+    }
+    return alignments;
   }
 
-  public CfgParser getCfgParser(AlignmentExample example, TableFactor expressionTerminalWeights) {
+  public CfgParser getCfgParser(AlignmentExample example) {
+    return getCfgParser(example, nonterminalFactor, terminalFactor);
+  }
+
+  public CfgParser getUniformCfgParser(AlignmentExample example) {
+    return getCfgParser(example, TableFactor.logUnity(nonterminalFactor.getVars()),
+        TableFactor.logUnity(terminalFactor.getVars()));
+  }
+
+  private CfgParser getCfgParser(AlignmentExample example, DiscreteFactor nonterminalFactor,
+      DiscreteFactor terminalFactor) {
     Set<ExpressionNode> expressions = Sets.newHashSet();
     example.getTree().getAllExpressionNodes(expressions);
     expressions.add(ParametricCfgAlignmentModel.SKIP_EXPRESSION);
@@ -189,6 +267,7 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     VariableNumMap newParentVar = VariableNumMap.singleton(parentVar.getOnlyVariableNum(), parentVar.getOnlyVariableName(), expressionVar);
     VariableNumMap newTerminalVar = VariableNumMap.singleton(terminalVar.getOnlyVariableNum(), terminalVar.getOnlyVariableName(), wordVar);
 
+    // Populate the binary rule distribution
     VariableNumMap binaryRuleVars = VariableNumMap.unionAll(newLeftVar, newRightVar, newParentVar, ruleVar);
     TableFactorBuilder binaryRuleBuilder = new TableFactorBuilder(binaryRuleVars,
         SparseTensorBuilder.getFactory());
@@ -200,8 +279,26 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     TableFactorBuilder newTerminalFactor = new TableFactorBuilder(newVars,
         DenseTensorBuilder.getFactory());
 
-    List<String> exampleWords = example.getWords();
-    for (ExpressionNode expression : expressions) {
+    populateTerminalDistribution(example.getWords(), expressions, terminalFactor,
+        newTerminalFactor);
+    
+    // Populate the root distribution
+    TableFactorBuilder rootBuilder = new TableFactorBuilder(newParentVar, DenseTensorBuilder.getFactory());
+    for (Object expression : expressions) {
+      double weight = rootFactor.getUnnormalizedProbability(expression);
+      rootBuilder.incrementWeight(newParentVar.outcomeArrayToAssignment(expression), weight);
+    }
+
+    // Generate a CFG parser. Note that the parser does not uniqueify parses  
+    // that skip the same set of words.
+    return new CfgParser(newParentVar, newLeftVar, newRightVar, newTerminalVar, ruleVar,
+        rootBuilder.build(), binaryDistribution, newTerminalFactor.build(), false, null);
+  }
+  
+  public void populateTerminalDistribution(List<String> exampleWords, Collection<?> expressions,
+      DiscreteFactor terminalFactor, TableFactorBuilder builder) {
+    VariableNumMap newVars = builder.getVars();
+    for (Object expression : expressions) {
       for (int i = 0; i < exampleWords.size(); i++) {
         double prob = 1.0;
 
@@ -210,26 +307,16 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
               expression, ParametricCfgAlignmentModel.TERMINAL);
           if (terminalFactor.getVars().isValidAssignment(a)) {
             double entryProb = prob * terminalFactor.getUnnormalizedProbability(a);
-            entryProb *= expressionTerminalWeights.getUnnormalizedProbability(a.intersection(expressionTerminalWeights.getVars()));
-            
+
             Assignment terminalAssignment = newVars.outcomeArrayToAssignment(exampleWords.subList(i, j + 1),
                 expression, ParametricCfgAlignmentModel.TERMINAL);
-            
-            newTerminalFactor.setWeight(terminalAssignment, entryProb);
+
+            builder.setWeight(terminalAssignment, entryProb);
           }
         }
       }
     }
-    // System.out.println(newTerminalFactor.build().getParameterDescription());
-
-    return new CfgParser(newParentVar, newLeftVar, newRightVar, newTerminalVar, ruleVar,
-        binaryDistribution, newTerminalFactor.build(), -1, false, null);
-    // Skip assignment:
-    /*
-        newParentVar.outcomeArrayToAssignment(ParametricCfgAlignmentModel.SKIP_EXPRESSION)
-        .union(ruleVar.outcomeArrayToAssignment(ParametricCfgAlignmentModel.TERMINAL)));
-        */
-  }  
+  }
 
   /**
    * This method is a hack that enables the use of the "substitutions"
@@ -248,5 +335,18 @@ public class CfgAlignmentModel implements AlignmentModelInterface, Serializable 
     }
 
     return TableFactor.pointDistribution(expressionVar, roots.toArray(new Assignment[0]));
+  }
+  
+  public String getTerminalDistributionString() {
+    StringBuilder sb = new StringBuilder();
+    for (List<String> terminalVarValue : getTerminalVarValues()) {
+      DiscreteFactor conditional = terminalFactor.conditional(terminalVar.outcomeArrayToAssignment(terminalVarValue));
+      String description = conditional.describeAssignments(conditional.getMostLikelyAssignments(10));
+      sb.append(terminalVarValue);
+      sb.append("\n");
+      sb.append(description);
+      sb.append("\n");
+    }
+    return sb.toString();
   }
 }

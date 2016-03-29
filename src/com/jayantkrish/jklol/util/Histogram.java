@@ -26,10 +26,14 @@ public class Histogram<T> {
       doubleCounts[i] = sumCounts[i] - sumCounts[i - 1];
     }
   }
+  
+  private int getSampleIndex() {
+    int sampleValue = Pseudorandom.get().nextInt(sumCounts[sumCounts.length - 1]);
+    return Arrays.binarySearch(sumCounts, sampleValue);
+  }
 
   public T sample() {
-    int sampleValue = Pseudorandom.get().nextInt(sumCounts[sumCounts.length - 1]);
-    int index = Arrays.binarySearch(sumCounts, sampleValue);
+    int index = getSampleIndex();
 
     if (index >= 0) {
       return items.get(index + 1);
@@ -61,6 +65,20 @@ public class Histogram<T> {
     Preconditions.checkState(false, "Sampling failed. draw: %s, currentSum %s, totalValues %s",
         draw, currentSum, totalValue);
     return items.get((int) conditionalCounts.indexToKeyNum(conditionalCountValues.length - 1));
+  }
+  
+  public T sampleExcluding(Tensor unusableIndexes) {
+    int index = getSampleIndex();
+    
+    while (unusableIndexes.get(index) != 0) {
+      index = getSampleIndex();
+    }
+    
+    if (index >= 0) {
+      return items.get(index + 1);
+    } else {
+      return items.get(-1 * (index + 1));
+    }
   }
 
   public List<T> getItems() {

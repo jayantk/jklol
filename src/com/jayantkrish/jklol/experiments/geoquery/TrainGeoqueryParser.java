@@ -9,7 +9,7 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.CcgParser;
@@ -109,8 +109,7 @@ public class TrainGeoqueryParser extends AbstractCli {
             new CommutativeReplacementRule("and:<t*,t>")));
     ExpressionComparator comparator = new SimplificationComparator(simplifier);
 
-    CcgBeamSearchInference inferenceAlgorithm = new CcgBeamSearchInference(null, comparator,
-        options.valueOf(beamSize), -1, Integer.MAX_VALUE, 1, false);
+    CcgCkyInference inferenceAlgorithm = CcgCkyInference.getDefault(options.valueOf(beamSize));
 
     CcgParser ccgParser = GeoqueryInduceLexicon.trainSemanticParser(trainingExamples, lexiconLines,
         unknownLexiconLines, ruleEntries, featureFactory, inferenceAlgorithm, comparator,
@@ -127,12 +126,12 @@ public class TrainGeoqueryParser extends AbstractCli {
 
     List<SemanticParserExampleLoss> trainingExampleLosses = Lists.newArrayList();    
     SemanticParserUtils.testSemanticParser(trainingExamples, ccgParser,
-        inferenceAlgorithm, simplifier, comparator, trainingExampleLosses);
+        inferenceAlgorithm, simplifier, comparator, trainingExampleLosses, true);
     SemanticParserExampleLoss.writeJsonToFile(trainingErrorOutputFilename, trainingExampleLosses);
 
     List<SemanticParserExampleLoss> testExampleLosses = Lists.newArrayList();    
     SemanticParserUtils.testSemanticParser(testExamples, ccgParser,
-        inferenceAlgorithm, simplifier, comparator, testExampleLosses);
+        inferenceAlgorithm, simplifier, comparator, testExampleLosses, true);
     SemanticParserExampleLoss.writeJsonToFile(testErrorOutputFilename, testExampleLosses);
   }
 

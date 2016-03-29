@@ -33,11 +33,15 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
   // embedded in the alignment model.
   private final GradientOptimizer optimizer;
   
+  private final boolean convex;
+  
   public CfgAlignmentEmOracle(ParametricCfgAlignmentModel pam, SufficientStatistics smoothing,
-      GradientOptimizer optimizer) {
+      GradientOptimizer optimizer, boolean convex) {
     this.pam = Preconditions.checkNotNull(pam);
     this.smoothing = smoothing;
     this.optimizer = optimizer;
+    
+    this.convex = convex;
     
     Preconditions.checkArgument(pam.isLoglinear() || smoothing != null, 
         "Must provide smoothing if model does not use loglinear factors");
@@ -53,33 +57,67 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
   
   @Override
   public CfgExpectation getInitialExpectationAccumulator() {
+    TableFactorBuilder rootBuilder = new TableFactorBuilder(
+        pam.getRootFactor().getVars(), DenseTensorBuilder.getFactory());
     TableFactorBuilder ruleBuilder = new TableFactorBuilder(
         pam.getRuleFactor().getVars(), DenseTensorBuilder.getFactory());
     TableFactorBuilder nonterminalBuilder = new TableFactorBuilder(
         pam.getNonterminalFactor().getVars(), SparseTensorBuilder.getFactory());
     TableFactorBuilder terminalBuilder = new TableFactorBuilder(
         pam.getTerminalFactor().getVars(), SparseTensorBuilder.getFactory());
-    return new CfgExpectation(ruleBuilder, nonterminalBuilder, terminalBuilder);
+    return new CfgExpectation(rootBuilder, ruleBuilder, nonterminalBuilder, terminalBuilder);
   }
 
   @Override
   public CfgExpectation computeExpectations(CfgAlignmentModel model,
       SufficientStatistics currentParameters, AlignmentExample example,
       CfgExpectation accumulator, LogFunction log) {
-    log.startTimer("e_step/getCfg");
-    CfgParser parser = model.getCfgParser(example);
-    log.stopTimer("e_step/getCfg");
+    if (convex) {
+      log.startTimer("e_step/getCfg");
+      CfgParser parser = model.getUniformCfgParser(example);
+      log.stopTimer("e_step/getCfg");
 
-    log.startTimer("e_step/marginals");
-    Factor rootFactor = model.getRootFactor(example.getTree(), parser.getParentVariable());
-    CfgParseChart chart = parser.parseMarginal(example.getWords(), rootFactor, true);
-    log.stopTimer("e_step/marginals");
+      log.startTimer("e_step/marginals");
+      Factor rootFactor = model.getRootFactor(example.getTree(), parser.getParentVariable());
+      CfgParseChart chart = parser.parseMarginal(example.getWords(), rootFactor, true);
+      log.stopTimer("e_step/marginals");
 
-    log.startTimer("e_step/compute_expectations");
-    pam.incrementExpectations(accumulator, chart, 1.0);
-    log.stopTimer("e_step/compute_expectations");
-    
-    return accumulator;
+      log.startTimer("e_step/compute_expectations");
+
+      Factor terminalTreeExpectations = chart.getTerminalRuleExpectations();
+      TableFactorBuilder builder = new TableFactorBuilder(terminalTreeExpectations.getVars(),
+          DenseTensorBuilder.getFactory());
+      model.populateTerminalDistribution(example.getWords(),
+          parser.getParentVariable().getDiscreteVariables().get(0).getValues(),
+          model.getTerminalFactor(), builder);
+      DiscreteFactor terminalExpectations = terminalTreeExpectations.product(builder.build()).coerceToDiscrete();
+      
+      VariableNumMap varsExceptTerminal = terminalExpectations.getVars().removeAll(parser.getTerminalVariable());
+      DiscreteFactor partitionFunction = terminalExpectations.marginalize(varsExceptTerminal);
+      terminalExpectations = terminalExpectations.product(partitionFunction.inverse());
+
+      pam.incrementExpectations(accumulator, chart.getMarginalEntriesRoot().coerceToDiscrete(),
+          chart.getBinaryRuleExpectations().coerceToDiscrete(),
+          terminalExpectations.coerceToDiscrete(), 1.0, chart.getPartitionFunction());
+
+      log.stopTimer("e_step/compute_expectations");
+      return accumulator;
+    } else {
+      log.startTimer("e_step/getCfg");
+      CfgParser parser = model.getCfgParser(example);
+      log.stopTimer("e_step/getCfg");
+
+      log.startTimer("e_step/marginals");
+      Factor rootFactor = model.getRootFactor(example.getTree(), parser.getParentVariable());
+      CfgParseChart chart = parser.parseMarginal(example.getWords(), rootFactor, true);
+      log.stopTimer("e_step/marginals");
+
+      log.startTimer("e_step/compute_expectations");
+      pam.incrementExpectations(accumulator, chart, 1.0);
+      log.stopTimer("e_step/compute_expectations");
+
+      return accumulator;
+    }
   }
 
   @Override
@@ -88,23 +126,28 @@ public class CfgAlignmentEmOracle implements EmOracle<CfgAlignmentModel, Alignme
     if (pam.isLoglinear()) {
       List<SufficientStatistics> paramList = currentParameters.coerceToList().getStatistics();
       
+      DiscreteFactor rootTarget = expectations.getRootBuilder().build();
+      ParametricFactor rootFamily = pam.getRootFactor();
+      SufficientStatistics rootParameters = trainFamily(rootFamily, rootTarget,
+          VariableNumMap.EMPTY, paramList.get(0));
+      
       DiscreteFactor ruleTarget = expectations.getRuleBuilder().build();
       ParametricFactor ruleFamily = pam.getRuleFactor();
       SufficientStatistics ruleParameters = trainFamily(ruleFamily, ruleTarget, pam.getNonterminalVar(),
-          paramList.get(0));
+          paramList.get(1));
 
       DiscreteFactor nonterminalTarget = expectations.getNonterminalBuilder().build();
       ParametricFactor nonterminalFamily = pam.getNonterminalFactor();
       SufficientStatistics nonterminalParameters = trainFamily(nonterminalFamily, nonterminalTarget,
-          pam.getNonterminalVar().union(pam.getRuleVar()), paramList.get(1));
+          pam.getNonterminalVar().union(pam.getRuleVar()), paramList.get(2));
 
       DiscreteFactor terminalTarget = expectations.getTerminalBuilder().build();
       ParametricFactor terminalFamily = pam.getTerminalFactor();
       SufficientStatistics terminalParameters = trainFamily(terminalFamily, terminalTarget,
-          pam.getNonterminalVar().union(pam.getRuleVar()), paramList.get(2));
+          pam.getNonterminalVar().union(pam.getRuleVar()), paramList.get(3));
 
-      return new ListSufficientStatistics(Arrays.asList("rules", "nonterminals", "terminals"),
-          Arrays.asList(ruleParameters, nonterminalParameters, terminalParameters));
+      return new ListSufficientStatistics(Arrays.asList("root", "rules", "nonterminals", "terminals"),
+          Arrays.asList(rootParameters, ruleParameters, nonterminalParameters, terminalParameters));
     } else {
       SufficientStatistics aggregate = pam.getNewSufficientStatistics();
       aggregate.increment(smoothing, 1.0);

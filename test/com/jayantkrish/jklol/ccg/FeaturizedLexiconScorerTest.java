@@ -28,20 +28,20 @@ import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 public class FeaturizedLexiconScorerTest extends TestCase {
   
   private static final String[] lexicon = {
-      "block,N{0},(lambda x (pred:block x)),0 pred:block",
-      "block,NP{0},(lambda x (pred:object x)),0 pred:object",
-      "foo,ABC{0},(lambda x (pred:object x)),0 pred:object",
-      "bar,ABCD{0},(lambda x (pred:object x)),0 pred:object",
+      "block,N{0},(lambda (x) (pred:block x)),0 pred:block",
+      "block,NP{0},(lambda (x) (pred:object x)),0 pred:object",
+      "foo,ABC{0},(lambda (x) (pred:object x)),0 pred:object",
+      "bar,ABCD{0},(lambda (x) (pred:object x)),0 pred:object",
   };
   
   private static final String[] unknownLexicon = {};
   private static final String[] ruleArray = {"ABC{0} ABCD{0}", "ABC{0} ABC{0} ABCD{0}"};
 
   private static final String[] trainingData = {
-      "red block#########(lambda x (pred:block x))",
-      "block red#########(lambda x (pred:object x))",
-      "block block red#########(lambda x (pred:object x))",
-      "block block red#########(lambda x (pred:object x))",
+      "red block#########(lambda (x) (pred:block x))",
+      "block red#########(lambda (x) (pred:object x))",
+      "block block red#########(lambda (x) (pred:object x))",
+      "block block red#########(lambda (x) (pred:object x))",
   };
   
   private ParametricCcgParser family;
@@ -91,11 +91,11 @@ public class FeaturizedLexiconScorerTest extends TestCase {
 
   public void testTraining() {
     ExpressionComparator comparator = new SimplificationComparator(ExpressionSimplifier.lambdaCalculus());
-    CcgInference inferenceAlg = new CcgBeamSearchInference(null, comparator, 100, -1, Integer.MAX_VALUE, 1, true);
-    
-    CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, inferenceAlg, 0.0);
+    CcgInference inferenceAlg = CcgCkyInference.getDefault(100);
+
+    CcgPerceptronOracle oracle = new CcgPerceptronOracle(family, comparator, inferenceAlg, 0.0);
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithL2Regularization(10,
-        1, 1, false, true, 0.0, new DefaultLogFunction());
+        1, 1, false, true, Double.MAX_VALUE, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);

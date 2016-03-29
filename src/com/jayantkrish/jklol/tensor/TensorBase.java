@@ -10,7 +10,7 @@ import java.util.Iterator;
  * 
  * @author jayant
  */
-public interface TensorBase {
+public interface TensorBase extends TensorHash {
 
   int[] getDimensionNumbers();
 
@@ -51,16 +51,6 @@ public interface TensorBase {
    * @return
    */
   public long getMaxKeyNum();
-
-  /**
-   * Gets the value associated with {@code keyNum}, which is interpreted as a
-   * key by successively mod'ing it by the size of each dimension of
-   * {@code this}. Equivalent {@code getByDimKey(convertToDimKey(keyNum))}.
-   * 
-   * @param keyNum
-   * @return
-   */
-  double get(long keyNum);
 
   /**
    * Gets the value associated with {@code key} in {@code this}. The {@code i}th

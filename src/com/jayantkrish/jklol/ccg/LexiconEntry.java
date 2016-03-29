@@ -65,7 +65,7 @@ public class LexiconEntry {
     CcgCategory category = CcgCategory.parseFrom(ArrayUtils.copyOfRange(parts, 1, parts.length));
     return new LexiconEntry(words, category);
   }
-  
+
   public static CsvParser getCsvParser() {
     return new CsvParser(ENTRY_DELIMITER, CsvParser.DEFAULT_QUOTE, '~');
   }

@@ -43,17 +43,14 @@ public class CfgParser implements Serializable {
   private final DiscreteVariable nonterminalVariableType;
   private final DiscreteVariable ruleVariableType;
 
-  // The distributions over terminals and binary rules.
+  // The distributions over terminals, binary rules, and the root symbol.
+  private final DiscreteFactor rootDistribution;
   private final DiscreteFactor binaryDistribution;
   private final DiscreteFactor terminalDistribution;
 
   // The parser uses the tensor representations of the nonterminal distributions
   // in order to improve parsing speed.
   private final Tensor binaryDistributionWeights;
-
-  // If greater than 0, this parser performs a beam search over trees,
-  // maintaining up to beamSize trees at each chart node.
-  private final int beamSize;
 
   // If true, the parser is allowed to skip portions of the terminal symbols
   // during parsing.
@@ -70,18 +67,20 @@ public class CfgParser implements Serializable {
    * @param rightVar
    * @param terminalVar variable over *lists* of terminal symbols. 
    * @param ruleTypeVar
+   * @param rootDistribution
    * @param binaryDistribution
    * @param terminalDistribution
-   * @param beamSize
    * @param canSkipTerminals
    * @param skipSymbol
    */
   public CfgParser(VariableNumMap parentVar, VariableNumMap leftVar, VariableNumMap rightVar,
-      VariableNumMap terminalVar, VariableNumMap ruleTypeVar, DiscreteFactor binaryDistribution,
-      DiscreteFactor terminalDistribution, int beamSize, boolean canSkipTerminals,
-      Assignment skipSymbol) {
+      VariableNumMap terminalVar, VariableNumMap ruleTypeVar, DiscreteFactor rootDistribution,
+      DiscreteFactor binaryDistribution, DiscreteFactor terminalDistribution,
+      boolean canSkipTerminals, Assignment skipSymbol) {
     Preconditions.checkArgument(parentVar.size() == 1 && leftVar.size() == 1
         && rightVar.size() == 1 && terminalVar.size() == 1 && ruleTypeVar.size() == 1);
+    Preconditions.checkArgument(rootDistribution.getVars().equals(VariableNumMap.unionAll(
+        parentVar)));
     Preconditions.checkArgument(binaryDistribution.getVars().equals(VariableNumMap.unionAll(
         parentVar, leftVar, rightVar, ruleTypeVar)));
     Preconditions.checkArgument(terminalDistribution.getVars().equals(VariableNumMap.unionAll(
@@ -94,6 +93,7 @@ public class CfgParser implements Serializable {
     this.rightVar = rightVar;
     this.terminalVar = terminalVar;
     this.ruleTypeVar = ruleTypeVar;
+    this.rootDistribution = rootDistribution;
     this.binaryDistribution = binaryDistribution;
     this.terminalDistribution = terminalDistribution;
 
@@ -101,7 +101,6 @@ public class CfgParser implements Serializable {
     this.nonterminalVariableType = parentVar.getDiscreteVariables().get(0);
     this.binaryDistributionWeights = binaryDistribution.getWeights();
 
-    this.beamSize = beamSize;
     this.canSkipTerminals = canSkipTerminals;
     this.skipSymbol = skipSymbol;
   }
@@ -117,21 +116,9 @@ public class CfgParser implements Serializable {
   public VariableNumMap getParentVariable() {
     return parentVar;
   }
-
-  public int getBeamSize() {
-    return beamSize;
-  }
-
-  /**
-   * Gets a new {@code CfgParser} with different values for {@code beamSize} and
-   * {@code canSkipTerminals}.
-   * 
-   * @return
-   */
-  public CfgParser setParameters(int newBeamSize, boolean newCanSkipTerminals,
-      Assignment skipSymbol) {
-    return new CfgParser(parentVar, leftVar, rightVar, terminalVar, ruleTypeVar, binaryDistribution,
-        terminalDistribution, newBeamSize, newCanSkipTerminals, skipSymbol);
+  
+  public VariableNumMap getTerminalVariable() {
+    return terminalVar;
   }
 
   // //////////////////////////////////////////////////////////////////////
@@ -173,7 +160,7 @@ public class CfgParser implements Serializable {
 
   /**
    * Performs a beam search over parse trees maintaining up to
-   * {@code this.getBeamSize()} trees at each node of the parse tree. This
+   * {@code beamSize} trees at each node of the parse tree. This
    * method can be used to approximate the marginal distribution over parse
    * trees. The returned list of trees is sorted from most to least probable.
    * 
@@ -182,7 +169,7 @@ public class CfgParser implements Serializable {
    * @return
    */
   @SuppressWarnings("unchecked")
-  public List<CfgParseTree> beamSearch(List<?> terminals) {
+  public List<CfgParseTree> beamSearch(List<?> terminals, int beamSize) {
     if (terminals.size() == 0) {
       // Zero size inputs occur because unknown words may be automatically skipped.
       return Collections.emptyList();
@@ -232,16 +219,14 @@ public class CfgParser implements Serializable {
 
     // Map the integer encodings of trees back to tree objects.
     List<CfgParseTree> trees;
-    if (canSkipTerminals) {
-      trees = populateParseTreesFromChartSkippingTerminals(chart, treeKeyOffsets);
-    } else {
-      trees = Lists.newArrayList();
-      int numRootTrees = chart.getNumParseTreeKeysForSpan(0, terminals.size() - 1);
-      long[] rootKeys = chart.getParseTreeKeysForSpan(0, terminals.size() - 1);
-      double[] rootProbs = chart.getParseTreeProbsForSpan(0, terminals.size() - 1);
-      for (int i = 0; i < numRootTrees; i++) {
-        trees.add(mapTreeKeyToParseTree(rootKeys[i], rootProbs[i], 0, terminals.size() - 1, chart, treeKeyOffsets));
-      }
+    trees = Lists.newArrayList();
+    int numRootTrees = chart.getNumParseTreeKeysForSpan(0, terminals.size() - 1);
+    long[] rootKeys = chart.getParseTreeKeysForSpan(0, terminals.size() - 1);
+    double[] rootProbs = chart.getParseTreeProbsForSpan(0, terminals.size() - 1);
+    for (int i = 0; i < numRootTrees; i++) {
+      CfgParseTree tree = mapTreeKeyToParseTree(rootKeys[i], rootProbs[i], 0, terminals.size() - 1, chart, treeKeyOffsets);
+      tree = tree.multiplyProbability(rootDistribution.getUnnormalizedProbability(tree.getRoot()));
+      trees.add(tree);
     }
 
     Collections.sort(trees);
@@ -250,7 +235,7 @@ public class CfgParser implements Serializable {
   }
 
   private List<CfgParseTree> populateParseTreesFromChartSkippingTerminals(BeamSearchCfgParseChart chart,
-      long[] treeEncodingOffsets) {
+      long[] treeEncodingOffsets, int beamSize) {
     // If we can skip terminals, a parse for any subtree of the sentence
     // is a parse for the entire sentence. Identify a probability threshold
     // which all returned parse trees must be above.
@@ -335,18 +320,15 @@ public class CfgParser implements Serializable {
   }
 
   /**
-   * Gets the probability of generating {@code tree} from {@code terminals}.
+   * Gets the probability of {@code tree}.
    * 
-   * @param terminals
    * @param tree
    * @return
    */
-  public double getProbability(List<?> terminals, CfgParseTree tree) {
-    if (!tree.getTerminalProductions().equals(terminals) && !canSkipTerminals) {
-      return 0.0;
-    } else {
-      return getProbabilityHelper(tree);
-    }
+  public double getProbability(CfgParseTree tree) {
+    double ruleProbability = getProbabilityHelper(tree);
+    double rootProbability = rootDistribution.getUnnormalizedProbability(tree.getRoot());
+    return ruleProbability * rootProbability;
   }
 
   private double getProbabilityHelper(CfgParseTree tree) {
@@ -383,11 +365,12 @@ public class CfgParser implements Serializable {
   }
 
   public CfgParseChart parseOutsideMarginal(CfgParseChart chart, Factor rootDist) {
-    assert chart.getInsideCalculated();
-    assert !chart.getOutsideCalculated();
+    Preconditions.checkState(chart.getInsideCalculated(), "Inside probabilities not calculated.");
+    Preconditions.checkState(!chart.getOutsideCalculated(), "Outside probabilities already calculated.");
 
-    chart.updateOutsideEntry(0, chart.chartSize() - 1, rootDist.coerceToDiscrete().getWeights().getValues(), 
-        rootDist, parentVar);
+    Factor root = rootDistribution.product(rootDist);
+    chart.updateOutsideEntry(0, chart.chartSize() - 1, root.coerceToDiscrete().getWeights().getValues(), 
+        root, parentVar);
     downwardChartPass(chart);
     return chart;
   }
@@ -421,8 +404,9 @@ public class CfgParser implements Serializable {
     initializeChart(chart, terminals);
     upwardChartPass(chart);
     // Set the initial outside probabilities
-    chart.updateOutsideEntry(0, chart.chartSize() - 1,
-        rootDist.coerceToDiscrete().getWeights().getValues(), rootDist, parentVar);
+    Factor root = rootDistribution.product(rootDist);
+    chart.updateOutsideEntry(0, chart.chartSize() - 1, 
+        root.coerceToDiscrete().getWeights().getValues(), root, parentVar);
     downwardChartPass(chart);
     return chart;
   }
@@ -471,7 +455,7 @@ public class CfgParser implements Serializable {
    * Compute the outside probabilities moving downward from the top of the tree.
    */
   private void downwardChartPass(CfgParseChart chart) {
-    assert chart.getInsideCalculated();
+    Preconditions.checkState(chart.getInsideCalculated());
 
     // Calculate root marginal, which is not included in the rest of the pass.
     // Also compute the partition function.

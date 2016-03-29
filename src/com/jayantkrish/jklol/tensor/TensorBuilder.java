@@ -30,6 +30,9 @@ public interface TensorBuilder extends TensorBase, Serializable {
   
   void incrementOuterProductWithMultiplier(Tensor leftTensor, Tensor rightTensor,
       double multiplier);
+  
+  void incrementInnerProductWithMultiplier(Tensor leftTensor, Tensor rightTensor,
+      double multiplier);
 
   /**
    * Increments each value in {@code this} by other squared.

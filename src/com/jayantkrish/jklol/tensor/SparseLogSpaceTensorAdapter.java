@@ -164,6 +164,11 @@ public class SparseLogSpaceTensorAdapter extends AbstractTensor {
   }
 
   @Override
+  public TensorHash toHash() {
+    return new LogTensorHashAdapter(logWeights.toHash());
+  }
+
+  @Override
   public int size() {
     // The size of the tensor is the number of nonzero values in the tensor.
     // However, this tensor may potentially have more than Integer.MAX_VALUE

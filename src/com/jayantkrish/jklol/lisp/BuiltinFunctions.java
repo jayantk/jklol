@@ -5,9 +5,9 @@ import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.lisp.AmbEval.AmbFunctionValue;
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Histogram;
@@ -18,31 +18,31 @@ public class BuiltinFunctions {
   
   public static class ConsFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
       return new ConsValue(argumentValues.get(0), argumentValues.get(1));
     }
   }
 
   public static class CarFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       return ((ConsValue) argumentValues.get(0)).getCar();
     }
   }
 
   public static class CdrFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       return ((ConsValue) argumentValues.get(0)).getCdr();
     }
   }
 
   public static class ListFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       int numValues = argumentValues.size();
       Object listValue = ConstantValue.NIL;
       for (int i = numValues - 1; i >= 0; i--) {
@@ -54,8 +54,8 @@ public class BuiltinFunctions {
 
   public static class NilFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1, "Wrong number of arguments: %s",
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1, "Wrong number of arguments: %s",
           argumentValues);
       return ConstantValue.NIL == argumentValues.get(0) ? ConstantValue.TRUE : ConstantValue.FALSE; 
     }
@@ -63,10 +63,10 @@ public class BuiltinFunctions {
 
   public static class NotFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       Object value = argumentValues.get(0);
-      Preconditions.checkState(ConstantValue.TRUE.equals(value) || ConstantValue.FALSE.equals(value));
+      LispUtil.checkArgument(ConstantValue.TRUE.equals(value) || ConstantValue.FALSE.equals(value));
       if (ConstantValue.TRUE.equals(value)) {
         return ConstantValue.FALSE;
       } else {
@@ -77,9 +77,13 @@ public class BuiltinFunctions {
 
   public static class AndFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       Boolean value = true;
       for (int i = 0; i < argumentValues.size(); i++) {
+        if (!(argumentValues.get(i) instanceof ConstantValue)) {
+          throw new EvalError("and got argument: " + argumentValues.get(i));
+        }
+
         value = value && ((ConstantValue) argumentValues.get(i)).toBoolean();
       }
       return ConstantValue.fromBoolean(value);
@@ -88,7 +92,7 @@ public class BuiltinFunctions {
 
   public static class OrFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       Boolean value = false;
       for (int i = 0; i < argumentValues.size(); i++) {
         value = value || ((ConstantValue) argumentValues.get(i)).toBoolean();
@@ -99,7 +103,7 @@ public class BuiltinFunctions {
 
   public static class PlusFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       if (allArgumentsInteger(argumentValues)) {
         int resultValue = 0;
         for (int i = 0; i < argumentValues.size(); i++) {
@@ -122,7 +126,7 @@ public class BuiltinFunctions {
 
   public static class MinusFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       if (allArgumentsInteger(argumentValues)) {
         int resultValue = (Integer) argumentValues.get(0);
         for (int i = 1; i < argumentValues.size(); i++) {
@@ -145,7 +149,7 @@ public class BuiltinFunctions {
 
   public static class MultiplyFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       if (allArgumentsInteger(argumentValues)) {
         int resultValue = 1;
         for (int i = 0; i < argumentValues.size(); i++) {
@@ -168,8 +172,8 @@ public class BuiltinFunctions {
 
   public static class DivideFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
       if (allArgumentsInteger(argumentValues)) {
         return ((Integer) argumentValues.get(0)) / ((Integer) argumentValues.get(1));
       } else {
@@ -179,8 +183,8 @@ public class BuiltinFunctions {
   }
 
   public static class LogFunction implements FunctionValue {
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       Object value = argumentValues.get(0);
       if (value instanceof Integer) {
         return Math.log((double) (Integer) value);
@@ -191,8 +195,8 @@ public class BuiltinFunctions {
   }
 
   public static class ExpFunction implements FunctionValue {
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       Object value = argumentValues.get(0);
       if (value instanceof Integer) {
         return Math.exp((double) (Integer) value);
@@ -204,16 +208,16 @@ public class BuiltinFunctions {
 
   public static class EqualsFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
       return argumentValues.get(0).equals(argumentValues.get(1)) ? ConstantValue.TRUE : ConstantValue.FALSE;
     }
   }
   
   public static class LessThanFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
       if (allArgumentsInteger(argumentValues)) {
         return ConstantValue.fromBoolean(((Integer) argumentValues.get(0)) < ((Integer) argumentValues.get(1)));
       } else {
@@ -224,8 +228,8 @@ public class BuiltinFunctions {
 
   public static class GreaterThanFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
       if (allArgumentsInteger(argumentValues)) {
         return ConstantValue.fromBoolean(((Integer) argumentValues.get(0)) > ((Integer) argumentValues.get(1)));
       } else {
@@ -236,7 +240,7 @@ public class BuiltinFunctions {
 
   public static class DisplayFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       List<String> argumentStrings = Lists.newArrayList();
       for (Object o : argumentValues) {
         argumentStrings.add(formatObjectForDisplay(o));
@@ -270,15 +274,15 @@ public class BuiltinFunctions {
 
   public static class MakeDictionaryFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       return IndexedList.<Object>create(argumentValues);
     }
   }
 
   public static class DictionaryLookupFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
       IndexedList<?> dictionary = (IndexedList<?>) argumentValues.get(1);
       return dictionary.getIndex(argumentValues.get(0));
     }
@@ -286,8 +290,8 @@ public class BuiltinFunctions {
 
   public static class DictionaryContainsFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
       IndexedList<?> dictionary = (IndexedList<?>) argumentValues.get(1);
       return dictionary.contains(argumentValues.get(0)) ? ConstantValue.TRUE : ConstantValue.FALSE;
     }
@@ -295,24 +299,24 @@ public class BuiltinFunctions {
 
   public static class DictionarySizeFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       return ((IndexedList<?>) argumentValues.get(0)).size();
     }
   }
 
   public static class DictionaryToArrayFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       return ((IndexedList<?>) argumentValues.get(0)).items().toArray();
     }
   }
 
   public static class DictionaryRandomElement implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       IndexedList<?> list = (IndexedList<?>) argumentValues.get(0);
       int choice = Pseudorandom.get().nextInt(list.size());
       return list.get(choice);
@@ -321,15 +325,15 @@ public class BuiltinFunctions {
 
   public static class MakeArrayFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       return argumentValues.toArray();
     }
   }
   
   public static class ArrayZipFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() > 0);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() > 0);
       Object[][] arrays = new Object[argumentValues.size()][];
       for (int i = 0; i < argumentValues.size(); i++) {
         arrays[i] = (Object[]) argumentValues.get(i);
@@ -337,7 +341,7 @@ public class BuiltinFunctions {
       
       int size = arrays[0].length;
       for (int i = 0; i < arrays.length; i++) {
-        Preconditions.checkArgument(arrays[i].length == size,
+        LispUtil.checkArgument(arrays[i].length == size,
             "All arrays passed to zip must have the same length.");
       }
       
@@ -355,8 +359,8 @@ public class BuiltinFunctions {
   
   public static class ArraySortFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1
           && argumentValues.get(0) instanceof Object[]);
       Object[] argumentArray = (Object[]) argumentValues.get(0);
 
@@ -369,10 +373,10 @@ public class BuiltinFunctions {
   
   public static class ArrayGetIthElement implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
-      Preconditions.checkArgument(argumentValues.get(0) instanceof Object[]);
-      Preconditions.checkArgument(argumentValues.get(1) instanceof Integer);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
+      LispUtil.checkArgument(argumentValues.get(0) instanceof Object[]);
+      LispUtil.checkArgument(argumentValues.get(1) instanceof Integer);
       Object[] argumentArray = (Object[]) argumentValues.get(0);
       int index = (Integer) argumentValues.get(1);
 
@@ -382,10 +386,10 @@ public class BuiltinFunctions {
   
   public static class ArrayMergeSets implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
-      Preconditions.checkArgument(argumentValues.get(0) instanceof Object[]);
-      Preconditions.checkArgument(argumentValues.get(1) instanceof Object[]);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
+      LispUtil.checkArgument(argumentValues.get(0) instanceof Object[]);
+      LispUtil.checkArgument(argumentValues.get(1) instanceof Object[]);
       
       Set<Object> objects = Sets.newHashSet();
       objects.addAll(Arrays.asList((Object[]) argumentValues.get(0)));
@@ -404,7 +408,7 @@ public class BuiltinFunctions {
 
   public static class MakeHistogramFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       List<Object> keys = Lists.newArrayListWithCapacity(argumentValues.size());
       int[] sumCounts = new int[argumentValues.size()];
       int sumCount = 0;
@@ -425,33 +429,44 @@ public class BuiltinFunctions {
 
   public static class SampleHistogramFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       return ((Histogram<?>) argumentValues.get(0)).sample();
     }
   }
 
   public static class SampleHistogramConditionalFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
       Histogram<?> histogram = (Histogram<?>) argumentValues.get(0);
       return histogram.sampleConditional((Tensor) argumentValues.get(1));
+    }
+  }
+  
+  public static class RejectionSampleHistogramFunction implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
+      Histogram<?> histogram = (Histogram<?>) argumentValues.get(0);
+      Tensor reject = (Tensor) argumentValues.get(1);
+      
+      return histogram.sampleExcluding(reject);
     }
   }
 
   public static class HistogramToDictionaryFunction implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       return IndexedList.create(((Histogram<?>) argumentValues.get(0)).getItems());
     }
   }
 
   public static class MakeDset implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
       IndexedList<?> dictionary = (IndexedList<?>) argumentValues.get(0);
       List<?> items = ConsValue.consListOrArrayToList(argumentValues.get(1), Object.class);
 
@@ -470,14 +485,14 @@ public class BuiltinFunctions {
 
   public static class DsetIntersect implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
+    public Object apply(List<Object> argumentValues, EvalContext context) {
       List<Tensor> tensorArgs = Lists.newArrayList();
       for (int i = 0; i < argumentValues.size(); i++) {
         Object value = argumentValues.get(i);
         if (value instanceof Tensor) {
           tensorArgs.add((Tensor) value);
         } else {
-          Preconditions.checkArgument(value == ConstantValue.NIL,
+          LispUtil.checkArgument(value == ConstantValue.NIL,
               "Illegal argument to dset-intersect: %s", value);
         }
       }
@@ -493,14 +508,36 @@ public class BuiltinFunctions {
       return result;
     }
   }
+  
+  public static class DsetSubtract implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
+      Tensor arg1 = (Tensor) argumentValues.get(0);
+      Tensor arg2 = (Tensor) argumentValues.get(1);
+      
+      // Return arg1 after removing any element also in arg2
+      return arg1.elementwiseAddition(arg1.elementwiseProduct(arg2).elementwiseProduct(-1));
+    }
+  }
 
   public static class DsetEmpty implements FunctionValue {
     @Override
-    public Object apply(List<Object> argumentValues, Environment env) {
-      Preconditions.checkArgument(argumentValues.size() == 1);
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
       Tensor arg = (Tensor) argumentValues.get(0);
       double sum = arg.getTrace();
       return sum == 0.0 ? ConstantValue.TRUE : ConstantValue.FALSE;
+    }
+  }
+  
+  public static class IsLambda implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 1);
+      Object value = argumentValues.get(0);
+      return (value instanceof FunctionValue || value instanceof AmbFunctionValue)
+          ? ConstantValue.TRUE : ConstantValue.FALSE; 
     }
   }
 }

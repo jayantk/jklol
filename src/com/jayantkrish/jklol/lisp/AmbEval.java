@@ -26,6 +26,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
+import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.Assignment;
@@ -60,6 +61,8 @@ public class AmbEval {
   private static final int OPT_MM_SYMBOL_INDEX = 13;
   private static final int NEW_FG_SCOPE_INDEX = 14;
   
+  private static final int PERIOD_INDEX = 15;
+  
   private final IndexedList<String> symbolTable;
 
   public AmbEval(IndexedList<String> symbolTable) {
@@ -71,11 +74,22 @@ public class AmbEval {
   }
 
   public EvalResult eval(SExpression expression) {
-    return eval(expression, getDefaultEnvironment(symbolTable), new ParametricBfgBuilder(true));
+    return eval(expression, getDefaultEnvironment(symbolTable), new ParametricBfgBuilder(true),
+        new NullLogFunction());
   }
 
   public EvalResult eval(SExpression expression, Environment environment,
       ParametricBfgBuilder builder) {
+    return eval(expression, environment, builder, new EvalContext(new NullLogFunction()));
+  }
+  
+  public EvalResult eval(SExpression expression, Environment environment,
+      ParametricBfgBuilder builder, LogFunction log) {
+    return eval(expression, environment, builder, new EvalContext(log));
+  }
+
+  private EvalResult eval(SExpression expression, Environment environment,
+      ParametricBfgBuilder builder, EvalContext context) {
     if (expression.isConstant()) {
       // The expression may be a primitive type or a variable.
       Object primitiveValue = expression.getConstantPrimitiveValue(); 
@@ -84,7 +98,10 @@ public class AmbEval {
         return new EvalResult(primitiveValue);
       } else {
         // Variable name
-        return new EvalResult(environment.getValue(expression.getConstantIndex(), symbolTable));
+        // context.getLog().startTimer("amb_eval/environment_get_value");
+        Object value = environment.getValue(expression.getConstantIndex(), symbolTable);
+        // context.getLog().stopTimer("amb_eval/environment_get_value");
+        return new EvalResult(value);
       }
     } else {
       List<SExpression> subexpressions = expression.getSubexpressions();
@@ -93,43 +110,52 @@ public class AmbEval {
         int constantNameIndex = first.getConstantIndex();
 
         switch (constantNameIndex) {
-        case DEFINE_SYMBOL_INDEX: return doDefine(subexpressions, environment, builder); 
-        case BEGIN_SYMBOL_INDEX: return doBegin(subexpressions, environment, builder);
-        case LET_SYMBOL_INDEX: return doLet(subexpressions, environment, builder);
+        case DEFINE_SYMBOL_INDEX: return doDefine(subexpressions, environment, builder, context); 
+        case BEGIN_SYMBOL_INDEX: return doBegin(subexpressions, environment, builder, context);
+        case LET_SYMBOL_INDEX: return doLet(subexpressions, environment, builder, context);
 
         case LAMBDA_SYMBOL_INDEX:
           // Create and return a function value representing this function.
-          Preconditions.checkArgument(subexpressions.size() >= 3, "Invalid lambda expression arguments: " + subexpressions);
-          return new EvalResult(makeLambda(subexpressions.get(1), subexpressions.subList(2, subexpressions.size()), environment));
+          LispUtil.checkArgument(subexpressions.size() >= 3, "Invalid lambda expression arguments: %s", subexpressions);
+          // context.getLog().startTimer("amb_eval/make_lambda");
+          EvalResult result = new EvalResult(makeLambda(subexpressions.get(1),
+              subexpressions.subList(2, subexpressions.size()), environment));
+          // context.getLog().stopTimer("amb_eval/make_lambda");
+          return result;
 
         case QUOTE_SYMBOL_INDEX:
-          Preconditions.checkArgument(subexpressions.size() == 2, "Invalid quote arguments: " + subexpressions);
+          LispUtil.checkArgument(subexpressions.size() == 2, "Invalid quote arguments: %s", subexpressions);
           return new EvalResult(subexpressions.get(1));
 
         case EVAL_SYMBOL_INDEX:
-          Preconditions.checkArgument(subexpressions.size() == 2, "Invalid eval arguments: " + subexpressions);
-          Object value = eval(subexpressions.get(1), environment, builder).getValue();
-          Preconditions.checkArgument(value instanceof SExpression, "Argument to eval must be an expression. Got: " + value);
-          return eval((SExpression) value, environment, builder);
+          LispUtil.checkArgument(subexpressions.size() == 2, "Invalid eval arguments: %s", subexpressions);
+          Object value = eval(subexpressions.get(1), environment, builder, context).getValue();
+          LispUtil.checkArgument(value instanceof SExpression, "Argument to eval must be an expression. Got: %s", value);
+          return eval((SExpression) value, environment, builder, context);
 
         case APPLY_SYMBOL_INDEX:
-          Preconditions.checkArgument(subexpressions.size() == 3, "Invalid apply expression: " + subexpressions);
-          AmbFunctionValue lambdaValue = (AmbFunctionValue) eval(subexpressions.get(1), environment, builder).getValue();
+          LispUtil.checkArgument(subexpressions.size() == 3, "Invalid apply expression: %s", subexpressions);
+          AmbFunctionValue lambdaValue = (AmbFunctionValue) eval(subexpressions.get(1), environment, builder, context).getValue();
           List<Object> argumentValues = ConsValue.consListToList(
-              eval(subexpressions.get(2), environment, builder).getValue(), Object.class);
-          return new EvalResult(lambdaValue.apply(argumentValues, environment, builder));
+              eval(subexpressions.get(2), environment, builder, context).getValue(), Object.class);
+          return new EvalResult(lambdaValue.apply(argumentValues, context, builder));
 
-        case IF_SYMBOL_INDEX: return doIf(subexpressions, environment, builder);
-        case AMB_SYMBOL_INDEX: return doAmb(subexpressions, environment, builder);
-        case GET_BEST_VALUE_SYMBOL_INDEX: return doGetBestValue(subexpressions, environment, builder);
-        case GET_MARGINALS_SYMBOL_INDEX: return doGetMarginals(subexpressions, environment, builder);
-        case ADD_WEIGHT_SYMBOL_INDEX: return doAddWeight(subexpressions, environment, builder);
-        case OPT_SYMBOL_INDEX: return doOpt(subexpressions, environment, builder);
-        case OPT_MM_SYMBOL_INDEX: return doOptMm(subexpressions, environment, builder);
-        case NEW_FG_SCOPE_INDEX: return doNewFgScope(subexpressions, environment, builder);
+        case IF_SYMBOL_INDEX: return doIf(subexpressions, environment, builder, context);
+        case AMB_SYMBOL_INDEX: return doAmb(subexpressions, environment, builder, context);
+        case GET_BEST_VALUE_SYMBOL_INDEX: return doGetBestValue(subexpressions, environment, builder, context);
+        case GET_MARGINALS_SYMBOL_INDEX: return doGetMarginals(subexpressions, environment, builder, context);
+        case ADD_WEIGHT_SYMBOL_INDEX: return doAddWeight(subexpressions, environment, builder, context);
+        case OPT_SYMBOL_INDEX: return doOpt(subexpressions, environment, builder, context);
+        case OPT_MM_SYMBOL_INDEX: return doOptMm(subexpressions, environment, builder, context);
+        case NEW_FG_SCOPE_INDEX: return doNewFgScope(subexpressions, environment, builder, context);
         }
       }
-      return doFunctionApplication(subexpressions, environment, builder);
+      try {
+        return doFunctionApplication(subexpressions, environment, builder, context);
+      } catch (Exception e) {
+        System.out.println("Function: " + expression);
+        throw e;
+      }
     }
   }
 
@@ -142,14 +168,26 @@ public class AmbEval {
     } else {
       argumentExpressions = arguments.getSubexpressions();
     }
-
-    int[] argumentNameIndexes = new int[argumentExpressions.size()];
-    int ind = 0;
-    for (SExpression argumentExpression : argumentExpressions) {
-      Preconditions.checkArgument(argumentExpression.isConstant(),
+    
+    // Check whether the declaration has varargs.
+    boolean varargs = false;
+    List<SExpression> actualArguments = Lists.newArrayList();
+    for (int j = 0; j < argumentExpressions.size(); j++) {
+      SExpression argumentExpression = argumentExpressions.get(j);
+      LispUtil.checkArgument(argumentExpression.isConstant(),
           "%s is not a constant. Argument list: %s", argumentExpression, arguments);
-      argumentNameIndexes[ind] = argumentExpression.getConstantIndex();
-      ind++;
+      if (argumentExpression.getConstantIndex() == PERIOD_INDEX) {
+        LispUtil.checkArgument(j == argumentExpressions.size() - 2,
+            "Invalid varargs lambda declaration. Arguments: %s", arguments);
+        varargs = true;
+      } else {
+        actualArguments.add(argumentExpression);
+      }
+    }
+
+    int[] argumentNameIndexes = new int[actualArguments.size()];
+    for (int j = 0; j < actualArguments.size(); j++) {
+      argumentNameIndexes[j] = actualArguments.get(j).getConstantIndex();
     }
 
     SExpression functionBody = null;
@@ -162,7 +200,7 @@ public class AmbEval {
       functionBody = SExpression.nested(functionBodyComponents);
     }
 
-    return new AmbLambdaValue(new LambdaValue(argumentExpressions, argumentNameIndexes,
+    return new AmbLambdaValue(new LambdaValue(actualArguments, argumentNameIndexes, varargs,
         functionBody, environment), this);
   }
   
@@ -175,12 +213,12 @@ public class AmbEval {
    * @return
    */
   private final EvalResult doDefine(List<SExpression> subexpressions, Environment environment,
-      ParametricBfgBuilder builder) {
+      ParametricBfgBuilder builder, EvalContext context) {
     int nameToBind = subexpressions.get(1).getConstantIndex();
     if (subexpressions.size() == 3) {
       // (define name value-expression)
       // Binds a name to the value of value-expression
-      Object valueToBind = eval(subexpressions.get(2), environment, builder).getValue();
+      Object valueToBind = eval(subexpressions.get(2), environment, builder, context).getValue();
       environment.bindName(nameToBind, valueToBind);
     } else if (subexpressions.size() >= 4) {
       // (define procedure-name (arg1 ...) procedure-body)
@@ -193,54 +231,55 @@ public class AmbEval {
   }
   
   private final EvalResult doBegin(List<SExpression> subexpressions, Environment environment,
-      ParametricBfgBuilder builder) {
+      ParametricBfgBuilder builder, EvalContext context) {
     // Sequentially evaluates its subexpressions, chaining any  
     // environment changes.
     EvalResult result = new EvalResult(ConstantValue.UNDEFINED);
     for (int i = 1; i < subexpressions.size(); i++) {
-      result = eval(subexpressions.get(i), environment, builder);
+      result = eval(subexpressions.get(i), environment, builder, context);
     } 
     return result;
   }
   
   private final EvalResult doLet(List<SExpression> subexpressions, Environment environment,
-      ParametricBfgBuilder builder) {
+      ParametricBfgBuilder builder, EvalContext context) {
     // (let ((name1 value-expr1) (name2 value-expr2) ...) body)
     Environment newEnv = Environment.extend(environment);
 
     List<SExpression> bindings = subexpressions.get(1).getSubexpressions();
     for (SExpression binding : bindings) {
-      Preconditions.checkArgument(binding.getSubexpressions().size() == 2,
+      LispUtil.checkArgument(binding.getSubexpressions().size() == 2,
           "Illegal element in let bindings: %s", binding);
       int nameIndex = binding.getSubexpressions().get(0).getConstantIndex();
       SExpression valueExpression = binding.getSubexpressions().get(1);
 
-      Object value = eval(valueExpression, newEnv, builder).getValue();
+      Object value = eval(valueExpression, newEnv, builder, context).getValue();
       newEnv.bindName(nameIndex, value);
     }
 
     EvalResult result = new EvalResult(ConstantValue.UNDEFINED);
     for (int i = 2; i < subexpressions.size(); i++) {
-      result = eval(subexpressions.get(i), newEnv, builder);
+      result = eval(subexpressions.get(i), newEnv, builder, context);
     }
     return result;
   }
   
   private final EvalResult doIf(List<SExpression> subexpressions, Environment environment,
-      ParametricBfgBuilder builder) {
-    Preconditions.checkArgument(subexpressions.size() == 4, "Illegal if statement: %s", subexpressions);
-    Object testCondition = eval(subexpressions.get(1), environment, builder).getValue();
+      ParametricBfgBuilder builder, EvalContext context) {
+    LispUtil.checkArgument(subexpressions.size() == 4, "Illegal if statement: %s", subexpressions);
+    Object testCondition = eval(subexpressions.get(1), environment, builder, context).getValue();
 
     if (!(testCondition instanceof AmbValue)) {
       // This condition evaluates to the same value in all program 
       // executions that reach this point.
       if (ConstantValue.TRUE.equals(testCondition)) {
-        return eval(subexpressions.get(2), environment, builder);
+        return eval(subexpressions.get(2), environment, builder, context);
       } else {
-        return eval(subexpressions.get(3), environment, builder);
+        return eval(subexpressions.get(3), environment, builder, context);
       }
     } else {
       // We disallow this case for the moment.
+      // This case is broken in Java, hence the Preconditions exception.
       Preconditions.checkArgument(false,
           "Cannot use amb values in conditions of if statements. Subexpressions: %s", subexpressions);
 
@@ -253,13 +292,13 @@ public class AmbEval {
       Assignment trueAssignment = ambVar.outcomeArrayToAssignment(ConstantValue.TRUE);
       ParametricBfgBuilder trueBuilder = builder.createChild(testConditionAmb.getVar(),
           trueAssignment);
-      EvalResult trueResult = eval(subexpressions.get(2), environment, trueBuilder);
+      EvalResult trueResult = eval(subexpressions.get(2), environment, trueBuilder, context);
 
       Assignment falseAssignment = testConditionAmb.getVar()
           .outcomeArrayToAssignment(ConstantValue.FALSE);
       ParametricBfgBuilder falseBuilder = builder.createChild(testConditionAmb.getVar(),
           falseAssignment);
-      EvalResult falseResult = eval(subexpressions.get(3), environment, falseBuilder);
+      EvalResult falseResult = eval(subexpressions.get(3), environment, falseBuilder, context);
 
       // The return value of the if statement is 
       Object trueValue = trueResult.getValue();
@@ -287,14 +326,14 @@ public class AmbEval {
   }
 
   private final EvalResult doAmb(List<SExpression> subexpressions, Environment environment,
-      ParametricBfgBuilder builder) {
-    Preconditions.checkArgument(subexpressions.size() >= 2 && subexpressions.size() <= 3);
+      ParametricBfgBuilder builder, EvalContext context) {
+    LispUtil.checkArgument(subexpressions.size() >= 2 && subexpressions.size() <= 3);
 
-    List<Object> possibleValues = ConsValue.consListToList(eval(subexpressions.get(1), environment, builder)
+    List<Object> possibleValues = ConsValue.consListToList(eval(subexpressions.get(1), environment, builder, context)
         .getValue(), Object.class);
     List<Number> weights;
     if (subexpressions.size() > 2) {
-      weights = ConsValue.consListToList(eval(subexpressions.get(2), environment, builder)
+      weights = ConsValue.consListToList(eval(subexpressions.get(2), environment, builder, context)
           .getValue(), Number.class);
     } else {
       weights = Collections.<Number>nCopies(possibleValues.size(), 1);
@@ -317,9 +356,9 @@ public class AmbEval {
   }
 
   private final EvalResult doGetBestValue(List<SExpression> subexpressions, Environment environment,
-      ParametricBfgBuilder builder) {
-    Preconditions.checkArgument(subexpressions.size() == 2);
-    Object value = eval(subexpressions.get(1), environment, builder).getValue();
+      ParametricBfgBuilder builder, EvalContext context) {
+    LispUtil.checkArgument(subexpressions.size() == 2);
+    Object value = eval(subexpressions.get(1), environment, builder, context).getValue();
 
     if (value instanceof AmbValue || value instanceof ConsValue) {
       BranchingFactorGraph fg = builder.build();
@@ -336,17 +375,17 @@ public class AmbEval {
   }
 
   private final EvalResult doGetMarginals(List<SExpression> subexpressions, Environment environment,
-      ParametricBfgBuilder builder) {
-    Preconditions.checkArgument(subexpressions.size() == 2);
-    Object value = eval(subexpressions.get(1), environment, builder).getValue();
+      ParametricBfgBuilder builder, EvalContext context) {
+    LispUtil.checkArgument(subexpressions.size() == 2);
+    Object value = eval(subexpressions.get(1), environment, builder, context).getValue();
 
     if (value instanceof AmbValue) {
-      VariableNumMap targetVar = ((AmbValue) value).getVar();
-      BranchingFactorGraph fg = builder.buildConnectedComponent(targetVar);
-
-      MarginalSet marginals = fg.getMarginals(targetVar);
-      DiscreteFactor varMarginal = marginals.getMarginal(targetVar.getOnlyVariableNum())
-          .coerceToDiscrete();
+      DiscreteFactor varMarginal;
+      try {
+        varMarginal = ambToMarginals((AmbValue) value, builder, true);
+      } catch (Exception e) {
+        throw new RuntimeException("illegal factor graph", e);
+      }
       
       Iterator<Outcome> iter = varMarginal.outcomeIterator();
       List<Object> outcomes = Lists.newArrayList();
@@ -366,12 +405,27 @@ public class AmbEval {
       return new EvalResult(new ConsValue(outcomesConsList, new ConsValue(weightsConsList, ConstantValue.NIL)));
     }
   }
+  
+  public DiscreteFactor ambToMarginals(AmbValue value, ParametricBfgBuilder builder, boolean normalize) {
+    VariableNumMap targetVar = ((AmbValue) value).getVar();
+    BranchingFactorGraph fg = builder.buildConnectedComponent(targetVar);
+
+    MarginalSet marginals = fg.getMarginals(targetVar);
+    DiscreteFactor varMarginal = marginals.getMarginal(targetVar.getOnlyVariableNum())
+        .coerceToDiscrete();
+    
+    if (normalize) {
+      return varMarginal;
+    } else {
+      return varMarginal.product(Math.exp(marginals.getLogPartitionFunction()));
+    }
+  }
 
   private final EvalResult doAddWeight(List<SExpression> subexpressions, Environment environment,
-      ParametricBfgBuilder builder) {
-    Preconditions.checkArgument(subexpressions.size() == 3);
-    Object value = eval(subexpressions.get(1), environment, builder).getValue();
-    double weight = ((Number) eval(subexpressions.get(2), environment, builder).getValue()).doubleValue();
+      ParametricBfgBuilder builder, EvalContext context) {
+    LispUtil.checkArgument(subexpressions.size() == 3);
+    Object value = eval(subexpressions.get(1), environment, builder, context).getValue();
+    double weight = ((Number) eval(subexpressions.get(2), environment, builder, context).getValue()).doubleValue();
 
     if (value instanceof AmbValue) {
       VariableNumMap fgVar = ((AmbValue) value).getVar();
@@ -388,28 +442,28 @@ public class AmbEval {
   }
 
   private final EvalResult doOpt(List<SExpression> subexpressions, Environment environment,
-      ParametricBfgBuilder builder) {
-    Preconditions.checkArgument(subexpressions.size() == 4 || subexpressions.size() == 5);
+      ParametricBfgBuilder builder, EvalContext context) {
+    LispUtil.checkArgument(subexpressions.size() == 4 || subexpressions.size() == 5);
 
-    Object value = eval(subexpressions.get(1), environment, builder).getValue();
-    Preconditions.checkArgument(value instanceof AmbFunctionValue);
+    Object value = eval(subexpressions.get(1), environment, builder, context).getValue();
+    LispUtil.checkArgument(value instanceof AmbFunctionValue);
     AmbFunctionValue modelFamily = (AmbFunctionValue) value;
 
     SpecAndParameters parameterSpec = (SpecAndParameters) eval(subexpressions.get(2),
-        environment, builder).getValue();
+        environment, builder, context).getValue();
 
-    Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
+    Object trainingDataValue = eval(subexpressions.get(3), environment, builder, context).getValue();
     List<ConsValue> trainingExampleObjects = ConsValue.consListOrArrayToList(
         trainingDataValue, ConsValue.class);
     List<Example<List<Object>, Object>> trainingData = Lists.newArrayList();
     for (ConsValue example : trainingExampleObjects) {
       List<Object> inputOutput = ConsValue.consListToList(example, Object.class);
-      Preconditions.checkArgument(inputOutput.size() == 2);
+      LispUtil.checkArgument(inputOutput.size() == 2);
       trainingData.add(Example.create(ConsValue.consListToList(inputOutput.get(0), Object.class),
           inputOutput.get(1)));
     }
 
-    AmbLispLoglikelihoodOracle oracle = new AmbLispLoglikelihoodOracle(modelFamily, environment,
+    AmbLispLoglikelihoodOracle oracle = new AmbLispLoglikelihoodOracle(modelFamily, context,
         parameterSpec.getParameterSpec(), new JunctionTree());
 
     // 4th argument is an optional parameter for providing optimization parameters.
@@ -417,7 +471,7 @@ public class AmbEval {
     double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME, symbolTable);
     double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME, symbolTable);
     if (subexpressions.size() >= 5) {
-      Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
+      Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder, context).getValue(); 
       Map<String, Object> optimizationParams = ConsValue.associationListToMap(
           optimizationParamsAlist, String.class, Object.class);
 
@@ -430,7 +484,7 @@ public class AmbEval {
     }
 
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createAdagrad(
-        trainingData.size() * epochs, 1, 1, true, false, l2Penalty, l2Frequency,
+        trainingData.size() * epochs, 1, 1, true, false, Double.MAX_VALUE, l2Penalty, l2Frequency,
         new DefaultLogFunction(10000, false));
 
     SufficientStatistics parameters = trainer.train(oracle, parameterSpec.getParameters(), trainingData);
@@ -439,28 +493,28 @@ public class AmbEval {
   }
 
   private final EvalResult doOptMm(List<SExpression> subexpressions, Environment environment,
-      ParametricBfgBuilder builder) {
-    Preconditions.checkArgument(subexpressions.size() == 4 || subexpressions.size() == 5);
+      ParametricBfgBuilder builder, EvalContext context) {
+    LispUtil.checkArgument(subexpressions.size() == 4 || subexpressions.size() == 5);
 
-    Object value = eval(subexpressions.get(1), environment, builder).getValue();
-    Preconditions.checkArgument(value instanceof AmbFunctionValue);
+    Object value = eval(subexpressions.get(1), environment, builder, context).getValue();
+    LispUtil.checkArgument(value instanceof AmbFunctionValue);
     AmbFunctionValue modelFamily = (AmbFunctionValue) value;
 
     SpecAndParameters parameterSpec = (SpecAndParameters) eval(subexpressions.get(2),
-        environment, builder).getValue();
+        environment, builder, context).getValue();
 
-    Object trainingDataValue = eval(subexpressions.get(3), environment, builder).getValue();
+    Object trainingDataValue = eval(subexpressions.get(3), environment, builder, context).getValue();
     List<ConsValue> trainingExampleObjects = ConsValue.consListOrArrayToList(
         trainingDataValue, ConsValue.class);
     List<Example<List<Object>, Example<AmbFunctionValue, AmbFunctionValue>>> trainingData = Lists.newArrayList();
     for (ConsValue example : trainingExampleObjects) {
       List<Object> inputOutput = ConsValue.consListToList(example, Object.class);
-      Preconditions.checkArgument(inputOutput.size() == 3);
+      LispUtil.checkArgument(inputOutput.size() == 3);
       trainingData.add(Example.create(ConsValue.consListToList(inputOutput.get(0), Object.class),
           Example.create((AmbFunctionValue) inputOutput.get(1), (AmbFunctionValue) inputOutput.get(2))));
     }
 
-    AmbLispMaxMarginOracle oracle = new AmbLispMaxMarginOracle(modelFamily, environment,
+    AmbLispMaxMarginOracle oracle = new AmbLispMaxMarginOracle(modelFamily, context,
         parameterSpec.getParameterSpec(), new JunctionTree());
 
     // 4th argument is an optional parameter for providing optimization parameters.
@@ -468,7 +522,7 @@ public class AmbEval {
     double l2Penalty = (Double) environment.getValue(OPT_L2_VAR_NAME, symbolTable);
     double l2Frequency = (Double) environment.getValue(OPT_L2_FREQ_VAR_NAME, symbolTable);
     if (subexpressions.size() >= 5) {
-      Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder).getValue(); 
+      Object optimizationParamsAlist = eval(subexpressions.get(4), environment, builder, context).getValue(); 
       Map<String, Object> optimizationParams = ConsValue.associationListToMap(
           optimizationParamsAlist, String.class, Object.class);
 
@@ -481,7 +535,8 @@ public class AmbEval {
     }
 
     StochasticGradientTrainer trainer = StochasticGradientTrainer.createWithStochasticL2Regularization(
-        trainingData.size() * epochs, 1, 1, true, true, l2Penalty, l2Frequency, new NullLogFunction());
+        trainingData.size() * epochs, 1, 1, true, true, Double.MAX_VALUE, l2Penalty,
+        l2Frequency, new NullLogFunction());
 
     SufficientStatistics parameters = trainer.train(oracle,
         parameterSpec.getParameters(), trainingData);
@@ -492,29 +547,30 @@ public class AmbEval {
   }
 
   public EvalResult doNewFgScope(List<SExpression> subexpressions, Environment environment,
-      ParametricBfgBuilder gfgBuilder) {
+      ParametricBfgBuilder gfgBuilder, EvalContext context) {
     // Sequentially evaluates its subexpressions, chaining any  
     // environment changes, in the context of a new builder.
     ParametricBfgBuilder newBuilder = new ParametricBfgBuilder(true);
     EvalResult result = new EvalResult(ConstantValue.UNDEFINED);
     for (int i = 1; i < subexpressions.size(); i++) {
-      result = eval(subexpressions.get(i), environment, newBuilder);
+      result = eval(subexpressions.get(i), environment, newBuilder, context);
     }
     return result;
   }
 
   public EvalResult doFunctionApplication(List<SExpression> subexpressions, Environment environment,
-      ParametricBfgBuilder gfgBuilder) {
+      ParametricBfgBuilder gfgBuilder, EvalContext context) {
     List<Object> values = Lists.newArrayList();
     for (SExpression expression : subexpressions) {
-      values.add(eval(expression, environment, gfgBuilder).getValue());
+      values.add(eval(expression, environment, gfgBuilder, context).getValue());
     }
 
     Object functionObject = values.get(0);
     List<Object> argumentValues = values.subList(1, values.size());
     if (functionObject instanceof AmbFunctionValue) {
       AmbFunctionValue function = (AmbFunctionValue) functionObject;
-      return new EvalResult(function.apply(argumentValues, environment, gfgBuilder));
+      EvalResult result = new EvalResult(function.apply(argumentValues, context, gfgBuilder));
+      return result;
     } else if (functionObject instanceof AmbValue) {
       // TODO: This gets messed up if the called functions themselves modify gfgBuilder.
       AmbValue functionAmb = ((AmbValue) functionObject);
@@ -523,7 +579,7 @@ public class AmbEval {
       List<Object> possibleReturnValues = Lists.newArrayList();
       for (Object possibleFunctionObject : possibleFunctionObjects) {
         AmbFunctionValue function = (AmbFunctionValue) possibleFunctionObject;
-        Object result = function.apply(argumentValues, environment, gfgBuilder);
+        Object result = function.apply(argumentValues, context, gfgBuilder);
         functionResults.add(result);
 
         if (result instanceof AmbValue) {
@@ -619,11 +675,13 @@ public class AmbEval {
     env.bindName("make-histogram", new RaisedBuiltinFunction(new BuiltinFunctions.MakeHistogramFunction()), symbolTable);
     env.bindName("sample-histogram", new RaisedBuiltinFunction(new BuiltinFunctions.SampleHistogramFunction()), symbolTable);
     env.bindName("sample-histogram-conditional", new RaisedBuiltinFunction(new BuiltinFunctions.SampleHistogramConditionalFunction()), symbolTable);
+    env.bindName("rejection-sample-histogram", new RaisedBuiltinFunction(new BuiltinFunctions.RejectionSampleHistogramFunction()), symbolTable);
     env.bindName("histogram-to-dictionary", new RaisedBuiltinFunction(new BuiltinFunctions.HistogramToDictionaryFunction()), symbolTable);
 
     env.bindName("make-dset", new RaisedBuiltinFunction(new BuiltinFunctions.MakeDset()), symbolTable);
     env.bindName("dset-empty?", new RaisedBuiltinFunction(new BuiltinFunctions.DsetEmpty()), symbolTable);
     env.bindName("dset-intersect", new RaisedBuiltinFunction(new BuiltinFunctions.DsetIntersect()), symbolTable);
+    env.bindName("dset-subtract", new RaisedBuiltinFunction(new BuiltinFunctions.DsetSubtract()), symbolTable);
     
     env.bindName("array", new RaisedBuiltinFunction(new BuiltinFunctions.MakeArrayFunction()), symbolTable);
     env.bindName("array-get-ith-element", new RaisedBuiltinFunction(new BuiltinFunctions.ArrayGetIthElement()), symbolTable); 
@@ -662,7 +720,8 @@ public class AmbEval {
     env.bindName("and", new RaisedBuiltinFunction(new BuiltinFunctions.AndFunction()), symbolTable);
     env.bindName("or", new RaisedBuiltinFunction(new BuiltinFunctions.OrFunction()), symbolTable);
     env.bindName("display", new WrappedBuiltinFunction(new BuiltinFunctions.DisplayFunction()), symbolTable);
-    
+    env.bindName("lambda?", new RaisedBuiltinFunction(new BuiltinFunctions.IsLambda()), symbolTable);
+
     // Bind default environment parameters for opt and opt-mm.
     env.bindName(OPT_EPOCHS_VAR_NAME, 50L, symbolTable);
     env.bindName(OPT_L2_VAR_NAME, 0.0, symbolTable);
@@ -695,12 +754,14 @@ public class AmbEval {
     symbolTable.add("opt");
     symbolTable.add("opt-mm");
     symbolTable.add("new-fg-scope");
+    
+    symbolTable.add(".");
 
     return symbolTable;
   }
 
   public static interface AmbFunctionValue {
-    public Object apply(List<Object> argumentValues, Environment env,
+    public Object apply(List<Object> argumentValues, EvalContext context,
         ParametricBfgBuilder gfgBuilder);
   }
   
@@ -714,16 +775,31 @@ public class AmbEval {
     }
 
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder gfgBuilder) {
-      int[] argumentNameIndexes = lambdaValue.getArgumentNameIndexes(); 
-      Preconditions.checkArgument(argumentNameIndexes.length == argumentValues.size(),
-          "Wrong number of arguments: expected %s, got %s to procedure: %s",
-          lambdaValue.getArgumentExpressions(), argumentValues, this);
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder gfgBuilder) {
+      int[] argumentNameIndexes = lambdaValue.getArgumentNameIndexes();
 
       Environment boundEnvironment = Environment.extend(lambdaValue.getEnvironment());
-      boundEnvironment.bindNames(argumentNameIndexes, argumentValues);
+      if (lambdaValue.hasVarargs()) {
+        LispUtil.checkArgument(argumentValues.size() > argumentNameIndexes.length - 1,
+            "Wrong number of arguments: expected %s, got %s to procedure: %s",
+            lambdaValue.getArgumentExpressions(), argumentValues, this);
+        // Last argument is the varargs parameter. 
+        for (int i = 0; i < argumentNameIndexes.length - 1; i++) {
+          boundEnvironment.bindName(argumentNameIndexes[i], argumentValues.get(i));
+        }
 
-      return eval.eval(lambdaValue.getBody(), boundEnvironment, gfgBuilder).getValue();
+        Object remainingArgumentList = ConsValue.listToConsList(
+            argumentValues.subList(argumentNameIndexes.length - 1, argumentValues.size()));
+        boundEnvironment.bindName(argumentNameIndexes[argumentNameIndexes.length - 1], remainingArgumentList);
+      } else {
+        LispUtil.checkArgument(argumentNameIndexes.length == argumentValues.size(),
+            "Wrong number of arguments: expected %s, got %s to procedure: %s",
+            lambdaValue.getArgumentExpressions(), argumentValues, this);
+
+        boundEnvironment.bindNames(argumentNameIndexes, argumentValues);
+      }
+
+      return eval.eval(lambdaValue.getBody(), boundEnvironment, gfgBuilder, context).getValue();
     }
     
     @Override
@@ -740,13 +816,17 @@ public class AmbEval {
     }
 
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder gfgBuilder) {
-      return baseFunction.apply(argumentValues, env);
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder gfgBuilder) {
+      return baseFunction.apply(argumentValues, context);
     }
     
     @Override
     public String toString() {
       return baseFunction.toString();
+    }
+    
+    public FunctionValue getBaseFunction() {
+      return baseFunction;
     }
   }
 
@@ -758,13 +838,25 @@ public class AmbEval {
     }
 
     @Override
-    public Object apply(List<Object> argumentValues, Environment env, ParametricBfgBuilder gfgBuilder) {
+    public Object apply(List<Object> argumentValues, EvalContext context, ParametricBfgBuilder gfgBuilder) {
+      // Try to short circuit the computation if no amb values are given
+      boolean noAmbValues = true;
+      for (int i = 0; i < argumentValues.size(); i++) {
+        if (argumentValues.get(i) instanceof AmbValue) {
+          noAmbValues = false;
+          break;
+        }
+      }
+      
+      if (noAmbValues) {
+        return baseFunction.apply(argumentValues, context);
+      }
+      
       // Default case: perform function application.
       List<List<Object>> inputVarValues = Lists.newArrayList();
       List<VariableNumMap> inputVars = Lists.newArrayList();
       VariableNumMap ambVars = VariableNumMap.EMPTY;
       int[] sizes = new int[argumentValues.size()];
-      boolean noAmbValues = true;
       for (int i = 0; i < argumentValues.size(); i++) {
         Object value = argumentValues.get(i);
         if (value instanceof AmbValue) {
@@ -773,21 +865,11 @@ public class AmbEval {
           sizes[i] = ambValue.getPossibleValues().size();
           ambVars = ambVars.union(ambValue.getVar());
           inputVars.add(ambValue.getVar());
-          noAmbValues = false;
         } else {
           inputVarValues.add(Lists.newArrayList(value));
           sizes[i] = 1;
           inputVars.add(null);
         }
-      }
-      
-      if (noAmbValues) {
-        // Short-circuit the more complex computation for efficiency.
-        List<Object> arguments = Lists.newArrayList();
-        for (List<Object> valueList : inputVarValues) {
-          arguments.add(Iterables.getOnlyElement(valueList));
-        }
-        return baseFunction.apply(arguments, env);
       }
 
       // Apply the function to every possible combination of 
@@ -802,7 +884,7 @@ public class AmbEval {
           chosenValues.add(inputVarValues.get(i).get(indexes[i]));
         }
 
-        Object result = baseFunction.apply(chosenValues, env);
+        Object result = baseFunction.apply(chosenValues, context);
         if (result instanceof AmbValue) {
           possibleValues.addAll(((AmbValue) result).getPossibleValues());
         } else {
@@ -835,7 +917,7 @@ public class AmbEval {
           }
         }
 
-        Object result = baseFunction.apply(chosenValues, env);
+        Object result = baseFunction.apply(chosenValues, context);
         if (result instanceof AmbValue) {
           Preconditions.checkState(false, "Probabilistic functions not yet supported. baseFunction %s", baseFunction);
         } else {
@@ -866,15 +948,15 @@ public class AmbEval {
    */
   public static class ArrayMapFunction implements AmbFunctionValue {
     @Override    
-    public Object apply(List<Object> argumentValues, Environment env,
+    public Object apply(List<Object> argumentValues, EvalContext context,
         ParametricBfgBuilder gfgBuilder) {
-      Preconditions.checkArgument(argumentValues.size() == 2);
+      LispUtil.checkArgument(argumentValues.size() == 2);
       AmbFunctionValue function = (AmbFunctionValue) argumentValues.get(0);
       Object[] values = (Object[]) argumentValues.get(1);
       
       Object[] result = new Object[values.length];
       for (int i = 0; i < values.length; i++) {
-        result[i] = function.apply(Arrays.asList(values[i]), env, gfgBuilder);
+        result[i] = function.apply(Arrays.asList(values[i]), context, gfgBuilder);
       }
       return result;
     }
@@ -890,17 +972,17 @@ public class AmbEval {
    */
   public static class ArrayFoldRightFunction implements AmbFunctionValue {
     @Override    
-    public Object apply(List<Object> argumentValues, Environment env,
+    public Object apply(List<Object> argumentValues, EvalContext context,
         ParametricBfgBuilder gfgBuilder) {
       // Arguments are: <function> <array> <initial val>
-      Preconditions.checkArgument(argumentValues.size() == 3);
+      LispUtil.checkArgument(argumentValues.size() == 3);
       AmbFunctionValue function = (AmbFunctionValue) argumentValues.get(0);
       Object[] values = (Object[]) argumentValues.get(1);
       Object initialValue = argumentValues.get(2);
 
       Object result = initialValue;
       for (int i = values.length - 1; i >= 0; i--) {
-        result = function.apply(Arrays.asList(values[i], result), env, gfgBuilder);
+        result = function.apply(Arrays.asList(values[i], result), context, gfgBuilder);
       }
       return result;
     }

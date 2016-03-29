@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class LispEval {
@@ -19,6 +20,9 @@ public class LispEval {
   }
 
   public EvalResult eval(SExpression expression, Environment environment) {
+    // TODO: deal with this context in a reasonable way.
+    EvalContext context = new EvalContext(new NullLogFunction());
+
     if (expression.isConstant()) {
       // The expression may be a primitive type or a variable.
       String constantString = expression.getConstant();
@@ -55,22 +59,22 @@ public class LispEval {
           return result;
         } else if (constantName.equals("lambda")) {
           // Create and return a function value representing this function.
-          Preconditions.checkArgument(subexpressions.size() == 3);
+          LispUtil.checkArgument(subexpressions.size() == 3);
 
           List<SExpression> argumentExpressions = subexpressions.get(1).getSubexpressions();
           int[] argumentNameIndexes = new int[argumentExpressions.size()];
           int ind = 0;
           for (SExpression argumentExpression : argumentExpressions) {
-            Preconditions.checkArgument(argumentExpression.isConstant());
+            LispUtil.checkArgument(argumentExpression.isConstant());
             argumentNameIndexes[ind] = argumentExpression.getConstantIndex();
             ind++;
           }
 
           SExpression functionBody = subexpressions.get(2); 
-          return new EvalResult(new LambdaValue(argumentExpressions, argumentNameIndexes,
+          return new EvalResult(new LambdaValue(argumentExpressions, argumentNameIndexes, false,
               functionBody, environment));
         } else if (constantName.equals("if")) {
-          Preconditions.checkArgument(subexpressions.size() == 4);
+          LispUtil.checkArgument(subexpressions.size() == 4);
           Object testCondition = eval(subexpressions.get(1), environment).getValue();
           if (ConstantValue.TRUE.equals(testCondition)) {
             return eval(subexpressions.get(2), environment);
@@ -90,7 +94,7 @@ public class LispEval {
         // Primitive procedures.
         FunctionValue functionToApply = (FunctionValue) values.get(0);
         List<Object> arguments = values.subList(1, values.size());
-        Object result = functionToApply.apply(arguments, environment);
+        Object result = functionToApply.apply(arguments, context);
         return new EvalResult(result);
       } else if (values.get(0) instanceof LambdaValue) {
         // Lambda procedures.
@@ -98,7 +102,7 @@ public class LispEval {
         List<Object> arguments = values.subList(1, values.size());
 
         int[] argumentNameIndexes = functionToApply.getArgumentNameIndexes(); 
-        Preconditions.checkArgument(argumentNameIndexes.length == arguments.size(),
+        LispUtil.checkArgument(argumentNameIndexes.length == arguments.size(),
             "Wrong number of arguments: expected %s, got %s",
             functionToApply.getArgumentExpressions(), arguments);
 
@@ -125,6 +129,7 @@ public class LispEval {
     env.bindName("not", new BuiltinFunctions.NotFunction(), symbolTable);
     env.bindName("and", new BuiltinFunctions.AndFunction(), symbolTable);
     env.bindName("or", new BuiltinFunctions.OrFunction(), symbolTable);
+    env.bindName("lambda?", new BuiltinFunctions.IsLambda(), symbolTable);
     return env;
   }
   

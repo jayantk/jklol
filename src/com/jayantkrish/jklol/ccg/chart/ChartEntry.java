@@ -85,6 +85,71 @@ public class ChartEntry {
   // True if this chart entry is the direct result of applying a
   // conjunction rule.
   private final boolean isProducedByConjunction;
+  
+  // Object for attaching side information to a chart entry. 
+  private final Object additionalInfo;
+  
+  
+  /**
+   * Copy constructor.
+   * 
+   * @param syntax
+   * @param syntaxUniqueVars
+   * @param syntaxHeadVar
+   * @param rootUnaryRule
+   * @param leftUnaryRule
+   * @param rightUnaryRule
+   * @param assignmentVarIndex
+   * @param assignments
+   * @param unfilledDependencyVarIndex
+   * @param unfilledDependencies
+   * @param deps
+   * @param syntaxHeadHashCode
+   * @param lexiconEntry
+   * @param lexiconTrigger
+   * @param lexiconIndex
+   * @param leftSpanStart
+   * @param leftSpanEnd
+   * @param leftChartIndex
+   * @param rightSpanStart
+   * @param rightSpanEnd
+   * @param rightChartIndex
+   * @param combinator
+   * @param isProducedByConjunction
+   * @param additionalInfo
+   */
+  private ChartEntry(int syntax, int[] syntaxUniqueVars, int syntaxHeadVar,
+      UnaryCombinator rootUnaryRule, UnaryCombinator leftUnaryRule, UnaryCombinator rightUnaryRule,
+      int[] assignmentVarIndex, long[] assignments, int[] unfilledDependencyVarIndex,
+      long[] unfilledDependencies, long[] deps, long syntaxHeadHashCode, CcgCategory lexiconEntry,
+      Object lexiconTrigger, int lexiconIndex, int leftSpanStart, int leftSpanEnd,
+      int leftChartIndex, int rightSpanStart, int rightSpanEnd, int rightChartIndex,
+      Combinator combinator, boolean isProducedByConjunction, Object additionalInfo) {
+    this.syntax = syntax;
+    this.syntaxUniqueVars = syntaxUniqueVars;
+    this.syntaxHeadVar = syntaxHeadVar;
+    this.rootUnaryRule = rootUnaryRule;
+    this.leftUnaryRule = leftUnaryRule;
+    this.rightUnaryRule = rightUnaryRule;
+    this.assignmentVarIndex = assignmentVarIndex;
+    this.assignments = assignments;
+    this.unfilledDependencyVarIndex = unfilledDependencyVarIndex;
+    this.unfilledDependencies = unfilledDependencies;
+    this.deps = deps;
+    this.syntaxHeadHashCode = syntaxHeadHashCode;
+    this.lexiconEntry = lexiconEntry;
+    this.lexiconTrigger = lexiconTrigger;
+    this.lexiconIndex = lexiconIndex;
+    this.leftSpanStart = leftSpanStart;
+    this.leftSpanEnd = leftSpanEnd;
+    this.leftChartIndex = leftChartIndex;
+    this.rightSpanStart = rightSpanStart;
+    this.rightSpanEnd = rightSpanEnd;
+    this.rightChartIndex = rightChartIndex;
+    this.combinator = combinator;
+    this.isProducedByConjunction = isProducedByConjunction;
+    this.additionalInfo = additionalInfo;
+  }
 
   /**
    * Use this constructor for nonterminals in the parse tree.
@@ -108,6 +173,7 @@ public class ChartEntry {
    * @param rightChartIndex
    * @param combinator
    * @param isProducedByConjunction
+   * @param additionalInfo
    */
   public ChartEntry(int syntax, int[] syntaxUniqueVars, int syntaxHeadVar, UnaryCombinator rootUnaryRule,
       UnaryCombinator leftUnaryRule, UnaryCombinator rightUnaryRule, int[] assignmentVarIndex,
@@ -144,6 +210,8 @@ public class ChartEntry {
 
     this.combinator = combinator;
     this.isProducedByConjunction = isProducedByConjunction;
+    
+    this.additionalInfo = null;
   }
 
   /**
@@ -200,10 +268,16 @@ public class ChartEntry {
 
     this.combinator = null;
     this.isProducedByConjunction = false;
+    
+    this.additionalInfo = null;
   }
 
   public int getHeadedSyntax() {
     return syntax;
+  }
+  
+  public int[] getSyntaxUniqueVars() {
+    return syntaxUniqueVars;
   }
 
   public int getHeadVariable() {
@@ -384,6 +458,10 @@ public class ChartEntry {
   public boolean isProducedByConjunction() {
     return isProducedByConjunction;
   }
+  
+  public Object getAdditionalInfo() {
+    return additionalInfo;
+  }
 
   public ChartEntry applyUnaryRule(int resultSyntax, int[] resultUniqueVars,
       int resultHeadVar, UnaryCombinator unaryRuleCombinator, int[] newAssignmentVarIndex,
@@ -399,6 +477,20 @@ public class ChartEntry {
           newAssignmentVarIndex, newAssignments, newUnfilledDepVarIndex, newUnfilledDeps, newFilledDeps, leftSpanStart,
           leftSpanEnd, leftChartIndex, rightSpanStart, rightSpanEnd, rightChartIndex, combinator, isProducedByConjunction);
     }
+  }
+  
+  public ChartEntry addAdditionalInfo(Object newAdditionalInfo) {
+    return new ChartEntry(syntax, syntaxUniqueVars, syntaxHeadVar, rootUnaryRule, leftUnaryRule, rightUnaryRule,
+        assignmentVarIndex, assignments, unfilledDependencyVarIndex, unfilledDependencies, deps, syntaxHeadHashCode, 
+        lexiconEntry, lexiconTrigger, lexiconIndex, leftSpanStart, leftSpanEnd, leftChartIndex, rightSpanStart,
+        rightSpanEnd, rightChartIndex, combinator, isProducedByConjunction, newAdditionalInfo);
+  }
+
+  public ChartEntry replaceRight(int newRightSpanStart, int newRightSpanEnd, int newRightChartIndex) {
+    return new ChartEntry(syntax, syntaxUniqueVars, syntaxHeadVar, rootUnaryRule, leftUnaryRule, rightUnaryRule,
+        assignmentVarIndex, assignments, unfilledDependencyVarIndex, unfilledDependencies, deps, syntaxHeadHashCode, 
+        lexiconEntry, lexiconTrigger, lexiconIndex, leftSpanStart, leftSpanEnd, leftChartIndex, newRightSpanStart,
+        newRightSpanEnd, newRightChartIndex, combinator, isProducedByConjunction, additionalInfo);
   }
 
   @Override

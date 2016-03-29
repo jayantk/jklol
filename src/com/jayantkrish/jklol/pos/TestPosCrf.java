@@ -15,6 +15,8 @@ public class TestPosCrf extends AbstractCli {
 
   private OptionSpec<String> model;
   private OptionSpec<String> testFilename;
+  
+  private OptionSpec<String> cliInput;
 
   public TestPosCrf() {
     super(CommonOptions.MAP_REDUCE);
@@ -24,6 +26,8 @@ public class TestPosCrf extends AbstractCli {
   public void initializeOptions(OptionParser parser) {
     model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
     testFilename = parser.accepts("testFilename").withRequiredArg().ofType(String.class);
+    
+    cliInput = parser.nonOptions().ofType(String.class);
   }
 
   @Override
@@ -40,7 +44,7 @@ public class TestPosCrf extends AbstractCli {
       System.out.println("TAG ACCURACY: " + error.getTagAccuracy() + " (" + error.getNumTagsCorrect() + " / " + error.getNumTags() + ")");
       System.out.println("SENTENCE ACCURACY: " + error.getSentenceAccuracy() + " (" + error.getNumSentencesCorrect() + " / " + error.getNumSentences() + ")");
     } else {
-      PosTaggedSentence tags = trainedModel.tag(options.nonOptionArguments());
+      PosTaggedSentence tags = trainedModel.tag(options.valuesOf(cliInput));
       System.out.println(tags.getWords());
       System.out.println(tags.getPos());
     }

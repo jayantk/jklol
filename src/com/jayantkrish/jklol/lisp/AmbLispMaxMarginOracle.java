@@ -22,15 +22,15 @@ public class AmbLispMaxMarginOracle implements GradientOracle<AmbFunctionValue,
 Example<List<Object>, Example<AmbFunctionValue,AmbFunctionValue>>> {
 
   private final AmbFunctionValue family;
-  private final Environment environment;
+  private final EvalContext context;
   private final ParameterSpec parameterSpec;
 
   private final MarginalCalculator marginalCalculator;
 
-  public AmbLispMaxMarginOracle(AmbFunctionValue family, Environment environment,
+  public AmbLispMaxMarginOracle(AmbFunctionValue family, EvalContext context,
       ParameterSpec parameterSpec, MarginalCalculator marginalCalculator) {
     this.family = Preconditions.checkNotNull(family);
-    this.environment = Preconditions.checkNotNull(environment);
+    this.context = Preconditions.checkNotNull(context);
     this.parameterSpec = Preconditions.checkNotNull(parameterSpec);
     this.marginalCalculator = Preconditions.checkNotNull(marginalCalculator);
   }
@@ -39,7 +39,7 @@ Example<List<Object>, Example<AmbFunctionValue,AmbFunctionValue>>> {
   public AmbFunctionValue instantiateModel(SufficientStatistics parameters) {
     ParametricBfgBuilder newBuilder = new ParametricBfgBuilder(true);
     Object value = family.apply(Arrays.<Object>asList(new SpecAndParameters(parameterSpec, parameters)),
-        environment, newBuilder);
+        context, newBuilder);
     Preconditions.checkState(value instanceof AmbFunctionValue);    
     return (AmbFunctionValue) value;
   }
@@ -60,8 +60,8 @@ Example<List<Object>, Example<AmbFunctionValue,AmbFunctionValue>>> {
     // Evaluate the nondeterministic function on the input value 
     // then augment the distribution with the costs. 
     ParametricBfgBuilder inputBuilder = new ParametricBfgBuilder(true);
-    Object inputApplicationResult = instantiatedModel.apply(input, environment, inputBuilder);
-    costFunction.apply(Arrays.asList(inputApplicationResult), environment, inputBuilder);
+    Object inputApplicationResult = instantiatedModel.apply(input, context, inputBuilder);
+    costFunction.apply(Arrays.asList(inputApplicationResult), context, inputBuilder);
     FactorGraph inputFactorGraph = inputBuilder.buildNoBranching();
 
     MaxMarginalSet inputMaxMarginals = marginalCalculator.computeMaxMarginals(inputFactorGraph);
@@ -72,8 +72,8 @@ Example<List<Object>, Example<AmbFunctionValue,AmbFunctionValue>>> {
     // Evaluate the nondeterministic function on the input value 
     // then condition the distribution on the true output. 
     ParametricBfgBuilder outputBuilder = new ParametricBfgBuilder(true);
-    inputApplicationResult = instantiatedModel.apply(input, environment, outputBuilder);
-    outputFunction.apply(Arrays.asList(inputApplicationResult), environment, outputBuilder);
+    inputApplicationResult = instantiatedModel.apply(input, context, outputBuilder);
+    outputFunction.apply(Arrays.asList(inputApplicationResult), context, outputBuilder);
     FactorGraph outputFactorGraph = outputBuilder.buildNoBranching();
 
     MaxMarginalSet outputMaxMarginals = marginalCalculator.computeMaxMarginals(outputFactorGraph);

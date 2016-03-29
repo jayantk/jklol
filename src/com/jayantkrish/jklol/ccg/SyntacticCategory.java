@@ -121,7 +121,7 @@ public class SyntacticCategory implements Serializable {
     while (index < typeString.length()) {
       if (typeString.charAt(index) == '\\' || typeString.charAt(index) == '/'
           || typeString.charAt(index) == '|') {
-        if (parenDepth < minParenDepth) {
+        if (parenDepth <= minParenDepth) {
           minParenDepth = parenDepth;
           minParenDepthIndex = index;
         }
@@ -171,15 +171,15 @@ public class SyntacticCategory implements Serializable {
       returnValue = new SyntacticCategory(baseSyntacticType, null, null, null, featureValue, featureVariable);
     } else {
       // Find the string corresponding to the operator.
-      int returnTypeIndex = minParenDepthIndex + 1;
+      int argumentTypeIndex = minParenDepthIndex + 1;
 
       SyntacticCategory left = parseSyntacticTypeStringHelper(
           typeString.substring(0, minParenDepthIndex));
 
       SyntacticCategory right = parseSyntacticTypeStringHelper(
-          typeString.substring(returnTypeIndex, typeString.length()));
+          typeString.substring(argumentTypeIndex, typeString.length()));
 
-      String directionString = typeString.substring(minParenDepthIndex, returnTypeIndex);
+      String directionString = typeString.substring(minParenDepthIndex, argumentTypeIndex);
       Direction direction = null;
       if (directionString.startsWith("\\")) {
         direction = Direction.LEFT;
@@ -520,7 +520,7 @@ public class SyntacticCategory implements Serializable {
     } else if (isAtomic()) {
       return value.equals(other.value);
     } else {
-      return direction.equals(other.direction) && 
+      return (direction.equals(Direction.BOTH) || direction.equals(other.direction)) && 
           argumentType.isUnifiableWith(other.argumentType, myAssignedFeatures, otherAssignedFeatures, relabeledFeatures) &&
           returnType.isUnifiableWith(other.returnType, myAssignedFeatures, otherAssignedFeatures, relabeledFeatures);
     }

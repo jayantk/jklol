@@ -31,7 +31,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
   // Function for comparing the equality of logical forms.
   private final ExpressionComparator comparator;
   
-  private final CcgBeamSearchInference inference;
+  private final CcgInference inference;
 
   /**
    * 
@@ -41,10 +41,10 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
    * @param inference
    */
   public CcgLoglikelihoodOracle(ParametricCcgParser family, ExpressionComparator comparator, 
-      CcgBeamSearchInference inference) {
+      CcgInference inference) {
     this.family = Preconditions.checkNotNull(family);
     this.comparator = comparator;
-    this.inference = inference;
+    this.inference = Preconditions.checkNotNull(inference);
   }
 
   @Override
@@ -77,15 +77,14 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     log.stopTimer("update_gradient/input_marginal");
 
     // Find parses with the correct syntactic structure and dependencies.
-    log.startTimer("update_gradient/condition_parses_on_dependencies");
+    log.startTimer("update_gradient/condition_parses");
     // Condition parses on provided syntactic / lexicon information,
     // if any is provided.
     ChartCost syntacticCost = null;
-    ChartCost lexiconCost = null;
     if (example.hasSyntacticParse()) {
       syntacticCost = SyntacticChartCost.createAgreementCost(example.getSyntacticParse());
     }
-    ChartCost cost = SumChartCost.create(syntacticCost, lexiconCost);
+    ChartCost cost = SumChartCost.create(syntacticCost);
 
     List<CcgParse> possibleParses = null;
     if (cost != null) {
@@ -104,18 +103,13 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
     if (example.hasLogicalForm()) {
       correctParses = filterParsesByLogicalForm(example.getLogicalForm(), comparator, correctParses);
     }
+    log.stopTimer("update_gradient/condition_parses");
 
     if (correctParses.size() == 0) {
       // Search error: couldn't find any correct parses.
       System.out.println("Search error (Correct): " + sentence + " " + example.getLogicalForm());
-      /*
-      for (CcgParse parse : possibleParses) {
-        System.out.println(parse.getLogicalForm());
-      }
-      */
       throw new ZeroProbabilityError();
     }
-    log.stopTimer("update_gradient/condition_parses_on_dependencies");
 
     log.startTimer("update_gradient/increment_gradient");
     // Subtract the unconditional expected feature counts.
@@ -132,7 +126,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
           parse.getSubtreeProbability() / conditionalPartitionFunction);
     }
     log.stopTimer("update_gradient/increment_gradient");
-
+    
     // The difference in log partition functions is equivalent to the loglikelihood
     // assigned to all correct parses.
     return Math.log(conditionalPartitionFunction) - Math.log(unconditionalPartitionFunction);
@@ -140,6 +134,7 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
 
   public static List<CcgParse> filterParsesByDependencies(Set<DependencyStructure> observedDependencies,
       Iterable<CcgParse> parses) {
+    Preconditions.checkNotNull(observedDependencies);
     List<CcgParse> correctParses = Lists.newArrayList();
     
     for (CcgParse parse : parses) {
@@ -152,11 +147,13 @@ public class CcgLoglikelihoodOracle implements GradientOracle<CcgParser, CcgExam
   
   public static List<CcgParse> filterParsesByLogicalForm(Expression2 observedLogicalForm,
     ExpressionComparator comparator, Iterable<CcgParse> parses) {
+    Preconditions.checkNotNull(observedLogicalForm);
+
     List<CcgParse> correctParses = Lists.newArrayList();
     for (CcgParse parse : parses) {
       Expression2 predictedLogicalForm = parse.getLogicalForm();
 
-      if (predictedLogicalForm != null && comparator.equals(predictedLogicalForm, observedLogicalForm)) {
+      if (predictedLogicalForm != null && comparator.equals(predictedLogicalForm, observedLogicalForm)){
         correctParses.add(parse);
       }
     }

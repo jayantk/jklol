@@ -12,7 +12,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.primitives.Doubles;
-import com.jayantkrish.jklol.ccg.CcgExactInference;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.SupertaggingCcgParser;
@@ -34,6 +34,7 @@ public class ParseToLogicalForm extends AbstractCli {
   private OptionSpec<String> lfTemplates;
   private OptionSpec<String> inputFile;
 
+  private OptionSpec<Integer> beamSize;
   private OptionSpec<Long> maxParseTimeMillis;
   private OptionSpec<Integer> maxChartSize;
   private OptionSpec<Integer> parserThreads;
@@ -55,6 +56,8 @@ public class ParseToLogicalForm extends AbstractCli {
     inputFile = optionParser.accepts("inputFile").withRequiredArg().ofType(String.class).required();
     
     // Optional arguments
+    beamSize = optionParser.accepts("beamSize").withRequiredArg().ofType(Integer.class)
+        .defaultsTo(100);
     maxParseTimeMillis = optionParser.accepts("maxParseTimeMillis").withRequiredArg()
         .ofType(Long.class).defaultsTo(-1L);
     maxChartSize = optionParser.accepts("maxChartSize").withRequiredArg().ofType(Integer.class)
@@ -71,7 +74,7 @@ public class ParseToLogicalForm extends AbstractCli {
     double[] tagThresholds = Doubles.toArray(options.valuesOf(multitagThresholds));
 
     SupertaggingCcgParser supertaggingParser = new SupertaggingCcgParser(ccgParser, 
-        new CcgExactInference(null, options.valueOf(maxParseTimeMillis),
+        new CcgCkyInference(null, options.valueOf(beamSize), options.valueOf(maxParseTimeMillis),
             options.valueOf(maxChartSize), options.valueOf(parserThreads)),
         tagger, tagThresholds, TrainSyntacticCcgParser.SUPERTAG_ANNOTATION_NAME);
 

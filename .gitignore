@@ -9,3 +9,7 @@
 .classpath
 .project
 /bin/
+
+# Misc from Intellij
+/target
+/bin/

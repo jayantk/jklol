@@ -191,6 +191,16 @@ public class FactoredTensor extends AbstractTensor {
   public double[] getValues() {
     throw new UnsupportedOperationException("Not implemented.");
   }
+  
+  @Override
+  public TensorHash toHash() {
+    TensorHash[] hashes = new TensorHash[tensors.length];
+    for (int i = 0; i < tensors.length; i++) {
+      hashes[i] = tensors[i].toHash();
+    }
+    return new FactoredTensorHash(hashes, getDimensionOffsets(), getMaxKeyNum(),
+        tensorDimensionOffsets, numDimensions);
+  }
 
   @Override
   public int size() {
@@ -280,5 +290,44 @@ public class FactoredTensor extends AbstractTensor {
   @Override
   public long[] getLargestValues(int n) {
     throw new UnsupportedOperationException("Not implemented.");
+  }
+  
+  private static class FactoredTensorHash implements TensorHash {
+    private static final long serialVersionUID = 1L;
+
+    // The elements which are multiplied to get the value of this tensor.
+    private final TensorHash[] tensors;
+    private final long[] dimensionOffsets;
+    private final long maxKeyNum;
+    
+    // Stores the subset of dimensions which are used to index each tensor.
+    // Offsets are set to zero for dimensions which are not used.
+    private final long[] tensorDimensionOffsets;
+    private final int numDimensions;
+    
+    public FactoredTensorHash(TensorHash[] tensors, long[] dimensionOffsets, long maxKeyNum,
+        long[] tensorDimensionOffsets, int numDimensions) {
+      this.tensors = tensors;
+      this.dimensionOffsets = dimensionOffsets;
+      this.maxKeyNum = maxKeyNum;
+      this.tensorDimensionOffsets = tensorDimensionOffsets;
+      this.numDimensions = numDimensions;
+    }
+
+    @Override
+    public double get(long keyNum) {
+      double prob = 1.0;
+      for (int i = 0; i < tensors.length; i++) {
+        TensorHash tensor = tensors[i];
+        long tensorKeyNum = 0;
+        for (int j = 0; j < numDimensions; j++) {
+          long prevModulo = (j == 0) ? maxKeyNum : dimensionOffsets[j - 1];
+          tensorKeyNum += tensorDimensionOffsets[(i * numDimensions) + j]
+              * ((keyNum % prevModulo) / dimensionOffsets[j]);
+        }
+        prob *= tensor.get(tensorKeyNum);
+      }
+      return prob;
+    }
   }
 }

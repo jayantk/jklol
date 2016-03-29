@@ -8,7 +8,7 @@ import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
@@ -46,7 +46,7 @@ public class TestSemanticParser extends AbstractCli {
     System.out.println("Read " + testExamples.size() + " test examples");
 
     CcgParser parser = IoUtils.readSerializedObject(options.valueOf(model), CcgParser.class);
-    CcgBeamSearchInference inferenceAlg = new CcgBeamSearchInference(null, null, 100, -1, Integer.MAX_VALUE, 1, false);
+    CcgCkyInference inferenceAlg = CcgCkyInference.getDefault(300);
     ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
         <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
             new VariableCanonicalizationReplacementRule(),
@@ -55,7 +55,7 @@ public class TestSemanticParser extends AbstractCli {
     
     List<SemanticParserExampleLoss> exampleLosses = Lists.newArrayList();
     SemanticParserUtils.testSemanticParser(testExamples, parser, inferenceAlg, simplifier,
-        comparator, exampleLosses);
+        comparator, exampleLosses, true);
 
     if (options.has(errorJson)) {
       SemanticParserExampleLoss.writeJsonToFile(options.valueOf(errorJson), exampleLosses);

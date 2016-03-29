@@ -3,9 +3,10 @@ package com.jayantkrish.jklol.ccg.util;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.jayantkrish.jklol.ccg.CcgBeamSearchInference;
 import com.jayantkrish.jklol.ccg.CcgExample;
-import com.jayantkrish.jklol.ccg.CcgInference;
 import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DependencyStructure;
@@ -20,6 +21,7 @@ import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
+import com.jayantkrish.jklol.util.CountAccumulator;
 
 public class SemanticParserUtils {
 
@@ -38,7 +40,7 @@ public class SemanticParserUtils {
    * @return
    */
   public static SemanticParserLoss testSemanticParser(List<CcgExample> testExamples, CcgParser parser,
-      CcgInference inferenceAlg, ExpressionSimplifier simplifier, ExpressionComparator comparator,
+      CcgBeamSearchInference inferenceAlg, ExpressionSimplifier simplifier, ExpressionComparator comparator,
       List<SemanticParserExampleLoss> exampleLossAccumulator) {
     int numCorrect = 0;
     int numCorrectLfPossible = 0;
@@ -48,10 +50,22 @@ public class SemanticParserUtils {
     for (CcgExample example : testExamples) {
       Expression2 correctLf = simplifier.apply(example.getLogicalForm());
 
-      CcgParse parse = inferenceAlg.getBestParse(parser, example.getSentence(), null, log);
+      List<CcgParse> parses = inferenceAlg.beamSearch(parser, example.getSentence(), null, log);
+      CountAccumulator<Expression2> expressions = inferenceAlg.marginalize(parses, simplifier);
       System.out.println("====");
       System.out.println("SENT: " + example.getSentence().getWords());
-      if (parse != null) {
+      if (expressions.keySet().size() > 0) {
+        Expression2 best = expressions.getSortedKeys().get(0); 
+        // Pick the best parse that produces this expression:
+        CcgParse parse = null;
+        for (CcgParse p : parses) {
+          if (simplifier.apply(p.getLogicalForm()).equals(best)) {
+            parse = p;
+            break;
+          }
+        }
+        Preconditions.checkState(parse != null);
+
         int correct = 0;
         int correctLfPossible = 0;
         Expression2 lf = null;
@@ -73,6 +87,12 @@ public class SemanticParserUtils {
         List<DependencyStructure> deps = parse.getAllDependencies();
 
         System.out.println("PREDICTED: " + lf);
+        List<Expression2> sorted = expressions.getSortedKeys();
+        for (int i = 0; i < sorted.size(); i++) {
+          Expression2 key = sorted.get(i);
+          System.out.println("   " + expressions.getProbability(key) + " " + key);
+        }
+
         System.out.println("TRUE:      " + correctLf);
         System.out.println("DEPS: " + deps);
         System.out.println("CORRECT: " + correct);

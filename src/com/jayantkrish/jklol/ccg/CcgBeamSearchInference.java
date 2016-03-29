@@ -8,8 +8,10 @@ import com.jayantkrish.jklol.ccg.chart.SumChartCost;
 import com.jayantkrish.jklol.ccg.chart.SyntacticChartCost;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
+import com.jayantkrish.jklol.util.CountAccumulator;
 
 /**
  * Beam search inference algorithm for CCG parsing. This algorithm 
@@ -110,5 +112,14 @@ public class CcgBeamSearchInference implements CcgInference {
     } else {
       return null;
     }
+  }
+  
+  public CountAccumulator<Expression2> marginalize(List<CcgParse> parses, ExpressionSimplifier simplifier) {
+    CountAccumulator<Expression2> acc = CountAccumulator.create();
+    for (CcgParse parse : parses) {
+      Expression2 lf = simplifier.apply(parse.getLogicalForm());
+      acc.increment(lf, parse.getSubtreeProbability());
+    }
+    return acc;
   }
 }

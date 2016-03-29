@@ -258,10 +258,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
         GeoqueryUtil.FEATURE_ANNOTATION_NAME, featureGen.getFeatureDictionary(),
         LexiconEntry.parseLexiconEntries(additionalLexiconEntries));
 
-    ExpressionSimplifier simplifier = new ExpressionSimplifier(Arrays.
-        <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
-            new VariableCanonicalizationReplacementRule(),
-            new CommutativeReplacementRule("and:<t*,t>")));
+    ExpressionSimplifier simplifier = GeoqueryUtil.getExpressionSimplifier();
     ExpressionComparator comparator = new SimplificationComparator(simplifier);
 
     CcgBeamSearchInference inferenceAlgorithm = new CcgBeamSearchInference(null, comparator, beamSize,
@@ -419,6 +416,9 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     }
     */
 
+    System.out.println("final parameters:");
+    System.out.println(family.getParameterDescription(parameters));
+    
     return family.getModelFromParameters(parameters);
   }
 

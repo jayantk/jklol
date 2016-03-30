@@ -61,7 +61,7 @@ public class GeoqueryUtil {
 
     List<Integer> locs = Lists.newArrayList(locVarMap.keySet());
     List<String> items = Lists.newArrayList(locVarMap.values());
-    List<String> newVarNames = StaticAnalysis.getNewVariableNames(lf, locVarMap.size());
+    List<String> newVarNames = StaticAnalysis.getNewVariableNames(locVarMap.size(), lf);
     Expression2 lfTemplateBody = lf;
     for (int i = 0; i < locs.size(); i++) {
       lfTemplateBody = lfTemplateBody.substitute(locs.get(i), newVarNames.get(i));

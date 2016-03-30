@@ -1,11 +1,11 @@
 package com.jayantkrish.jklol.experiments.geoquery;
 
 import java.util.List;
-import java.util.Map;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda.Type;
+import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 
@@ -20,10 +20,10 @@ public class Lexeme {
     return predicates;
   }
   
-  public List<Type> getTypeSignature(Map<String, String> typeReplacements) {
+  public List<Type> getTypeSignature(TypeDeclaration typeDeclaration) {
     List<Type> typeSig = Lists.newArrayList();
     for (String predicate : predicates) {
-      typeSig.add(StaticAnalysis.inferType(Expression2.constant(predicate), typeReplacements));
+      typeSig.add(StaticAnalysis.inferType(Expression2.constant(predicate), typeDeclaration));
     }
     return typeSig;
   }

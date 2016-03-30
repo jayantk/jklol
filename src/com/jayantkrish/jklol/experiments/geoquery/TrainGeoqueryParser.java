@@ -99,7 +99,7 @@ public class TrainGeoqueryParser extends AbstractCli {
     testExamples = SemanticParserUtils.annotateFeatures(testExamples, featureGen,
         GeoqueryUtil.FEATURE_ANNOTATION_NAME);
     
-    CcgFeatureFactory featureFactory = new GeoqueryFeatureFactory(true, true,
+    CcgFeatureFactory featureFactory = new GeoqueryFeatureFactory(true, true, false, false,
         GeoqueryUtil.FEATURE_ANNOTATION_NAME, featureGen.getFeatureDictionary(),
         LexiconEntry.parseLexiconEntries(npLexiconLines));
 

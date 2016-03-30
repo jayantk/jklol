@@ -235,7 +235,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
 
     ccgTrainingExamples = SemanticParserUtils.annotateFeatures(ccgTrainingExamples, featureGen,
         GeoqueryUtil.FEATURE_ANNOTATION_NAME);
-    CcgFeatureFactory featureFactory = new GeoqueryFeatureFactory(true, true,
+    CcgFeatureFactory featureFactory = new GeoqueryFeatureFactory(true, true, false, false,
         GeoqueryUtil.FEATURE_ANNOTATION_NAME, featureGen.getFeatureDictionary(),
         LexiconEntry.parseLexiconEntries(additionalLexiconEntries));
 

@@ -4,14 +4,19 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.CcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricCcgLexicon;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricFeaturizedLexiconScorer;
 import com.jayantkrish.jklol.ccg.lexicon.ParametricLexiconScorer;
@@ -31,21 +36,26 @@ import com.jayantkrish.jklol.models.parametric.ConstantParametricFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactor;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
+import com.jayantkrish.jklol.util.Pair;
 
 public class GeoqueryFeatureFactory implements CcgFeatureFactory {
 
   private final boolean useDependencyFeatures;
   private final boolean useSyntacticFeatures;
+  private final boolean useLexemeFeatures;
+  private final boolean useTemplateFeatures;
   private final String lexiconFeatureAnnotationName;
   private final DiscreteVariable lexiconFeatureDictionary;
   
   private final List<LexiconEntry> entityNames;
   
   public GeoqueryFeatureFactory(boolean useDependencyFeatures, boolean useSyntacticFeatures,
-      String lexiconFeatureAnnotationName, DiscreteVariable lexiconFeatureDictionary,
-      List<LexiconEntry> entityNames) {
+      boolean useLexemeFeatures, boolean useTemplateFeatures, String lexiconFeatureAnnotationName,
+      DiscreteVariable lexiconFeatureDictionary, List<LexiconEntry> entityNames) {
     this.useDependencyFeatures = useDependencyFeatures;
     this.useSyntacticFeatures = useSyntacticFeatures;
+    this.useLexemeFeatures = useLexemeFeatures;
+    this.useTemplateFeatures = useTemplateFeatures;
     this.lexiconFeatureAnnotationName = lexiconFeatureAnnotationName;
     this.lexiconFeatureDictionary = lexiconFeatureDictionary;
     this.entityNames = entityNames;
@@ -169,9 +179,27 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
 
     DiscreteLogLinearFactor additionalFeatures = new DiscreteLogLinearFactor(terminalVars, featureVar,
         featureBuilder.build(), lexiconIndicatorFactor);
+    
+    List<String> terminalFactorNames = Lists.newArrayList("indicators", "features");
+    List<ParametricFactor> terminalParametricFactors = Lists.newArrayList(
+        terminalIndicatorFactor, additionalFeatures);
+    
+    if (useLexemeFeatures) {
+      ParametricFactor lexemeFeatureFactor = getLexemeFeatures(lexiconEntries, terminalWordVar,
+          ccgCategoryVar, lexiconIndicatorFactor);
+      terminalFactorNames.add("lexemeFeatures");
+      terminalParametricFactors.add(lexemeFeatureFactor);
+    }
+    
+    if (useTemplateFeatures) {
+      ParametricFactor templateFeatureFactor = getTemplateFeatures(lexiconEntries, terminalWordVar,
+          ccgCategoryVar, lexiconIndicatorFactor);
+      terminalFactorNames.add("templateFeatures");
+      terminalParametricFactors.add(templateFeatureFactor);
+    }
 
     ParametricFactor terminalParametricFactor = new CombiningParametricFactor(terminalVars,
-        Arrays.asList("indicators", "features"), Arrays.asList(terminalIndicatorFactor, additionalFeatures), false);
+        terminalFactorNames, terminalParametricFactors, false);
 
     List<ParametricCcgLexicon> lexicons = Lists.newArrayList();
     lexicons.add(new ParametricTableLexicon(
@@ -186,6 +214,89 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
       lexicons.add(unknownLexicon);
     }
     return lexicons;
+  }
+  
+  private DiscreteLogLinearFactor getLexemeFeatures(Collection<LexiconEntry> lexiconEntries,
+      VariableNumMap terminalWordVar, VariableNumMap ccgCategoryVar,
+      DiscreteFactor lexiconIndicatorFactor) {
+    
+    ExpressionSimplifier simplifier = GeoqueryUtil.getExpressionSimplifier();
+    Set<Pair<List<String>, Lexeme>> features = Sets.newHashSet();
+    Map<LexiconEntry, Pair<List<String>, Lexeme>> categoryLexemeMap = Maps.newHashMap();
+    for (LexiconEntry entry : lexiconEntries) {
+      CcgCategory category = entry.getCategory();
+      Expression2 lf = category.getLogicalForm();
+      
+      if (lf.isConstant()) {
+        // Skip entities
+        continue;
+      }
+      
+      Pair<Lexeme, LexiconEntryTemplate> factoredEntry = GeoqueryUtil.factorLexiconEntry(
+          entry, simplifier);
+      Pair<List<String>, Lexeme> feature = Pair.of(entry.getWords(), factoredEntry.getLeft());
+      features.add(feature);
+      categoryLexemeMap.put(entry, feature);
+    }
+
+    VariableNumMap terminalVars = terminalWordVar.union(ccgCategoryVar);
+    int varNum = Ints.max(VariableNumMap.unionAll(terminalWordVar, ccgCategoryVar)
+        .getVariableNumsArray()) + 1;
+    DiscreteVariable lexemeDictionary = new DiscreteVariable("lexemes", features);
+    VariableNumMap lexemeVar = VariableNumMap.singleton(varNum, "lexemeFeatures",
+        lexemeDictionary);
+    TableFactorBuilder featureBuilder = new TableFactorBuilder(terminalVars.union(lexemeVar),
+        SparseTensorBuilder.getFactory());
+    
+    for (LexiconEntry entry : lexiconEntries) {
+      if (categoryLexemeMap.containsKey(entry)) {
+        Pair<List<String>, Lexeme> lexeme = categoryLexemeMap.get(entry);
+
+        Assignment assignment = terminalVars.outcomeArrayToAssignment(entry.getWords(),
+            entry.getCategory()).union(lexemeVar.outcomeArrayToAssignment(lexeme));
+        featureBuilder.setWeight(assignment, 1);
+      }
+    }
+
+    return new DiscreteLogLinearFactor(terminalVars, lexemeVar, featureBuilder.build(),
+        lexiconIndicatorFactor);
+  }
+
+  private DiscreteLogLinearFactor getTemplateFeatures(Collection<LexiconEntry> lexiconEntries,
+      VariableNumMap terminalWordVar, VariableNumMap ccgCategoryVar,
+      DiscreteFactor lexiconIndicatorFactor) {
+    ExpressionSimplifier simplifier = GeoqueryUtil.getExpressionSimplifier();
+    Set<Pair<Lexeme, LexiconEntryTemplate>> templates = Sets.newHashSet();
+    Map<CcgCategory, Pair<Lexeme, LexiconEntryTemplate>> categoryTemplateMap = Maps.newHashMap();
+    for (LexiconEntry entry : lexiconEntries) {
+      Pair<Lexeme, LexiconEntryTemplate> factoredEntry = GeoqueryUtil.factorLexiconEntry(
+          entry, simplifier);
+      templates.add(factoredEntry);
+
+      CcgCategory category = entry.getCategory();
+      categoryTemplateMap.put(category, factoredEntry);
+    }
+
+    VariableNumMap terminalVars = terminalWordVar.union(ccgCategoryVar);
+    int varNum = Ints.max(VariableNumMap.unionAll(terminalWordVar, ccgCategoryVar)
+        .getVariableNumsArray()) + 1;
+    DiscreteVariable templateDictionary = new DiscreteVariable("templates", templates);
+    VariableNumMap templateVar = VariableNumMap.singleton(varNum, "templateFeatures",
+        templateDictionary);
+    TableFactorBuilder featureBuilder = new TableFactorBuilder(terminalVars.union(templateVar),
+        SparseTensorBuilder.getFactory());
+    
+    for (LexiconEntry entry : lexiconEntries) {
+      CcgCategory category = entry.getCategory();
+
+      Pair<Lexeme, LexiconEntryTemplate> feature = categoryTemplateMap.get(category);
+      Assignment assignment = terminalVars.outcomeArrayToAssignment(entry.getWords(),
+          entry.getCategory()).union(templateVar.outcomeArrayToAssignment(feature));
+      featureBuilder.setWeight(assignment, 1);
+    }
+
+    return new DiscreteLogLinearFactor(terminalVars, templateVar, featureBuilder.build(),
+        lexiconIndicatorFactor);
   }
   
   @Override
@@ -269,4 +380,6 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
       return onesFactor;
     }
   }
+  
+  
 }

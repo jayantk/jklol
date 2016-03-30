@@ -32,6 +32,11 @@ public class LexiconEntryTemplate {
   public Expression2 getLfTemplate() {
     return lfTemplate;
   }
+  
+  @Override
+  public String toString() {
+    return "[template:" + syntax + " " + lfTemplate + " " + typeSignature + "]";
+  }
 
   @Override
   public int hashCode() {

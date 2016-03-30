@@ -224,8 +224,8 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
       DiscreteFactor lexiconIndicatorFactor) {
     
     ExpressionSimplifier simplifier = GeoqueryUtil.getExpressionSimplifier();
-    Set<Lexeme> lexemes = Sets.newHashSet();
-    Map<CcgCategory, Lexeme> categoryLexemeMap = Maps.newHashMap();
+    Set<Pair<List<String>, Lexeme>> features = Sets.newHashSet();
+    Map<LexiconEntry, Pair<List<String>, Lexeme>> categoryLexemeMap = Maps.newHashMap();
     for (LexiconEntry entry : lexiconEntries) {
       CcgCategory category = entry.getCategory();
       Expression2 lf = category.getLogicalForm();
@@ -237,49 +237,47 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
       
       Pair<Lexeme, LexiconEntryTemplate> factoredEntry = GeoqueryUtil.factorLexiconEntry(
           entry, simplifier);
-      lexemes.add(factoredEntry.getLeft());
-      categoryLexemeMap.put(category, factoredEntry.getLeft());
+      Pair<List<String>, Lexeme> feature = Pair.of(entry.getWords(), factoredEntry.getLeft());
+      features.add(feature);
+      categoryLexemeMap.put(entry, feature);
     }
 
     VariableNumMap terminalVars = terminalWordVar.union(ccgCategoryVar);
     int varNum = Ints.max(VariableNumMap.unionAll(terminalWordVar, ccgCategoryVar)
         .getVariableNumsArray()) + 1;
-    DiscreteVariable lexemeDictionary = new DiscreteVariable("lexemes", lexemes);
+    DiscreteVariable lexemeDictionary = new DiscreteVariable("lexemes", features);
     VariableNumMap lexemeVar = VariableNumMap.singleton(varNum, "lexemeFeatures",
         lexemeDictionary);
     TableFactorBuilder featureBuilder = new TableFactorBuilder(terminalVars.union(lexemeVar),
         SparseTensorBuilder.getFactory());
     
     for (LexiconEntry entry : lexiconEntries) {
-      CcgCategory category = entry.getCategory();
-
-      if (categoryLexemeMap.containsKey(category)) {
-        Lexeme lexeme = categoryLexemeMap.get(category);
+      if (categoryLexemeMap.containsKey(entry)) {
+        Pair<List<String>, Lexeme> lexeme = categoryLexemeMap.get(entry);
 
         Assignment assignment = terminalVars.outcomeArrayToAssignment(entry.getWords(),
             entry.getCategory()).union(lexemeVar.outcomeArrayToAssignment(lexeme));
         featureBuilder.setWeight(assignment, 1);
       }
     }
-    
+
     return new DiscreteLogLinearFactor(terminalVars, lexemeVar, featureBuilder.build(),
         lexiconIndicatorFactor);
   }
-  
+
   private DiscreteLogLinearFactor getTemplateFeatures(Collection<LexiconEntry> lexiconEntries,
       VariableNumMap terminalWordVar, VariableNumMap ccgCategoryVar,
       DiscreteFactor lexiconIndicatorFactor) {
     ExpressionSimplifier simplifier = GeoqueryUtil.getExpressionSimplifier();
-    Set<LexiconEntryTemplate> templates = Sets.newHashSet();
-    Map<CcgCategory, LexiconEntryTemplate> categoryTemplateMap = Maps.newHashMap();
+    Set<Pair<Lexeme, LexiconEntryTemplate>> templates = Sets.newHashSet();
+    Map<CcgCategory, Pair<Lexeme, LexiconEntryTemplate>> categoryTemplateMap = Maps.newHashMap();
     for (LexiconEntry entry : lexiconEntries) {
       Pair<Lexeme, LexiconEntryTemplate> factoredEntry = GeoqueryUtil.factorLexiconEntry(
           entry, simplifier);
-      LexiconEntryTemplate template = factoredEntry.getRight(); 
-      templates.add(template);
+      templates.add(factoredEntry);
 
       CcgCategory category = entry.getCategory();
-      categoryTemplateMap.put(category, template);
+      categoryTemplateMap.put(category, factoredEntry);
     }
 
     VariableNumMap terminalVars = terminalWordVar.union(ccgCategoryVar);
@@ -294,9 +292,9 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
     for (LexiconEntry entry : lexiconEntries) {
       CcgCategory category = entry.getCategory();
 
-      LexiconEntryTemplate template = categoryTemplateMap.get(category);
+      Pair<Lexeme, LexiconEntryTemplate> feature = categoryTemplateMap.get(category);
       Assignment assignment = terminalVars.outcomeArrayToAssignment(entry.getWords(),
-          entry.getCategory()).union(templateVar.outcomeArrayToAssignment(template));
+          entry.getCategory()).union(templateVar.outcomeArrayToAssignment(feature));
       featureBuilder.setWeight(assignment, 1);
     }
 

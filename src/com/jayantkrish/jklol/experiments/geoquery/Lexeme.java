@@ -27,6 +27,11 @@ public class Lexeme {
     }
     return typeSig;
   }
+  
+  @Override
+  public String toString() {
+    return predicates.toString();
+  }
 
   @Override
   public int hashCode() {

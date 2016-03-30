@@ -88,7 +88,8 @@ public class SemanticParserUtils {
 
         System.out.println("PREDICTED: " + lf);
         List<Expression2> sorted = expressions.getSortedKeys();
-        for (int i = 0; i < sorted.size(); i++) {
+        int numToPrint = Math.min(sorted.size(), 5);
+        for (int i = 0; i < numToPrint; i++) {
           Expression2 key = sorted.get(i);
           System.out.println("   " + expressions.getProbability(key) + " " + key);
         }

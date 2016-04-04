@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.util;
 import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 
 /**
@@ -14,10 +13,38 @@ import com.google.common.primitives.Ints;
  */
 public class MatchingUtils {
   
-  public static int[] maxMatching(double[][] costs) {
-    HungarianAlgorithm alg = new HungarianAlgorithm(costs);
-    alg.solve();
-    return alg.getRowMatching();
+  public static int[] maxMatching(double[][] costs, double discretization) {
+    int numRows = costs.length;
+    int numCols = costs[0].length;
+    int[][] intCosts = new int[numRows][numCols];
+    for (int i = 0; i < numRows; i++) {
+      for (int j = 0; j < numCols; j++) {
+        intCosts[i][j] = (int) (costs[i][j] / discretization);
+      }
+    }
+    return maxMatching(intCosts);
+  }
+
+  public static int[] maxMatching(int[][] costs) {
+    if (costs.length > costs[0].length) {
+      // More rows than columns. Transpose the matrix
+      int numRows = costs.length;
+      int numCols = costs[0].length;
+      int[][] transposed = new int[numCols][numRows];
+      for (int i = 0; i < numRows; i++) {
+        for (int j = 0; j < numCols; j++) {
+          transposed[j][i] = costs[i][j];
+        }
+      }
+
+      HungarianAlgorithm alg = new HungarianAlgorithm(transposed);
+      alg.solve();
+      return alg.getColMatching();
+    } else {
+      HungarianAlgorithm alg = new HungarianAlgorithm(costs);
+      alg.solve();
+      return alg.getRowMatching();
+    }
   }
 
   private MatchingUtils() {
@@ -38,34 +65,34 @@ public class MatchingUtils {
     // bipartite graph.
     private final int numRows;
     private final int numCols;
-    private final double[][] costs;
+    private final int[][] costs;
     
     // Row and column potential functions. Potentials have the
     // property that rowPotential[i] + colPotential[j] >= costs[i][j].
-    private final double[] rowPotentials;
-    private final double[] colPotentials;
+    private final int[] rowPotentials;
+    private final int[] colPotentials;
     
     // Mapping of rows to their matched column, -1 if unmatched.
     private final int[] rowMatching;
     // Mapping of columns to their matched row, -1 if unmatched.
     private final int[] colMatching;
 
-    public HungarianAlgorithm(double[][] costs) {
+    public HungarianAlgorithm(int[][] costs) {
       this.numRows = costs.length;
       this.numCols = costs[0].length;
-      Preconditions.checkArgument(numCols >= numRows);
+      Preconditions.checkArgument(numCols >= numRows, "Cost matrix must have numCols >= numRows.");
 
       // Copy cost matrix
-      this.costs = new double[numRows][numCols];
-      this.rowPotentials = new double[numRows];
-      this.colPotentials = new double[numCols];
-      Arrays.fill(colPotentials, 0.0);
+      this.costs = new int[numRows][numCols];
+      this.rowPotentials = new int[numRows];
+      this.colPotentials = new int[numCols];
+      Arrays.fill(colPotentials, 0);
       for (int i = 0; i < numRows; i++) {
         // double minVal = Doubles.min(costs[i]);
         for (int j = 0; j < numCols; j++) {
           this.costs[i][j] = costs[i][j];
         }
-        this.rowPotentials[i] = Doubles.max(costs[i]);
+        this.rowPotentials[i] = Ints.max(costs[i]);
       }
       
       this.rowMatching = new int[numRows];

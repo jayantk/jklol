@@ -27,6 +27,14 @@ public class CpsTransformTest extends TestCase {
     runTest("(continuation (lambda ($0 $1) (eats:<a,<a,t>> (lambda ($2) (sun:<a,t> (lambda ($3) (and:<t*,t> $0 $2 $3)) $1)) $1 \"grasses and other plants\":a)))",
         "(lambda ($0) (and:<t*,t> (eats:<a,<a,t>> $0 \"grasses and other plants\":a) (sun:<a,t> $0)))");
   }
+  
+  public void testQuote1() {
+    runTest("(continuation (quote (lambda (x) (foo x))))", "(quote (lambda (x) (foo x)))");
+  }
+  
+  public void testQuote2() {
+    runTest("(foo continuation (quote a))", "((lambda (x) (foo x)) (quote a))");
+  }
 
   private void runTest(String expected, String input) {
     ExpressionParser<Expression2> p = ExpressionParser.expression2();

@@ -24,6 +24,7 @@ import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 public class StaticAnalysis {
   
   public static final String LAMBDA = "lambda";
+  public static final String QUOTE = "quote";
 
   private StaticAnalysis() {
     // Prevent instantiation
@@ -146,6 +147,23 @@ public class StaticAnalysis {
     }
 
     return new ScopeSet(allCreatedScopes);
+  }
+  
+  /**
+   * Returns {@code true} if {@code expression} is of the form
+   * (quote ...).
+   *  
+   * @param expression
+   * @return
+   */
+  public static boolean isQuote(Expression2 expression) {
+    return isQuote(expression, 0);
+  }
+
+  public static boolean isQuote(Expression2 expression, int index) {
+    Expression2 subexpression = expression.getSubexpression(index);
+    return !subexpression.isConstant() && subexpression.getSubexpression(1).isConstant() && 
+        subexpression.getSubexpression(1).getConstant().equals(QUOTE);
   }
 
   public static boolean isLambda(Expression2 expression) {

@@ -31,6 +31,8 @@ public class CpsTransform {
     if (StaticAnalysis.isLambda(exp, 0)) {
       Expression2 cpsExp = M(exp);
       return Expression2.nested(continuation, cpsExp);
+    } if (StaticAnalysis.isQuote(exp, 0)) {
+      return Expression2.nested(continuation, exp);
     } else if (exp.isConstant()) {
       Expression2 cpsExp = M(exp);
       return Expression2.nested(continuation, cpsExp);

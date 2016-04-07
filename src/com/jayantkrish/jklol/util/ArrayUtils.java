@@ -100,6 +100,18 @@ public class ArrayUtils {
     }
     return true;
   }
+  
+  public static int[][] copyOf(int[][] old) {
+    int numRows = old.length;
+    int numCols = old[0].length;
+    int[][] copy = new int[numRows][numCols];
+    for (int i = 0; i < numRows; i++) {
+      for (int j = 0; j < numCols; j++) {
+        copy[i][j] = old[i][j]; 
+      }
+    }
+    return copy;
+  }
 
   /**
    * Returns an array of the form {@code [min, min + 1, ..., max - 1]}

@@ -36,7 +36,6 @@ import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.experiments.p3.KbParametricContinuationIncEval.KbContinuationIncEval;
 import com.jayantkrish.jklol.lisp.AmbEval;
-import com.jayantkrish.jklol.lisp.AmbEval.WrappedBuiltinFunction;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.LispUtil;
 import com.jayantkrish.jklol.lisp.SExpression;
@@ -56,7 +55,6 @@ import com.jayantkrish.jklol.util.IoUtils;
 public class TrainP3 extends AbstractCli {
 
   private OptionSpec<String> trainingData;
-  private OptionSpec<String> environment;
   private OptionSpec<String> defs;
   private OptionSpec<String> genDefs;
   
@@ -76,7 +74,6 @@ public class TrainP3 extends AbstractCli {
   public void initializeOptions(OptionParser parser) {
     trainingData = parser.accepts("trainingData").withRequiredArg().withValuesSeparatedBy(',')
         .ofType(String.class).required();
-    environment = parser.accepts("environment").withRequiredArg().ofType(String.class);
     defs = parser.accepts("defs").withRequiredArg().ofType(String.class);
     genDefs = parser.accepts("gendefs").withRequiredArg().ofType(String.class);
     
@@ -108,9 +105,8 @@ public class TrainP3 extends AbstractCli {
     
     List<String> lexiconLines = IoUtils.readLines(options.valueOf(lexicon));
     ParametricCcgParser ccgFamily  = getCcgParser(lexiconLines);
-    ParametricIncEval evalFamily = getEval(lexiconLines, options.valueOf(environment),
-        options.valueOf(defs), options.valueOf(genDefs), categoryFeatureNames,
-        relationFeatureNames);
+    ParametricIncEval evalFamily = getEval(lexiconLines, options.valueOf(defs),
+        options.valueOf(genDefs), categoryFeatureNames, relationFeatureNames);
     ParametricGroundedParser family = new ParametricGroundedParser(ccgFamily, evalFamily);
 
     GroundedParserInference inf = new GroundedParserPipelinedInference(
@@ -137,7 +133,7 @@ public class TrainP3 extends AbstractCli {
   }
   
   private static ParametricIncEval getEval(List<String> lexiconLines,
-      String envFilename, String defFilename, String generatedDefFilename,
+      String defFilename, String generatedDefFilename,
       DiscreteVariable categoryFeatureNames, DiscreteVariable relationFeatureNames) {
     // Build an SExpression defining all category and relation
     // predicates found in the lexicon.
@@ -174,15 +170,8 @@ public class TrainP3 extends AbstractCli {
     
     IndexedList<String> symbolTable = AmbEval.getInitialSymbolTable(); 
     AmbEval ambEval = new AmbEval(symbolTable);
-    Environment env = AmbEval.getDefaultEnvironment(symbolTable);
-    env.bindName("get-entities", new WrappedBuiltinFunction(new P3Functions.GetEntities()), symbolTable);
-    env.bindName("kb-get", new WrappedBuiltinFunction(new P3Functions.KbGet()), symbolTable);
-    env.bindName("kb-set", new WrappedBuiltinFunction(new P3Functions.KbSet()), symbolTable);
-    env.bindName("list-to-set", new WrappedBuiltinFunction(new P3Functions.ListToSet()), symbolTable);
-    SExpression envProg = LispUtil.readProgram(Arrays.asList(envFilename), symbolTable);
-    ambEval.eval(envProg, env, null);
-    
-    ExpressionSimplifier simplifier = getSimplifier();
+    Environment env = P3Utils.getEnvironment(symbolTable);
+    ExpressionSimplifier simplifier = P3Utils.getSimplifier();
     
     SExpression defs = LispUtil.readProgram(Arrays.asList(defFilename, generatedDefFilename),
         symbolTable);
@@ -223,14 +212,6 @@ public class TrainP3 extends AbstractCli {
     return new KbParametricContinuationIncEval(predicateNames, families, featureVars,
         labelAssignments, featureGen, incEval);
   }
-  
-  private static ExpressionSimplifier getSimplifier() {
-    return new ExpressionSimplifier(Arrays.<ExpressionReplacementRule>asList(
-        new LambdaApplicationReplacementRule(),
-        new VariableCanonicalizationReplacementRule(),
-        new CommutativeReplacementRule("and:<t*,t>")));
-  }
-  
 
   public static void main(String[] args) {
     new TrainP3().run(args);

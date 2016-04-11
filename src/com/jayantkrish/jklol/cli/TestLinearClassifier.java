@@ -12,6 +12,7 @@ import com.jayantkrish.jklol.models.FactorGraph;
 import com.jayantkrish.jklol.models.LinearClassifierFactor;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IoUtils;
 
@@ -55,7 +56,8 @@ public class TestLinearClassifier extends AbstractCli {
     VariableNumMap featureVar = VariableNumMap.singleton(1, "features", featureVarType);
     VariableNumMap featureVectorVars = exampleVar.union(featureVar);
     TableFactor featureVectors = TableFactor.fromDelimitedFile(featureVectorVars, 
-        IoUtils.readLines(options.valueOf(featureFile)), delimiter, true);
+        IoUtils.readLines(options.valueOf(featureFile)), delimiter, true,
+        SparseTensorBuilder.getFactory());
     
     VariableNumMap inputVar = classifier.getVariables().getVariablesByName(
         TrainLinearClassifier.INPUT_VAR_NAME);

@@ -78,7 +78,8 @@ public class CombiningParametricFactorTest extends TestCase {
 
   public void testIncrementSufficientStatisticsFromMarginal() {
     List<String> marginalList = Arrays.asList("F,F,0", "F,T,0", "T,F,1", "T,T,1");
-    Factor marginal = TableFactor.fromDelimitedFile(vars, marginalList, ",", false);
+    Factor marginal = TableFactor.fromDelimitedFile(vars, marginalList, ",", false,
+        SparseTensorBuilder.getFactory());
 
     factor.incrementSufficientStatisticsFromMarginal(stats, stats, marginal, Assignment.EMPTY,
         1, 2);

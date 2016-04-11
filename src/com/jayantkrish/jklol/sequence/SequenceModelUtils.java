@@ -17,6 +17,7 @@ import com.jayantkrish.jklol.models.dynamic.VariableNamePattern;
 import com.jayantkrish.jklol.models.loglinear.DiscreteLogLinearFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.StringUtils;
 
@@ -64,7 +65,8 @@ public class SequenceModelUtils {
     VariableNumMap emissionFeatureVar = VariableNumMap.singleton(0, "emissionFeature", emissionFeatureType);
     TableFactor emissionFeatureFactor = TableFactor.fromDelimitedFile(
         Arrays.asList(x, y, emissionFeatureVar), emissionFeatureLines,
-        featureDelimiter, false).cacheWeightPermutations();
+        featureDelimiter, false, SparseTensorBuilder.getFactory())
+        .cacheWeightPermutations();
 
     System.out.println(emissionFeatureFactor.getVars());
 

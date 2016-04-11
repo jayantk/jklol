@@ -99,7 +99,7 @@ public class IncEvalTrainingTest extends TestCase {
     String evalDefString = "(begin " + Joiner.on(" ").join(evalDefs) + ")";
     SExpression defs = sexpParser.parse(evalDefString);
     
-    eval = new ContinuationIncEval(ambEval, env, simplifier, defs);
+    eval = new ContinuationIncEval(ambEval, env, simplifier, defs, null);
     
     FeatureVectorGenerator<StateFeatures> featureVectorGen =
         new HashingFeatureVectorGenerator<StateFeatures>(100, new StateFeatureGen());

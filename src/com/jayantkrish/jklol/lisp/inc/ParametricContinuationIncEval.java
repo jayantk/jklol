@@ -70,16 +70,6 @@ public class ParametricContinuationIncEval implements ParametricIncEval {
   }
 
   @Override
-  public String getParameterDescription(SufficientStatistics parameters) {
-    return family.getParameterDescription(parameters);
-  }
-
-  @Override
-  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
-    return family.getParameterDescription(parameters, numFeatures);
-  }
-
-  @Override
   public void incrementSufficientStatistics(SufficientStatistics gradient,
       SufficientStatistics currentParameters, Expression2 lf, IncEvalState state, double count) {
     if (state.getFeatures() == null) {
@@ -92,7 +82,17 @@ public class ParametricContinuationIncEval implements ParametricIncEval {
     family.incrementSufficientStatisticsFromAssignment(gradient, currentParameters,
         a.union(labelAssignment), count);
   }
-  
+
+  @Override
+  public String getParameterDescription(SufficientStatistics parameters) {
+    return family.getParameterDescription(parameters);
+  }
+
+  @Override
+  public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
+    return family.getParameterDescription(parameters, numFeatures);
+  }
+
   public static class StateFeatures {
     private final IncEvalState prev;
     private final Object continuation;
@@ -146,7 +146,7 @@ public class ParametricContinuationIncEval implements ParametricIncEval {
     public FeaturizedContinuationIncEval(ContinuationIncEval eval,
         Factor classifier, VariableNumMap featureVar, Assignment labelAssignment,
         FeatureVectorGenerator<StateFeatures> featureGen) {
-      super(eval.eval, eval.env, eval.simplifier, eval.defs);
+      super(eval.eval, eval.env, eval.simplifier, eval.defs, eval.lfConversion);
       
       this.classifier = Preconditions.checkNotNull(classifier);
       this.featureVar = Preconditions.checkNotNull(featureVar);

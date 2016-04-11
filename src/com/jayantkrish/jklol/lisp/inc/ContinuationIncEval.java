@@ -43,6 +43,7 @@ public class ContinuationIncEval extends AbstractIncEval {
   
   protected final ExpressionParser<SExpression> sexpParser;
   protected final SExpression defs;
+  protected final Expression2 lfConversion;
   
   protected final int finalContinuationIndex;
   protected final int queueContinuationsIndex;
@@ -53,13 +54,14 @@ public class ContinuationIncEval extends AbstractIncEval {
   public static final String CONTINUATION_HOLDER = "continuation-inc-eval:continuation-holder";
   
   public ContinuationIncEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier,
-      SExpression defs) {
+      SExpression defs, Expression2 lfConversion) {
     this.eval = Preconditions.checkNotNull(eval);
     this.env = Preconditions.checkNotNull(env);
     this.simplifier = Preconditions.checkNotNull(simplifier);
 
     this.sexpParser = ExpressionParser.sExpression(eval.getSymbolTable());
     this.defs = defs;
+    this.lfConversion = lfConversion;
     
     this.finalContinuationIndex = this.eval.getSymbolTable().add(FINAL_CONTINUATION);
     this.queueContinuationsIndex = this.eval.getSymbolTable().add(QUEUE_CONTINUATIONS);
@@ -87,6 +89,10 @@ public class ContinuationIncEval extends AbstractIncEval {
   
   public SExpression getDefs() {
     return defs;
+  }
+  
+  public Expression2 getLfConversion() {
+    return lfConversion;
   }
 
   @Override
@@ -170,10 +176,15 @@ public class ContinuationIncEval extends AbstractIncEval {
   
   @Override
   public AmbFunctionValue lfToContinuation(Expression2 lf, Environment env) {
+    if (lfConversion != null) {
+      lf = Expression2.nested(lfConversion, lf);
+    }
     lf = simplifier.apply(lf);
+    
     // System.out.println("lfToContinuation: " + lf);
     Expression2 cpsLf = simplifier.apply(CpsTransform.apply(lf, Expression2.constant(FINAL_CONTINUATION)));
     // System.out.println(cpsLf);
+    System.out.println("lfToContinuation: " + lf + " -> " + cpsLf);
     
     SExpression cpsSexp = sexpParser.parse(cpsLf.toString());
     EvalResult evalResult = eval.eval(cpsSexp, env, null);

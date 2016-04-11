@@ -79,6 +79,12 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
           log, evalBeamSize);
       System.out.println("evaluated: " + states.size() + " " + lf);
 
+      /*
+      for (IncEvalState state : states) {
+        System.out.println("  " + state.getDenotation() + " " + state.getDiagram());
+      }
+      */
+
       if (states.size() > 1) {
         numEvaluated++;
       }

@@ -81,8 +81,13 @@ public class GroundedParserLoglikelihoodOracle implements
     log.startTimer("update_gradient/input_marginal");
     IncEvalCost marginCost = example.getMarginCost();
     System.out.println("unconditional evaluations:");
-    List<GroundedCcgParse> unconditionalParses = inference.beamSearch(
-        model, sentence, diagram, null, marginCost, log);
+    List<GroundedCcgParse> unconditionalParses = null;
+    if (marginCost == null && chartFilter == null && labelCost == null) {
+      unconditionalParses = conditionalParsesInit;
+    } else {
+      unconditionalParses = inference.beamSearch(
+          model, sentence, diagram, null, marginCost, log);
+    }
     
     if (unconditionalParses.size() == 0) {
       System.out.println("Search error (Predicted): " + sentence);

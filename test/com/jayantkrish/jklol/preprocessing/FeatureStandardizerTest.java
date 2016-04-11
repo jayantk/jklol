@@ -63,7 +63,7 @@ public class FeatureStandardizerTest extends TestCase {
     }    
     featureFactor = featureFactorBuilder.build();
     featureFactor2 = TableFactor.fromDelimitedFile(Arrays.asList(var1, var2, features), 
-        Arrays.asList(featureFactor2Values), ",", false);
+        Arrays.asList(featureFactor2Values), ",", false, SparseTensorBuilder.getFactory());
   }
   
   public void testEstimateFrom1() {

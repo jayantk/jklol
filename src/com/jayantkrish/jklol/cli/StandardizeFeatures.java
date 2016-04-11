@@ -14,6 +14,7 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.preprocessing.FeatureStandardizer;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IoUtils;
 
@@ -50,7 +51,7 @@ public class StandardizeFeatures {
 
     // Read in the factor from the input file.
     TableFactor factor = TableFactor.fromDelimitedFile(variables, 
-        IoUtils.readLines(inputFilename), delimiter, false);
+        IoUtils.readLines(inputFilename), delimiter, false, SparseTensorBuilder.getFactory());
 
     // Determine which variable contains the features.
     int columnIndex = options.valueOf(featureColumn);

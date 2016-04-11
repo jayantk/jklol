@@ -25,6 +25,7 @@ import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraph;
 import com.jayantkrish.jklol.models.parametric.ParametricFactorGraphBuilder;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.MaxMarginOracle;
@@ -90,7 +91,8 @@ public class TrainLinearClassifier extends AbstractCli {
     VariableNumMap featureVar = VariableNumMap.singleton(1, "features", featureVarType);
     VariableNumMap featureVectorVars = exampleVar.union(featureVar);
     TableFactor featureVectors = TableFactor.fromDelimitedFile(featureVectorVars, 
-        IoUtils.readLines(options.valueOf(featureVectorFile)), delimiter, false);    
+        IoUtils.readLines(options.valueOf(featureVectorFile)), delimiter, false,
+        SparseTensorBuilder.getFactory());    
     List<Example<Assignment, Assignment>> trainingData = constructClassificationData(
         IoUtils.readLines(options.valueOf(labelFile)), exampleVar, featureVectors, inputVar, outputVar);
     

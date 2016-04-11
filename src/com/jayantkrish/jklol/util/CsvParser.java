@@ -89,7 +89,7 @@ public class CsvParser {
     // This requires regex escaping.
     input = input.replaceAll(Pattern.quote(escapeStr), Matcher.quoteReplacement(escapeStr + escapeStr));
     input = input.replaceAll(Pattern.quote(quoteStr), Matcher.quoteReplacement(escapeStr + quoteStr));
-    input = input.replaceAll(Pattern.quote(separatorStr), Matcher.quoteReplacement(escapeStr + separatorStr));
+    // input = input.replaceAll(Pattern.quote(separatorStr), Matcher.quoteReplacement(escapeStr + separatorStr));
 
     return input;
   }

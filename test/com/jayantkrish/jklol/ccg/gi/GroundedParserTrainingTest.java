@@ -129,7 +129,7 @@ public class GroundedParserTrainingTest extends TestCase {
     
     String evalDefString = "(begin " + Joiner.on(" ").join(evalDefs) + ")";
     SExpression defs = sexpParser.parse(evalDefString);
-    ContinuationIncEval eval = new ContinuationIncEval(ambEval, env, simplifier, defs);
+    ContinuationIncEval eval = new ContinuationIncEval(ambEval, env, simplifier, defs, null);
     
     FeatureVectorGenerator<StateFeatures> featureVectorGen =
         new DictionaryFeatureVectorGenerator<StateFeatures, String>(StateFeatureGen.getFeatureNames(

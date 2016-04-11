@@ -17,6 +17,7 @@ import com.jayantkrish.jklol.tensor.LogSpaceTensorAdapter;
 import com.jayantkrish.jklol.tensor.SparseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.tensor.TensorBase.KeyValue;
+import com.jayantkrish.jklol.tensor.TensorFactory;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IoUtils;
 
@@ -154,14 +155,15 @@ public class TableFactor extends DiscreteFactor {
    * @param ignoreInvalidAssignments if {@code true}, lines representing invalid
    * assignments to {@code variables} are skipped. If {@code false}, an error is
    * thrown.
+   * @param tensorFactory
    * @return
    */
   public static TableFactor fromDelimitedFile(List<VariableNumMap> variables, 
       List<? extends Function<String, ?>> inputConverters, Iterable<String> lines, String delimiter,
-      boolean ignoreInvalidAssignments) {
+      boolean ignoreInvalidAssignments, TensorFactory tensorFactory) {
     int numVars = variables.size();
     VariableNumMap allVars = VariableNumMap.unionAll(variables);
-    TableFactorBuilder builder = new TableFactorBuilder(allVars, SparseTensorBuilder.getFactory());
+    TableFactorBuilder builder = new TableFactorBuilder(allVars, tensorFactory);
     for (String line : lines) {
       // Ignore blank lines.
       if (line.trim().length() == 0) {
@@ -192,9 +194,11 @@ public class TableFactor extends DiscreteFactor {
   }
   
   public static TableFactor fromDelimitedFile(List<VariableNumMap> variables, 
-      Iterable<String> lines, String delimiter, boolean ignoreInvalidAssignments) {
+      Iterable<String> lines, String delimiter, boolean ignoreInvalidAssignments,
+      TensorFactory factory) {
     List<Function<String, String>> converters = Collections.nCopies(variables.size(), Functions.<String>identity());
-    return fromDelimitedFile(variables, converters, lines, delimiter, ignoreInvalidAssignments);
+    return fromDelimitedFile(variables, converters, lines, delimiter, ignoreInvalidAssignments,
+        factory);
   }
   
   public static TableFactor fromDelimitedFile(VariableNumMap vars, 
@@ -204,16 +208,17 @@ public class TableFactor extends DiscreteFactor {
     for (int varNum : vars.getVariableNumsArray()) {
       varList.add(vars.intersection(varNum));
     }
-    return fromDelimitedFile(varList, inputConverters, lines, delimiter, ignoreInvalidAssignments);    
+    return fromDelimitedFile(varList, inputConverters, lines, delimiter, ignoreInvalidAssignments,
+        SparseTensorBuilder.getFactory());    
   }
   
   public static TableFactor fromDelimitedFile(VariableNumMap vars, Iterable<String> lines,
-      String delimiter, boolean ignoreInvalidAssignments) {
+      String delimiter, boolean ignoreInvalidAssignments, TensorFactory factory) {
     List<VariableNumMap> varList = Lists.newArrayList();
     for (int varNum : vars.getVariableNumsArray()) {
       varList.add(vars.intersection(varNum));
     }
-    return fromDelimitedFile(varList, lines, delimiter, ignoreInvalidAssignments);
+    return fromDelimitedFile(varList, lines, delimiter, ignoreInvalidAssignments, factory);
   }
   
   public static TableFactor fromDelimitedFile(Iterable<String> lines, String delimiter) {
@@ -227,7 +232,7 @@ public class TableFactor extends DiscreteFactor {
       vars.add(curVar);
     }
 
-    return fromDelimitedFile(vars, lines, delimiter, false);
+    return fromDelimitedFile(vars, lines, delimiter, false, SparseTensorBuilder.getFactory());
   }
 
   // //////////////////////////////////////////////////////////////////////////////

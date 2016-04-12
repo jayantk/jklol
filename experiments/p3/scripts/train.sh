@@ -1,15 +1,24 @@
 #!/bin/bash -e
 
-LEXICON=experiments/p3/scene/data/lexicon.p3.txt
-DEFS=experiments/p3/scene/data/defs.lisp
-GENDEFS=experiments/p3/scene/data/gendefs.lisp
-TRAINING_DATA=experiments/p3/scene/scene/000000
+source experiments/p3/scripts/config.sh
 
-CATEGORY_FEATURE_NAMES=experiments/p3/scene/data/category_feature_names.txt
-RELATION_FEATURE_NAMES=experiments/p3/scene/data/relation_feature_names.txt
+num_folds=${#FOLD_NAMES[@]}
+echo $num_folds
+for (( i=0; i<${num_folds}; i++ ));
+do
+    TRAIN=${TRAIN_FILES[$i]}
+    TEST=${TEST_FILES[$i]}
+    NAME=${FOLD_NAMES[$i]}
 
-PARSER_OUT=experiments/p3/scene/data/parser.ser
-KB_MODEL_OUT=experiments/p3/scene/data/kbmodel.ser
+    MODEL_DIR="$EXPERIMENT_DIR/$NAME"
+    mkdir -p $MODEL_DIR
+    
+    PARSER="$MODEL_DIR/$PARSER_FILENAME"
+    KB_MODEL="$MODEL_DIR/$KBMODEL_FILENAME"
+    LOG="$MODEL_DIR/train_log.txt"
 
-./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TrainP3 --lexicon $LEXICON --trainingData $TRAINING_DATA --defs $DEFS --gendefs $GENDEFS --categoryFeatures $CATEGORY_FEATURE_NAMES --relationFeatures $RELATION_FEATURE_NAMES --parserOut $PARSER_OUT --kbModelOut $KB_MODEL_OUT --batchSize 1 --iterations 1 
+    echo "Training parser: $NAME"
+    echo "  train: $TRAIN"
 
+    ./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TrainP3 --lexicon $LEXICON --trainingData $TRAIN --defs $DEFS,$GENDEFS --categories $CATEGORIES --categoryFeatures $CATEGORY_FEATURE_NAMES --relations $RELATIONS --relationFeatures $RELATION_FEATURE_NAMES --parserOut $PARSER --kbModelOut $KB_MODEL --batchSize 1 --iterations 1 > $LOG
+done

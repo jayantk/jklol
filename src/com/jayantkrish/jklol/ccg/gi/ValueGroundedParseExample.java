@@ -50,4 +50,8 @@ public class ValueGroundedParseExample implements GroundedParseExample {
   public boolean isCorrect(Expression2 lf, Object denotation, Object diagram) {
     return denotationLabel.equals(denotation);
   }
+  
+  public Object getLabel() {
+    return denotationLabel;
+  }
 }

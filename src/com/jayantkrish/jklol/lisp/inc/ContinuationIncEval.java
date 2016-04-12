@@ -184,7 +184,7 @@ public class ContinuationIncEval extends AbstractIncEval {
     // System.out.println("lfToContinuation: " + lf);
     Expression2 cpsLf = simplifier.apply(CpsTransform.apply(lf, Expression2.constant(FINAL_CONTINUATION)));
     // System.out.println(cpsLf);
-    System.out.println("lfToContinuation: " + lf + " -> " + cpsLf);
+    // System.out.println("lfToContinuation: " + lf + " -> " + cpsLf);
     
     SExpression cpsSexp = sexpParser.parse(cpsLf.toString());
     EvalResult evalResult = eval.eval(cpsSexp, env, null);

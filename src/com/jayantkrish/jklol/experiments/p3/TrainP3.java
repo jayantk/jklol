@@ -1,20 +1,16 @@
 package com.jayantkrish.jklol.experiments.p3;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
-import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.gi.GroundedParser;
 import com.jayantkrish.jklol.ccg.gi.GroundedParserInference;
@@ -22,24 +18,8 @@ import com.jayantkrish.jklol.ccg.gi.GroundedParserLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.gi.GroundedParserPipelinedInference;
 import com.jayantkrish.jklol.ccg.gi.ParametricGroundedParser;
 import com.jayantkrish.jklol.ccg.gi.ValueGroundedParseExample;
-import com.jayantkrish.jklol.ccg.lambda.ExplicitTypeDeclaration;
-import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.lambda.Type;
-import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
-import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
-import com.jayantkrish.jklol.ccg.lambda2.Expression2;
-import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
-import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
-import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
-import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
-import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.experiments.p3.KbParametricContinuationIncEval.KbContinuationIncEval;
-import com.jayantkrish.jklol.lisp.AmbEval;
-import com.jayantkrish.jklol.lisp.Environment;
-import com.jayantkrish.jklol.lisp.LispUtil;
-import com.jayantkrish.jklol.lisp.SExpression;
-import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval;
 import com.jayantkrish.jklol.lisp.inc.ParametricIncEval;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.ObjectVariable;
@@ -56,8 +36,9 @@ public class TrainP3 extends AbstractCli {
 
   private OptionSpec<String> trainingData;
   private OptionSpec<String> defs;
-  private OptionSpec<String> genDefs;
   
+  private OptionSpec<String> categories;
+  private OptionSpec<String> relations;
   private OptionSpec<String> categoryFeatures;
   private OptionSpec<String> relationFeatures;
   
@@ -74,9 +55,13 @@ public class TrainP3 extends AbstractCli {
   public void initializeOptions(OptionParser parser) {
     trainingData = parser.accepts("trainingData").withRequiredArg().withValuesSeparatedBy(',')
         .ofType(String.class).required();
-    defs = parser.accepts("defs").withRequiredArg().ofType(String.class);
-    genDefs = parser.accepts("gendefs").withRequiredArg().ofType(String.class);
+    defs = parser.accepts("defs").withRequiredArg().withValuesSeparatedBy(',')
+        .ofType(String.class);
     
+    categories = parser.accepts("categories").withRequiredArg()
+        .ofType(String.class).required();
+    relations = parser.accepts("relations").withRequiredArg()
+        .ofType(String.class).required();
     categoryFeatures = parser.accepts("categoryFeatures").withRequiredArg()
         .ofType(String.class).required();
     relationFeatures = parser.accepts("relationFeatures").withRequiredArg()
@@ -90,6 +75,8 @@ public class TrainP3 extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
+    List<String> categoryList = IoUtils.readLines(options.valueOf(categories));
+    List<String> relationList = IoUtils.readLines(options.valueOf(relations));
     DiscreteVariable categoryFeatureNames = new DiscreteVariable("categoryFeatures",
         IoUtils.readLines(options.valueOf(categoryFeatures)));
     DiscreteVariable relationFeatureNames = new DiscreteVariable("relationFeatures",
@@ -105,12 +92,12 @@ public class TrainP3 extends AbstractCli {
     
     List<String> lexiconLines = IoUtils.readLines(options.valueOf(lexicon));
     ParametricCcgParser ccgFamily  = getCcgParser(lexiconLines);
-    ParametricIncEval evalFamily = getEval(lexiconLines, options.valueOf(defs),
-        options.valueOf(genDefs), categoryFeatureNames, relationFeatureNames);
+    ParametricIncEval evalFamily = getEval(lexiconLines, options.valuesOf(defs),
+        categoryFeatureNames, relationFeatureNames, categoryList, relationList);
     ParametricGroundedParser family = new ParametricGroundedParser(ccgFamily, evalFamily);
 
     GroundedParserInference inf = new GroundedParserPipelinedInference(
-        CcgCkyInference.getDefault(100), getSimplifier(), 10, 100, false);
+        CcgCkyInference.getDefault(100), P3Utils.getSimplifier(), 10, 100, false);
     GroundedParserLoglikelihoodOracle oracle = new GroundedParserLoglikelihoodOracle(family, inf);
     GradientOptimizer trainer = createGradientOptimizer(examples.size());
     
@@ -129,55 +116,12 @@ public class TrainP3 extends AbstractCli {
     List<String> ruleLines = Lists.newArrayList("FOO{0} BAR{0}");
     return ParametricCcgParser.parseFromLexicon(lexiconLines, unkLexiconLines,
         ruleLines, new DefaultCcgFeatureFactory(false, true), null, false, null, true);
-    
   }
-  
-  private static ParametricIncEval getEval(List<String> lexiconLines,
-      String defFilename, String generatedDefFilename,
-      DiscreteVariable categoryFeatureNames, DiscreteVariable relationFeatureNames) {
-    // Build an SExpression defining all category and relation
-    // predicates found in the lexicon.
-    Collection<LexiconEntry> lexicon = LexiconEntry.parseLexiconEntries(lexiconLines);
-    TypeDeclaration typeDeclaration = new ExplicitTypeDeclaration(Collections.emptyMap());
-    Type catType = Type.parseFrom("<e,t>");
-    Type relType = Type.parseFrom("<e,<e,t>>");
-    
-    Set<String> cats = Sets.newHashSet();
-    Set<String> rels = Sets.newHashSet();
-    for (LexiconEntry l : lexicon) {
-      Expression2 lf = l.getCategory().getLogicalForm();
-      Set<String> freeVars = StaticAnalysis.getFreeVariables(lf);
-      
-      for (String freeVar : freeVars) {
-        Type varType = typeDeclaration.getType(freeVar);
-        if (varType.equals(catType)) {
-          cats.add(freeVar);
-        } else if (varType.equals(relType)) {
-          rels.add(freeVar);
-        }
-      }
-    }
-    
-    List<String> generatedDefs = Lists.newArrayList();
-    for (String cat : cats) {
-      generatedDefs.add("(define " + cat + " (make-category \"" + cat + "\"))\n");
-    }
-    for (String rel : rels) {
-      generatedDefs.add("(define " + rel + " (make-relation \"" + rel + "\"))\n");
-    }
-    
-    IoUtils.writeLines(generatedDefFilename, generatedDefs);
-    
-    IndexedList<String> symbolTable = AmbEval.getInitialSymbolTable(); 
-    AmbEval ambEval = new AmbEval(symbolTable);
-    Environment env = P3Utils.getEnvironment(symbolTable);
-    ExpressionSimplifier simplifier = P3Utils.getSimplifier();
-    
-    SExpression defs = LispUtil.readProgram(Arrays.asList(defFilename, generatedDefFilename),
-        symbolTable);
 
-    Expression2 lfConversion = ExpressionParser.expression2().parse("(lambda (x) (list-to-set-c (get-denotation x)))");
-    ContinuationIncEval incEval = new ContinuationIncEval(ambEval, env, simplifier, defs, lfConversion);
+  private static ParametricIncEval getEval(List<String> lexiconLines,
+      List<String> defFilenames, DiscreteVariable categoryFeatureNames,
+      DiscreteVariable relationFeatureNames, List<String> categories,
+      List<String> relations) {
     
     // Set up the per-predicate classifiers
     ObjectVariable tensorVar = new ObjectVariable(Tensor.class);
@@ -194,13 +138,13 @@ public class TrainP3 extends AbstractCli {
     List<ParametricLinearClassifierFactor> families = Lists.newArrayList();
     List<VariableNumMap> featureVars = Lists.newArrayList();
     List<Assignment> labelAssignments = Lists.newArrayList();
-    for (String cat : cats) {
+    for (String cat : categories) {
       predicateNames.add(cat);
       families.add(categoryFamily);
       featureVars.add(input);
       labelAssignments.add(labelAssignment);
     }    
-    for (String rel : rels) {
+    for (String rel : relations) {
       predicateNames.add(rel);
       families.add(relationFamily);
       featureVars.add(input);
@@ -210,7 +154,7 @@ public class TrainP3 extends AbstractCli {
     KbFeatureGenerator featureGen = new KbFeatureGenerator();
     
     return new KbParametricContinuationIncEval(predicateNames, families, featureVars,
-        labelAssignments, featureGen, incEval);
+        labelAssignments, featureGen, P3Utils.getIncEval(defFilenames));
   }
 
   public static void main(String[] args) {

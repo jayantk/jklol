@@ -9,7 +9,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.gi.ValueGroundedParseExample;
-import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
@@ -18,6 +19,9 @@ import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.AmbEval.WrappedBuiltinFunction;
 import com.jayantkrish.jklol.lisp.ConstantValue;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.lisp.LispUtil;
+import com.jayantkrish.jklol.lisp.SExpression;
+import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -99,12 +103,24 @@ public class P3Utils {
     env.bindName("list-to-set", new WrappedBuiltinFunction(new P3Functions.ListToSet()), symbolTable);
     return env;
   }
+
+  public static ContinuationIncEval getIncEval(List<String> defFilenames) {
+    IndexedList<String> symbolTable = AmbEval.getInitialSymbolTable(); 
+    AmbEval ambEval = new AmbEval(symbolTable);
+    Environment env = P3Utils.getEnvironment(symbolTable);
+    ExpressionSimplifier simplifier = P3Utils.getSimplifier();
+
+    SExpression defs = LispUtil.readProgram(defFilenames, symbolTable);
+
+    Expression2 lfConversion = ExpressionParser.expression2().parse(
+        "(lambda (x) (list-to-set-c (get-denotation x)))");
+    return new ContinuationIncEval(ambEval, env, simplifier, defs, lfConversion);
+  }
   
   public static ExpressionSimplifier getSimplifier() {
     return new ExpressionSimplifier(Arrays.<ExpressionReplacementRule>asList(
         new LambdaApplicationReplacementRule(),
-        new VariableCanonicalizationReplacementRule(),
-        new CommutativeReplacementRule("and:<t*,t>")));
+        new VariableCanonicalizationReplacementRule()));
   }
 
   private P3Utils() {

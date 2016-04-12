@@ -81,7 +81,8 @@ public class BuiltinFunctions {
       Boolean value = true;
       for (int i = 0; i < argumentValues.size(); i++) {
         if (!(argumentValues.get(i) instanceof ConstantValue)) {
-          throw new EvalError("and got argument: " + argumentValues.get(i));
+          throw new EvalError("and got bad argument: " + argumentValues.get(i)
+              + " all arguments: " + argumentValues);
         }
 
         value = value && ((ConstantValue) argumentValues.get(i)).toBoolean();

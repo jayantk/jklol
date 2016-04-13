@@ -37,5 +37,5 @@ do
 done
 
 
-grep 'Training Recall:' $EXPERIMENT_DIR/**/train_err.txt | grep -o '([^)]*)' | sed 's/[(\/)]//g' | awk '{SUM += $1; TOT += $2} END {print "RECALL: " (SUM / TOT) " (" SUM " / " TOT ")"}'
-grep 'Test Recall:' $EXPERIMENT_DIR/**/test_err.txt | grep -o '([^)]*)' | sed 's/[(\/)]//g' | awk '{SUM += $1; TOT += $2} END {print "RECALL: " (SUM / TOT) " (" SUM " / " TOT ")"}'
+grep 'Recall:' $EXPERIMENT_DIR/**/train_err.txt | grep -o '([^)]*)' | sed 's/[(\/)]//g' | awk '{SUM += $1; TOT += $2} END {print "Training recall: " (SUM / TOT) " (" SUM " / " TOT ")"}'
+grep 'Recall:' $EXPERIMENT_DIR/**/test_err.txt | grep -o '([^)]*)' | sed 's/[(\/)]//g' | awk '{SUM += $1; TOT += $2} END {print "Test recall: " (SUM / TOT) " (" SUM " / " TOT ")"}'

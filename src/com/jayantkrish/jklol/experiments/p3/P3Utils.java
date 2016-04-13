@@ -77,7 +77,7 @@ public class P3Utils {
 
     List<ValueGroundedParseExample> examples = Lists.newArrayList();
     for (String exampleString : IoUtils.readLines(path + "/" + trainingFilePath)) {
-      if (exampleString.startsWith("*") || exampleString.trim().length() == 0) {
+      if (exampleString.startsWith("*") || exampleString.startsWith("#") || exampleString.trim().length() == 0) {
         continue;
       }
       
@@ -94,7 +94,11 @@ public class P3Utils {
       List<String> pos = Collections.nCopies(tokens.size(), ParametricCcgParser.DEFAULT_POS_TAG);
       AnnotatedSentence sentence = new AnnotatedSentence(tokens, pos);
       
-      Set<String> denotation = Sets.newHashSet(exampleParts[1].split(","));
+      String[] denotationParts = exampleParts[1].split(",");
+      Set<String> denotation = Sets.newHashSet();
+      if (denotationParts.length > 1 || denotationParts[0].length() != 0) {
+        denotation.addAll(Arrays.asList(denotationParts));
+      }
       examples.add(new ValueGroundedParseExample(sentence, state, denotation));
     }
 

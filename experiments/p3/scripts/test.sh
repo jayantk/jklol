@@ -2,10 +2,8 @@
 
 source experiments/p3/scripts/config.sh
 
-num_folds=${#FOLD_NAMES[@]}
-echo $num_folds
 PROC=()
-for (( i=0; i<${num_folds}; i++ ));
+for (( i=0; i<${NUM_FOLDS}; i++ ));
 do
     TRAIN=${TRAIN_FILES[$i]}
     TEST=${TEST_FILES[$i]}

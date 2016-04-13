@@ -48,5 +48,7 @@ for i in $DATA_DIR/scene/0*; do
     FOLD_NAMES+=($name)
 done
 
+NUM_FOLDS=${#FOLD_NAMES[@]}
+
 export PARSER_FILENAME="parser.ser"
 export KBMODEL_FILENAME="kbmodel.ser"

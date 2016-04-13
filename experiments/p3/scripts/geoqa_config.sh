@@ -1,7 +1,6 @@
-
 export DATA_DIR="experiments/p3/geoqa"
 export OUT_DIR="$DATA_DIR/output/"
-export EXPERIMENT_NAME="wordskip5"
+export EXPERIMENT_NAME="wordskip6"
 export EXPERIMENT_DIR="$OUT_DIR/$EXPERIMENT_NAME/"
 
 mkdir -p $OUT_DIR
@@ -40,9 +39,9 @@ for i in $DATA_DIR/geoqa2/environments/**; do
 	fi
     done
 
-    TRAIN_FILES=$(join , ${TRAIN_FILES_ARR[@]})
+    TRAIN_FILES_STR=$(join , ${TRAIN_FILES_ARR[@]})
 
-    TRAIN_FILES+=($TRAIN_FILES)
+    TRAIN_FILES+=($TRAIN_FILES_STR)
     TEST_FILES+=($i)
     FOLD_NAMES+=($name)
 done

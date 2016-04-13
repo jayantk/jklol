@@ -9,6 +9,11 @@ do
     TEST=${TEST_FILES[$i]}
     NAME=${FOLD_NAMES[$i]}
 
+    
+    echo "Training parser $NAME ..."
+    echo "  training data: $TRAIN"
+    echo "  test data: $TEST"
+
     MODEL_DIR="$EXPERIMENT_DIR/$NAME"
     mkdir -p $MODEL_DIR
     
@@ -16,10 +21,7 @@ do
     KB_MODEL="$MODEL_DIR/$KBMODEL_FILENAME"
     LOG="$MODEL_DIR/train_log.txt"
 
-    echo "Training parser: $NAME"
-    echo "  train: $TRAIN"
-
-    CMD="./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TrainP3 --lexicon $LEXICON --trainingData $TRAIN --exampleFilename $TRAINING_FILE_PATH --categoryFilename $CATEGORY_FILE_PATH --relationFilename $RELATION_FILE_PATH --defs $DEFS,$GENDEFS --categories $CATEGORIES --categoryFeatures $CATEGORY_FEATURE_NAMES --relations $RELATIONS --relationFeatures $RELATION_FEATURE_NAMES --parserOut $PARSER --kbModelOut $KB_MODEL --batchSize 1 --iterations 10"
+    CMD="./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TrainP3 --lexicon $LEXICON --trainingData $TRAIN --exampleFilename $TRAINING_FILE_PATH --categoryFilename $CATEGORY_FILE_PATH --relationFilename $RELATION_FILE_PATH --defs $DEFS,$GENDEFS --categories $CATEGORIES --categoryFeatures $CATEGORY_FEATURE_NAMES --relations $RELATIONS --relationFeatures $RELATION_FEATURE_NAMES --parserOut $PARSER --kbModelOut $KB_MODEL --batchSize 1 --iterations 1"
 
     echo $CMD
     $CMD > $LOG &

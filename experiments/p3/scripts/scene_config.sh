@@ -41,9 +41,9 @@ for i in $DATA_DIR/scene/0*; do
 	fi
     done
 
-    TRAIN_FILES=$(join , ${TRAIN_FILES_ARR[@]})
+    TRAIN_FILES_STR=$(join , ${TRAIN_FILES_ARR[@]})
 
-    TRAIN_FILES+=($TRAIN_FILES)
+    TRAIN_FILES+=($TRAIN_FILES_STR)
     TEST_FILES+=($i)
     FOLD_NAMES+=($name)
 done

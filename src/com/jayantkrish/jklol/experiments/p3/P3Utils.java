@@ -77,7 +77,7 @@ public class P3Utils {
 
     List<ValueGroundedParseExample> examples = Lists.newArrayList();
     for (String exampleString : IoUtils.readLines(path + "/" + trainingFilePath)) {
-      if (exampleString.startsWith("*")) {
+      if (exampleString.startsWith("*") || exampleString.trim().length() == 0) {
         continue;
       }
       

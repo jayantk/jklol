@@ -22,3 +22,5 @@ do
 
     ./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TestP3 --testData $TRAIN --defs $DEFS,$GENDEFS --categoryFeatures $CATEGORY_FEATURE_NAMES --relationFeatures $RELATION_FEATURE_NAMES --parser $PARSER --kbModel $KB_MODEL > $TRAIN_ERR
 done
+
+grep 'Recall:' $EXPERIMENT_DIR/**/test_err.txt | grep -o '([^)]*)' | sed 's/[(\/)]//g' | awk '{SUM += $1; TOT += $2} END {print "RECALL: " (SUM / TOT) " (" SUM " / " TOT ")"}'

@@ -48,6 +48,11 @@ public class KbEnvironment {
   }
   
   public DiscreteFactor getEmptyCategoryAssignment() {
+    /*
+    TableFactorBuilder builder = new TableFactorBuilder(getCategoryVars(),
+        DenseTensorBuilder.getFactory());
+    return builder.build();
+    */
     return TableFactor.zero(getCategoryVars());
   }
   
@@ -60,6 +65,11 @@ public class KbEnvironment {
   }
   
   public DiscreteFactor getEmptyRelationAssignment() {
+    /*
+    TableFactorBuilder builder = new TableFactorBuilder(getRelationVars(),
+        DenseTensorBuilder.getFactory());
+    return builder.build();
+    */
     return TableFactor.zero(getRelationVars());
   }
   

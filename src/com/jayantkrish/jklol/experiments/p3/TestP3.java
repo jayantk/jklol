@@ -16,6 +16,7 @@ import com.jayantkrish.jklol.ccg.gi.GroundedParser;
 import com.jayantkrish.jklol.ccg.gi.GroundedParserInference;
 import com.jayantkrish.jklol.ccg.gi.GroundedParserPipelinedInference;
 import com.jayantkrish.jklol.ccg.gi.ValueGroundedParseExample;
+import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.experiments.p3.KbParametricContinuationIncEval.KbContinuationIncEval;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -88,19 +89,24 @@ public class TestP3 extends AbstractCli {
       List<GroundedCcgParse> parses = inf.beamSearch(parser, ex.getSentence(), ex.getDiagram());
       
       CountAccumulator<ImmutableSet<Object>> denotationCounts = CountAccumulator.create();
+      double partitionFunction = 0.0;
       for (GroundedCcgParse parse : parses) {
         Object d = parse.getDenotation();
         double prob = parse.getSubtreeProbability();
+        partitionFunction += prob;
+
         if (d instanceof Set) {
           denotationCounts.increment(ImmutableSet.copyOf((Set<?>) d), prob);
         }
       }
       
-      int numToPrint = Math.min(denotationCounts.keySet().size(), 5);
-      List<ImmutableSet<Object>> sortedDenotations = denotationCounts.getSortedKeys();
+      int numToPrint = Math.min(parses.size(), 10);
       for (int i = 0; i < numToPrint; i++) {
-        ImmutableSet<Object> d = sortedDenotations.get(i);
-        System.out.println("   " + denotationCounts.getProbability(d) + " " + d);
+        GroundedCcgParse parse = parses.get(i);
+        Expression2 lf = P3Utils.getSimplifier().apply(parse.getLogicalForm());
+        ImmutableSet<Object> d = ImmutableSet.copyOf((Set<?>) parse.getDenotation());
+        double prob = parse.getSubtreeProbability() / partitionFunction;
+        System.out.println("   " + prob + " " + d + " " + lf);
       }
       
       if (denotationCounts.keySet().size() > 0) {

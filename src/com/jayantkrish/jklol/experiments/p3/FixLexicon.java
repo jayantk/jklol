@@ -9,6 +9,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgCategory;
@@ -25,9 +26,6 @@ public class FixLexicon extends AbstractCli {
 
   private OptionSpec<String> lexicon;
   
-  private static final Set<String> IGNORE_PREDS = Sets.newHashSet(
-      "kb-ignore", "kb-ignore-equal", "kb-equal");
-    
   private static final String[][] SYNTAX_HEADS = new String[][] {
         {"N", "N{0}"},
         {"N/N", "(N{0}/N{0}){1}"},
@@ -38,9 +36,15 @@ public class FixLexicon extends AbstractCli {
         {"A\\N", "(N{0}\\N{0}){1}"},
         {"(N\\N)/N", "((N{0}\\N{0}){1}/N{2}){1}"},
         {"(N\\N)/P", "((N{0}\\N{0}){1}/N{2}){1}"},
+        {"(A\\A)/N", "((N{0}\\N{0}){1}/N{2}){1}"},
+        {"(A\\A)/A", "((N{0}\\N{0}){1}/N{2}){1}"},
+        {"(A\\N)/A", "((N{0}\\N{0}){1}/N{2}){1}"},
         {"(S\\N)/N", "((S{0}\\N{1}){0}/N{2}){0}"},
         {"(S\\N)/P", "((S{0}\\N{1}){0}/N{2}){0}"},
         {"(S\\P)/N", "((S{0}\\N{1}){0}/N{2}){0}"},
+        {"(S\\N)/A", "((S{0}\\N{1}){0}/N{2}){0}"},
+        {"(S\\A)/N", "((S{0}\\N{1}){0}/N{2}){0}"},
+        {"(S/A)/N", "((S{0}/N{1}){0}/N{2}){0}"},
         {"(S/N)/N", "((S{0}/N{1}){0}/N{2}){0}"},
         {"(S/N)/P", "((S{0}/N{1}){0}/N{2}){0}"},
         {"(S/P)/N", "((S{0}/N{1}){0}/N{2}){0}"},
@@ -76,12 +80,10 @@ public class FixLexicon extends AbstractCli {
         argSpec[i] = Integer.parseInt(semantics[i + 1]);
       }
 
-      if (IGNORE_PREDS.contains(predicate)) {
-        continue;
-      }
-      
       SyntacticCategory syntax = SyntacticCategory.parseFrom(syntaxString);
       HeadedSyntacticCategory headedSyntax = syntaxMap.get(syntax);
+      
+      Preconditions.checkState(headedSyntax != null, "No syntax mapping for %s", syntax);
 
       String[] lcWords = new String[words.length];
       for (int i = 0; i < words.length; i++) {
@@ -89,7 +91,21 @@ public class FixLexicon extends AbstractCli {
       }
       
       Expression2 lf = null;
-      if (predicate.endsWith("-rel")) {
+      if (predicate.equals("kb-ignore")) {
+        if (syntax.isAtomic()) {
+          lf = exp.parse("(lambda (x) #t)");
+        } else {
+          lf = exp.parse("(lambda (f) (lambda (x) (f x)))");
+        }
+      } else if (predicate.equals("kb-equal")) {
+        if (syntax.getArgumentList().size() == 1) {
+          lf = exp.parse("(lambda (f) (lambda (x) (f x)))");
+        } else {
+          lf = exp.parse("(lambda (f) (lambda (g) (lambda (x) (and:<t*,t> (f x) (g x)))))");
+        }
+      } else if (predicate.equals("kb-ignore-equal")) {
+        lf = exp.parse("(lambda (f) (lambda (g) (lambda (x) (and:<t*,t> (f x) (g x)))))");
+      } else if (predicate.endsWith("-rel")) {
         String typedPredicate = predicate +  ":<e,<e,t>>";
 
         if (Arrays.equals(argSpec, new int[] {0, 1})) {

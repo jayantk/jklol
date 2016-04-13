@@ -4,6 +4,7 @@ source experiments/p3/scripts/config.sh
 
 num_folds=${#FOLD_NAMES[@]}
 echo $num_folds
+PROC=()
 for (( i=0; i<${num_folds}; i++ ));
 do
     TRAIN=${TRAIN_FILES[$i]}
@@ -20,5 +21,17 @@ do
     echo "Training parser: $NAME"
     echo "  train: $TRAIN"
 
-    ./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TrainP3 --lexicon $LEXICON --trainingData $TRAIN --defs $DEFS,$GENDEFS --categories $CATEGORIES --categoryFeatures $CATEGORY_FEATURE_NAMES --relations $RELATIONS --relationFeatures $RELATION_FEATURE_NAMES --parserOut $PARSER --kbModelOut $KB_MODEL --batchSize 1 --iterations 1 > $LOG
+    CMD="./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TrainP3 --lexicon $LEXICON --trainingData $TRAIN --defs $DEFS,$GENDEFS --categories $CATEGORIES --categoryFeatures $CATEGORY_FEATURE_NAMES --relations $RELATIONS --relationFeatures $RELATION_FEATURE_NAMES --parserOut $PARSER --kbModelOut $KB_MODEL --batchSize 1 --iterations 10"
+
+    echo $CMD
+    $CMD > $LOG &
+    pid=$!
+    echo $pid
+    PROC[$i]=$pid
+done
+
+for pid in ${PROC[@]};
+do
+    echo "waiting $pid ..."
+    wait $pid
 done

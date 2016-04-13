@@ -112,7 +112,7 @@ public class FixLexicon extends AbstractCli {
         String[] predicateParts = predicate.split("-");
         String entityName = predicateParts[1].split(":")[0];
         entityName.replaceAll("_", " ");
-        lf = exp.parse("(lambda (x) (entity-equal? x \"" + entityName + "\"))");
+        lf = exp.parse("(lambda (x) (equal?:<⊤,<⊤,t>> x \"" + entityName + "\"))");
       } else if (predicate.endsWith("-rel")) {
         String typedPredicate = predicate +  ":<e,<e,t>>";
 

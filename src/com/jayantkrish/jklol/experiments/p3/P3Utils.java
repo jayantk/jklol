@@ -82,6 +82,11 @@ public class P3Utils {
       }
       
       String[] exampleParts = exampleString.split(";");
+      if (exampleParts.length < 2) {
+        System.out.println("bad example: "+ exampleString);
+        continue;
+      }
+      
       String language = exampleParts[0];
       // Hacky tokenization.
       List<String> tokens = Arrays.asList(language.toLowerCase().replaceAll("([,?./\\(\\)-])", " $1 ")

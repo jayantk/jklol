@@ -1,5 +1,6 @@
  
 (define and:<t*,t> (continuation . rest) (continuation (apply and rest)))
+(define equal?:<⊤,<⊤,t>> (continuation x1 x2) (continuation (= x1 x2)))
 
 (define exists:<<e,t>,t> (continuation f-c)
   (get-denotation (lambda (x) (continuation (not (nil? x))))

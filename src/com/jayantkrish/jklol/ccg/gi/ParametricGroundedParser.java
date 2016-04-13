@@ -22,6 +22,9 @@ public class ParametricGroundedParser implements ParametricFamily<GroundedParser
   private final ParametricCcgParser ccgFamily;
   private final ParametricIncEval evalFamily;
   
+  public static final String CCG_PARAMETER_NAME="ccg";
+  public static final String EVAL_PARAMETER_NAME="ccg";
+  
   public ParametricGroundedParser(ParametricCcgParser ccgFamily,
       ParametricIncEval evalFamily) {
     this.ccgFamily = Preconditions.checkNotNull(ccgFamily);
@@ -30,7 +33,7 @@ public class ParametricGroundedParser implements ParametricFamily<GroundedParser
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
-    return new ListSufficientStatistics(Arrays.asList("ccg", "eval"), 
+    return new ListSufficientStatistics(Arrays.asList(CCG_PARAMETER_NAME, EVAL_PARAMETER_NAME), 
         Arrays.asList(ccgFamily.getNewSufficientStatistics(), evalFamily.getNewSufficientStatistics()));
   }
 

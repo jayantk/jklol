@@ -102,6 +102,11 @@ public class TrainP3 extends AbstractCli {
     GradientOptimizer trainer = createGradientOptimizer(examples.size());
     
     SufficientStatistics initialParameters = oracle.initializeGradient();
+    // This disables skipping words for words that are in the lexicon.
+    initialParameters.coerceToList().getStatisticByName(ParametricGroundedParser.CCG_PARAMETER_NAME)
+    .coerceToList().getStatisticByName(ParametricCcgParser.WORD_SKIP_PARAMETERS)
+    .increment(Double.NEGATIVE_INFINITY);
+    
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);
     GroundedParser parser = family.getModelFromParameters(parameters);
     IoUtils.serializeObjectToFile(parser.getCcgParser(), options.valueOf(parserOut));

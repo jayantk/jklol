@@ -95,6 +95,7 @@ public class TestP3 extends AbstractCli {
     int numNoPrediction = 0;
     for (ValueGroundedParseExample ex : examples) {
       System.out.println(ex.getSentence());
+      System.out.println(ex.getLabel());
 
       List<GroundedCcgParse> parses = inf.beamSearch(parser, ex.getSentence(), ex.getDiagram());
       
@@ -121,14 +122,15 @@ public class TestP3 extends AbstractCli {
       
       if (denotationCounts.keySet().size() > 0) {
         ImmutableSet<Object> items = denotationCounts.getSortedKeys().get(0);
+        System.out.println("  Predicted: " + ex.getLabel());
         if (ex.getLabel().equals(items)) {
-          System.out.println("CORRECT");
+          System.out.println("  CORRECT");
           numCorrect++;
         } else {
-          System.out.println("INCORRECT");
+          System.out.println("  INCORRECT");
         }
       } else {
-        System.out.println("NO PREDICTION");
+        System.out.println("  NO PREDICTION");
         numNoPrediction++;
       }
     }

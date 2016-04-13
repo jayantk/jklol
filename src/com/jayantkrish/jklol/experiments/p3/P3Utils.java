@@ -34,9 +34,10 @@ import com.jayantkrish.jklol.util.IoUtils;
 public class P3Utils {
 
   public static List<ValueGroundedParseExample> readTrainingData(String path,
-      DiscreteVariable categoryFeatureNames, DiscreteVariable relationFeatureNames) {
+      DiscreteVariable categoryFeatureNames, DiscreteVariable relationFeatureNames,
+      String categoryFilePath, String relationFilePath, String trainingFilePath) {
     DiscreteFactor categoryFeatures = TableFactor.fromDelimitedFile(
-        IoUtils.readLines(path + "/osm_kb.domain.entities"), ",");
+        IoUtils.readLines(path + "/" + categoryFilePath), ",");
     
     VariableNumMap entityVar = categoryFeatures.getVars().getFirstVariables(1)
         .relabelVariableNums(new int[] {0});
@@ -49,7 +50,7 @@ public class P3Utils {
 
     categoryFeatures = TableFactor.fromDelimitedFile(
         VariableNumMap.unionAll(entityVar, truthVar, entityFeatureVar),
-        IoUtils.readLines(path + "/osm_kb.domain.entities"), ",", false,
+        IoUtils.readLines(path + "/" + categoryFilePath), ",", false,
         DenseTensorBuilder.getFactory());
     categoryFeatures = new TableFactor(
         VariableNumMap.unionAll(entityVar, lispTruthVar, entityFeatureVar),
@@ -62,7 +63,7 @@ public class P3Utils {
 
     DiscreteFactor relationFeatures = TableFactor.fromDelimitedFile(
         VariableNumMap.unionAll(entityVar1, entityVar2, truthVar, entityPairFeatureVar),
-        IoUtils.readLines(path + "/osm_kb.domain.relations"), ",", false,
+        IoUtils.readLines(path + "/" + relationFilePath), ",", false,
         DenseTensorBuilder.getFactory());
     relationFeatures = new TableFactor(
         VariableNumMap.unionAll(entityVar1, entityVar2, lispTruthVar, entityPairFeatureVar),
@@ -75,7 +76,7 @@ public class P3Utils {
     KbState state = KbState.unassigned(env);
 
     List<ValueGroundedParseExample> examples = Lists.newArrayList();
-    for (String exampleString : IoUtils.readLines(path + "/training.annotated.txt")) {
+    for (String exampleString : IoUtils.readLines(path + "/" + trainingFilePath)) {
       if (exampleString.startsWith("*")) {
         continue;
       }

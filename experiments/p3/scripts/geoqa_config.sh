@@ -8,6 +8,9 @@ mkdir -p $OUT_DIR
 mkdir -p $EXPERIMENT_DIR
 
 # Common data files for all models
+export CATEGORY_FILE_PATH="cat_features.txt"
+export RELATION_FILE_PATH="rel_features.txt"
+export TRAINING_FILE_PATH="training.txt"
 export CATEGORY_FEATURE_NAMES="$DATA_DIR/data/category_feature_names.txt"
 export RELATION_FEATURE_NAMES="$DATA_DIR/data/relation_feature_names.txt"
 export DEFS="$DATA_DIR/data/defs.lisp"

@@ -26,6 +26,9 @@ import com.jayantkrish.jklol.util.IoUtils;
 public class TestP3 extends AbstractCli {
 
   private OptionSpec<String> testData;
+  private OptionSpec<String> categoryFilename;
+  private OptionSpec<String> relationFilename;
+  private OptionSpec<String> exampleFilename;
   private OptionSpec<String> defs;
 
   private OptionSpec<String> categoryFeatures;
@@ -41,6 +44,12 @@ public class TestP3 extends AbstractCli {
   @Override
   public void initializeOptions(OptionParser parser) {
     testData = parser.accepts("testData").withRequiredArg().withValuesSeparatedBy(',')
+        .ofType(String.class).required();
+    categoryFilename = parser.accepts("categoryFilename").withRequiredArg()
+        .ofType(String.class).required();
+    relationFilename = parser.accepts("relationFilename").withRequiredArg()
+        .ofType(String.class).required();
+    exampleFilename = parser.accepts("exampleFilename").withRequiredArg()
         .ofType(String.class).required();
     defs = parser.accepts("defs").withRequiredArg().withValuesSeparatedBy(',')
         .ofType(String.class);
@@ -64,7 +73,8 @@ public class TestP3 extends AbstractCli {
     List<ValueGroundedParseExample> examples = Lists.newArrayList();
     for (String trainingDataEnv : options.valuesOf(testData)) {
       examples.addAll(P3Utils.readTrainingData(trainingDataEnv, categoryFeatureNames,
-          relationFeatureNames));
+          relationFeatureNames, options.valueOf(categoryFilename), options.valueOf(relationFilename),
+          options.valueOf(exampleFilename)));
     }
     
     CcgParser ccgParser = IoUtils.readSerializedObject(options.valueOf(parserOpt), CcgParser.class);

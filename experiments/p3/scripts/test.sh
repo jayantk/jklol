@@ -19,12 +19,12 @@ do
 
     echo "Testing $NAME..."
 
-    CMD="./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TestP3 --testData $TEST --defs $DEFS,$GENDEFS --categoryFeatures $CATEGORY_FEATURE_NAMES --relationFeatures $RELATION_FEATURE_NAMES --parser $PARSER --kbModel $KB_MODEL"
+    CMD="./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TestP3 --testData $TEST --exampleFilename $TRAINING_FILE_PATH --categoryFilename $CATEGORY_FILE_PATH --relationFilename $RELATION_FILE_PATH --defs $DEFS,$GENDEFS --categoryFeatures $CATEGORY_FEATURE_NAMES --relationFeatures $RELATION_FEATURE_NAMES --parser $PARSER --kbModel $KB_MODEL"
     $CMD > $TEST_ERR &
     pid=$!
     PROC+=($pid)
 
-    CMD="./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TestP3 --testData $TRAIN --defs $DEFS,$GENDEFS --categoryFeatures $CATEGORY_FEATURE_NAMES --relationFeatures $RELATION_FEATURE_NAMES --parser $PARSER --kbModel $KB_MODEL"
+    CMD="./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TestP3 --testData $TRAIN --exampleFilename $TRAINING_FILE_PATH --categoryFilename $CATEGORY_FILE_PATH --relationFilename $RELATION_FILE_PATH --defs $DEFS,$GENDEFS --categoryFeatures $CATEGORY_FEATURE_NAMES --relationFeatures $RELATION_FEATURE_NAMES --parser $PARSER --kbModel $KB_MODEL"
     $CMD > $TRAIN_ERR &
     pid=$!
     PROC+=($pid)

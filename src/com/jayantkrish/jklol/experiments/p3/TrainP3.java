@@ -35,6 +35,9 @@ import com.jayantkrish.jklol.util.IoUtils;
 public class TrainP3 extends AbstractCli {
 
   private OptionSpec<String> trainingData;
+  private OptionSpec<String> categoryFilename;
+  private OptionSpec<String> relationFilename;
+  private OptionSpec<String> exampleFilename;
   private OptionSpec<String> defs;
   
   private OptionSpec<String> categories;
@@ -54,6 +57,12 @@ public class TrainP3 extends AbstractCli {
   @Override
   public void initializeOptions(OptionParser parser) {
     trainingData = parser.accepts("trainingData").withRequiredArg().withValuesSeparatedBy(',')
+        .ofType(String.class).required();
+    categoryFilename = parser.accepts("categoryFilename").withRequiredArg()
+        .ofType(String.class).required();
+    relationFilename = parser.accepts("relationFilename").withRequiredArg()
+        .ofType(String.class).required();
+    exampleFilename = parser.accepts("exampleFilename").withRequiredArg()
         .ofType(String.class).required();
     defs = parser.accepts("defs").withRequiredArg().withValuesSeparatedBy(',')
         .ofType(String.class);
@@ -85,7 +94,8 @@ public class TrainP3 extends AbstractCli {
     List<ValueGroundedParseExample> examples = Lists.newArrayList();
     for (String trainingDataEnv : options.valuesOf(trainingData)) {
       examples.addAll(P3Utils.readTrainingData(trainingDataEnv, categoryFeatureNames,
-          relationFeatureNames));
+          relationFeatureNames, options.valueOf(categoryFilename), options.valueOf(relationFilename),
+          options.valueOf(exampleFilename)));
     }
     
     Collections.shuffle(examples);

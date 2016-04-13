@@ -253,9 +253,7 @@ public class CcgCategory implements Serializable {
     List<String> subjects = Lists.newArrayList();
     List<Integer> argumentNums = Lists.newArrayList();
     List<Integer> objects = Lists.newArrayList();
-    List<Set<String>> assignments = Lists.newArrayList();
-    assignments.add(Sets.newHashSet(head));
-
+    
     List<HeadedSyntacticCategory> argumentCats = Lists.newArrayList(cat.getArgumentTypes());
     Collections.reverse(argumentCats);
     for (int i = 0; i < argumentCats.size(); i++) {
@@ -264,9 +262,12 @@ public class CcgCategory implements Serializable {
       objects.add(argumentCats.get(i).getHeadVariable());
     }
 
-    for (int i = 0; i < cat.getUniqueVariables().length - 1; i++) {
+    List<Set<String>> assignments = Lists.newArrayList();
+    for (int i = 0; i < cat.getUniqueVariables().length; i++) {
       assignments.add(Collections.<String>emptySet());
     }
+    int headVar = cat.getHeadVariable();
+    assignments.set(headVar, Sets.newHashSet(head));
 
     return new CcgCategory(cat, lf, subjects, argumentNums, objects, assignments);
   }

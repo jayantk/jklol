@@ -4,6 +4,7 @@ source experiments/p3/scripts/config.sh
 
 num_folds=${#FOLD_NAMES[@]}
 echo $num_folds
+PROC=()
 for (( i=0; i<${num_folds}; i++ ));
 do
     TRAIN=${TRAIN_FILES[$i]}
@@ -18,9 +19,23 @@ do
 
     echo "Testing $NAME..."
 
-    ./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TestP3 --testData $TEST --defs $DEFS,$GENDEFS --categoryFeatures $CATEGORY_FEATURE_NAMES --relationFeatures $RELATION_FEATURE_NAMES --parser $PARSER --kbModel $KB_MODEL > $TEST_ERR
+    CMD="./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TestP3 --testData $TEST --defs $DEFS,$GENDEFS --categoryFeatures $CATEGORY_FEATURE_NAMES --relationFeatures $RELATION_FEATURE_NAMES --parser $PARSER --kbModel $KB_MODEL"
+    $CMD > $TEST_ERR &
+    pid=$!
+    PROC+=($pid)
 
-    ./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TestP3 --testData $TRAIN --defs $DEFS,$GENDEFS --categoryFeatures $CATEGORY_FEATURE_NAMES --relationFeatures $RELATION_FEATURE_NAMES --parser $PARSER --kbModel $KB_MODEL > $TRAIN_ERR
+    CMD="./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TestP3 --testData $TRAIN --defs $DEFS,$GENDEFS --categoryFeatures $CATEGORY_FEATURE_NAMES --relationFeatures $RELATION_FEATURE_NAMES --parser $PARSER --kbModel $KB_MODEL"
+    $CMD > $TRAIN_ERR &
+    pid=$!
+    PROC+=($pid)
 done
 
-grep 'Recall:' $EXPERIMENT_DIR/**/test_err.txt | grep -o '([^)]*)' | sed 's/[(\/)]//g' | awk '{SUM += $1; TOT += $2} END {print "RECALL: " (SUM / TOT) " (" SUM " / " TOT ")"}'
+for pid in ${PROC[@]};
+do
+    echo "waiting $pid ..."
+    wait $pid
+done
+
+
+grep 'Training Recall:' $EXPERIMENT_DIR/**/train_err.txt | grep -o '([^)]*)' | sed 's/[(\/)]//g' | awk '{SUM += $1; TOT += $2} END {print "RECALL: " (SUM / TOT) " (" SUM " / " TOT ")"}'
+grep 'Test Recall:' $EXPERIMENT_DIR/**/test_err.txt | grep -o '([^)]*)' | sed 's/[(\/)]//g' | awk '{SUM += $1; TOT += $2} END {print "RECALL: " (SUM / TOT) " (" SUM " / " TOT ")"}'

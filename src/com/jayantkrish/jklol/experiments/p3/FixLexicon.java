@@ -118,16 +118,16 @@ public class FixLexicon extends AbstractCli {
         } else if (Arrays.equals(argSpec, new int[] {1, 0})) {
           lf = exp.parse("(lambda (f) (lambda (y) (exists:<<e,t>,t> (lambda (x) (and:<t*,t> (f x) (" + typedPredicate + " x y))))))");
         } else if (Arrays.equals(argSpec, new int[] {0, 0, 1})) {
-          lf = exp.parse("(lambda (f) (lambda (g) (lambda (x) (exists:<<e,t>,t> (lambda (y) (and:<t*,t> (f y) (g x) (" + typedPredicate +  " x y)))))))");
+          lf = exp.parse("(lambda (f) (lambda (g) (lambda (x) (and:<t*,t> (g x) (exists:<<e,t>,t> (lambda (y) (and:<t*,t> (f y) (" + typedPredicate +  " x y))))))))");
         } else if (Arrays.equals(argSpec, new int[] {0, 1, 0})) {
-          lf = exp.parse("(lambda (f) (lambda (g) (lambda (x) (exists:<<e,t>,t> (lambda (y) (and:<t*,t> (g y) (f x) (" + typedPredicate +  " x y)))))))");
+          lf = exp.parse("(lambda (f) (lambda (g) (lambda (x) (and:<t*,t> (f x) (exists:<<e,t>,t> (lambda (y) (and:<t*,t> (g y) (" + typedPredicate +  " x y))))))))");
         }
       } else {
         String typedPredicate = predicate +  ":<e,t>";
         if (headedSyntax.isAtomic()) {
           lf = exp.parse(typedPredicate);
         } else {
-          lf = exp.parse("(lambda (f) (lambda (x) (and:<t*,t> (f x) (" + typedPredicate +  " x))))");
+          lf = exp.parse("(lambda (f) (lambda (x) (and:<t*,t> (" + typedPredicate +  " x) (f x))))");
         }
       }
       

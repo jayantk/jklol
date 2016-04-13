@@ -3,7 +3,6 @@ package com.jayantkrish.jklol.experiments.p3;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -11,7 +10,6 @@ import joptsimple.OptionSpec;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
@@ -110,6 +108,11 @@ public class FixLexicon extends AbstractCli {
         }
       } else if (predicate.equals("kb-ignore-equal")) {
         lf = exp.parse("(lambda (f) (lambda (g) (lambda (x) (and:<t*,t> (f x) (g x)))))");
+      } else if (predicate.startsWith("kb-")) {
+        String[] predicateParts = predicate.split("-");
+        String entityName = predicateParts[1].split(":")[0];
+        entityName.replaceAll("_", " ");
+        lf = exp.parse("(lambda (x) (= x \"" + entityName + "\"))");
       } else if (predicate.endsWith("-rel")) {
         String typedPredicate = predicate +  ":<e,<e,t>>";
 

@@ -5,10 +5,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
-import com.jayantkrish.jklol.ccg.gi.ValueGroundedParseExample;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
@@ -33,9 +34,10 @@ import com.jayantkrish.jklol.util.IoUtils;
 
 public class P3Utils {
 
-  public static List<ValueGroundedParseExample> readTrainingData(String path,
+  public static List<P3Example> readTrainingData(String path,
       DiscreteVariable categoryFeatureNames, DiscreteVariable relationFeatureNames,
-      String categoryFilePath, String relationFilePath, String trainingFilePath) {
+      String categoryFilePath, String relationFilePath, String trainingFilePath,
+      String worldFilePath, List<String> categories, List<String> relations) {
     DiscreteFactor categoryFeatures = TableFactor.fromDelimitedFile(
         IoUtils.readLines(path + "/" + categoryFilePath), ",");
     
@@ -74,8 +76,72 @@ public class P3Utils {
 
     KbEnvironment env = new KbEnvironment(id, categoryFeatures, relationFeatures);
     KbState state = KbState.unassigned(env);
+    
+    KbState stateLabel = null;
+    if (worldFilePath != null) {
+      stateLabel = state;
+      for (String predicateString : IoUtils.readLines(path + "/" + worldFilePath)) {
+        if (!predicateString.startsWith("*")) {
+          continue;
+        }
+        
+        String[] predicateParts = predicateString.substring(1).split(";");
+        String predicateName = predicateParts[0];
+        String[] assignmentParts = predicateParts[1].split(",");
+        if (predicateName.endsWith("-rel")) {
+          String typedPredicateName = predicateName + ":<e,<e,t>>";
+          Multimap<String, String> relationMap = HashMultimap.create();
+          for (int i = 0; i < assignmentParts.length; i++) {
+            String[] entityParts = assignmentParts[i].split("#");
+            relationMap.put(entityParts[0], entityParts[1]);
+          }
+          
+          List<Object> entities = env.getEntities();
+          for (Object arg1 : entities) {
+            for (Object arg2 : entities) {
+              if (relationMap.containsEntry(arg1, arg2)) {
+                stateLabel = stateLabel.setRelationValue(typedPredicateName, arg1, arg2, ConstantValue.TRUE);
+              } else {
+                stateLabel = stateLabel.setRelationValue(typedPredicateName, arg1, arg2, ConstantValue.FALSE);
+              }
+            }
+          }
+        } else {
+          String typedPredicateName = predicateName + ":<e,t>";
+          Set<String> trueEntities = Sets.newHashSet(assignmentParts);
+          Set<Object> falseEntities = Sets.newHashSet(env.getEntities());
+          falseEntities.removeAll(trueEntities);
+          
+          for (Object trueEntity : trueEntities) {
+            stateLabel = stateLabel.setCategoryValue(typedPredicateName, trueEntity, ConstantValue.TRUE);
+          }
+          
+          for (Object falseEntity : falseEntities) {
+            stateLabel = stateLabel.setCategoryValue(typedPredicateName, falseEntity, ConstantValue.FALSE);
+          }
+        }
+      }
+      
+      for (String category : categories) {
+        if (!stateLabel.getCategories().contains(category)) {
+          for (Object entity : env.getEntities()) {
+            stateLabel = stateLabel.setCategoryValue(category, entity, ConstantValue.FALSE);
+          }
+        }
+      }
+      
+      for (String relation : relations) {
+        if (!stateLabel.getRelations().contains(relation)) {
+          for (Object arg1 : env.getEntities()) {
+            for (Object arg2 : env.getEntities()) {
+              stateLabel = stateLabel.setRelationValue(relation, arg1, arg2, ConstantValue.FALSE);
+            }
+          }
+        }
+      }
+    }
 
-    List<ValueGroundedParseExample> examples = Lists.newArrayList();
+    List<P3Example> examples = Lists.newArrayList();
     for (String exampleString : IoUtils.readLines(path + "/" + trainingFilePath)) {
       if (exampleString.startsWith("*") || exampleString.startsWith("#") || exampleString.trim().length() == 0) {
         continue;
@@ -99,7 +165,7 @@ public class P3Utils {
       if (denotationParts.length > 1 || denotationParts[0].length() != 0) {
         denotation.addAll(Arrays.asList(denotationParts));
       }
-      examples.add(new ValueGroundedParseExample(sentence, state, denotation));
+      examples.add(new P3Example(sentence, state, denotation, stateLabel));
     }
 
     return examples;

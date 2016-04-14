@@ -17,7 +17,6 @@ import com.jayantkrish.jklol.ccg.gi.GroundedParserInference;
 import com.jayantkrish.jklol.ccg.gi.GroundedParserLoglikelihoodOracle;
 import com.jayantkrish.jklol.ccg.gi.GroundedParserPipelinedInference;
 import com.jayantkrish.jklol.ccg.gi.ParametricGroundedParser;
-import com.jayantkrish.jklol.ccg.gi.ValueGroundedParseExample;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.experiments.p3.KbParametricContinuationIncEval.KbContinuationIncEval;
 import com.jayantkrish.jklol.lisp.inc.ParametricIncEval;
@@ -38,6 +37,7 @@ public class TrainP3 extends AbstractCli {
   private OptionSpec<String> categoryFilename;
   private OptionSpec<String> relationFilename;
   private OptionSpec<String> exampleFilename;
+  private OptionSpec<String> worldFilename;
   private OptionSpec<String> defs;
   
   private OptionSpec<String> categories;
@@ -64,6 +64,8 @@ public class TrainP3 extends AbstractCli {
         .ofType(String.class).required();
     exampleFilename = parser.accepts("exampleFilename").withRequiredArg()
         .ofType(String.class).required();
+    worldFilename = parser.accepts("worldFilename").withRequiredArg()
+        .ofType(String.class);
     defs = parser.accepts("defs").withRequiredArg().withValuesSeparatedBy(',')
         .ofType(String.class);
     
@@ -91,11 +93,11 @@ public class TrainP3 extends AbstractCli {
     DiscreteVariable relationFeatureNames = new DiscreteVariable("relationFeatures",
         IoUtils.readLines(options.valueOf(relationFeatures)));
     
-    List<ValueGroundedParseExample> examples = Lists.newArrayList();
+    List<P3Example> examples = Lists.newArrayList();
     for (String trainingDataEnv : options.valuesOf(trainingData)) {
       examples.addAll(P3Utils.readTrainingData(trainingDataEnv, categoryFeatureNames,
           relationFeatureNames, options.valueOf(categoryFilename), options.valueOf(relationFilename),
-          options.valueOf(exampleFilename)));
+          options.valueOf(exampleFilename), options.valueOf(worldFilename), categoryList, relationList));
     }
     
     Collections.shuffle(examples);

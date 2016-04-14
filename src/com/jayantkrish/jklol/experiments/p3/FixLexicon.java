@@ -1,15 +1,19 @@
 package com.jayantkrish.jklol.experiments.p3;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.CcgCategory;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
@@ -94,6 +98,7 @@ public class FixLexicon extends AbstractCli {
       }
       
       Expression2 lf = null;
+      boolean isEntity = false;
       if (predicate.equals("kb-ignore")) {
         if (syntax.isAtomic()) {
           lf = exp.parse("(lambda (x) #t)");
@@ -111,8 +116,9 @@ public class FixLexicon extends AbstractCli {
       } else if (predicate.startsWith("kb-")) {
         String[] predicateParts = predicate.split("-");
         String entityName = predicateParts[1].split(":")[0];
-        entityName.replaceAll("_", " ");
+        entityName = entityName.replaceAll("_", " ");
         if (syntax.isAtomic()) {
+          isEntity = true;
           lf = exp.parse("(lambda (x) (equal?:<⊤,<⊤,t>> x \"" + entityName + "\"))");
         } else {
           lf = exp.parse("(lambda (f) (lambda (x) (and:<t*,t> (f x) (equal?:<⊤,<⊤,t>> x \"" + entityName + "\"))))");
@@ -138,7 +144,17 @@ public class FixLexicon extends AbstractCli {
         }
       }
       
-      LexiconEntry entry = new LexiconEntry(Arrays.asList(lcWords), CcgCategory.fromSyntaxLf(headedSyntax, lf));
+      CcgCategory category = null;
+      if (isEntity) {
+        List<Set<String>> assignment = Lists.newArrayList();
+        assignment.add(Sets.newHashSet("entity"));
+        category = new CcgCategory(headedSyntax, lf, Collections.emptyList(), Collections.emptyList(),
+            Collections.emptyList(), assignment);
+      } else {
+        category = CcgCategory.fromSyntaxLf(headedSyntax, lf);
+      }
+      
+      LexiconEntry entry = new LexiconEntry(Arrays.asList(lcWords), category);
       System.out.println(entry.toCsvString());
     }
   }

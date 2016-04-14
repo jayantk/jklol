@@ -115,9 +115,8 @@ public class TestP3 extends AbstractCli {
       for (int i = 0; i < numToPrint; i++) {
         GroundedCcgParse parse = parses.get(i);
         Expression2 lf = P3Utils.getSimplifier().apply(parse.getLogicalForm());
-        ImmutableSet<Object> d = ImmutableSet.copyOf((Set<?>) parse.getDenotation());
         double prob = parse.getSubtreeProbability() / partitionFunction;
-        System.out.println("   " + prob + " " + d + " " + lf);
+        System.out.println("   " + prob + " " + parse.getDenotation() + " " + lf);
       }
       
       if (denotationCounts.keySet().size() > 0) {

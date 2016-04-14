@@ -19,6 +19,7 @@ import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval;
+import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval.SimplifierCpsTransform;
 import com.jayantkrish.jklol.lisp.inc.IncEval;
 import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
@@ -86,7 +87,8 @@ public class GroundedParserContinuationTest extends TestCase {
     
     String evalDefString = "(begin " + Joiner.on(" ").join(evalDefs) + ")";
     SExpression defs = sexpParser.parse(evalDefString);
-    eval = new ContinuationIncEval(ambEval, env, simplifier, defs, null);
+    SimplifierCpsTransform transform = new SimplifierCpsTransform(simplifier, null);
+    eval = new ContinuationIncEval(ambEval, env, transform, defs);
     parser = new GroundedParser(ccgParser, eval);
   }
 

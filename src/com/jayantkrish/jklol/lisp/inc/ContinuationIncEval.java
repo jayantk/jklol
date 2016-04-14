@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
@@ -39,11 +40,10 @@ import com.jayantkrish.jklol.training.LogFunction;
 public class ContinuationIncEval extends AbstractIncEval {
   protected final AmbEval eval;
   protected final Environment env;
-  protected final ExpressionSimplifier simplifier;
+  protected final Function<Expression2, Expression2> cpsTransform;
   
   protected final ExpressionParser<SExpression> sexpParser;
   protected final SExpression defs;
-  protected final Expression2 lfConversion;
   
   protected final int finalContinuationIndex;
   protected final int queueContinuationsIndex;
@@ -53,15 +53,14 @@ public class ContinuationIncEval extends AbstractIncEval {
   public static final String QUEUE_CONTINUATIONS = "queue-k";
   public static final String CONTINUATION_HOLDER = "continuation-inc-eval:continuation-holder";
   
-  public ContinuationIncEval(AmbEval eval, Environment env, ExpressionSimplifier simplifier,
-      SExpression defs, Expression2 lfConversion) {
+  public ContinuationIncEval(AmbEval eval, Environment env,
+      Function<Expression2, Expression2> cpsTransform, SExpression defs) {
     this.eval = Preconditions.checkNotNull(eval);
     this.env = Preconditions.checkNotNull(env);
-    this.simplifier = Preconditions.checkNotNull(simplifier);
+    this.cpsTransform = Preconditions.checkNotNull(cpsTransform);
 
     this.sexpParser = ExpressionParser.sExpression(eval.getSymbolTable());
     this.defs = defs;
-    this.lfConversion = lfConversion;
     
     this.finalContinuationIndex = this.eval.getSymbolTable().add(FINAL_CONTINUATION);
     this.queueContinuationsIndex = this.eval.getSymbolTable().add(QUEUE_CONTINUATIONS);
@@ -83,16 +82,12 @@ public class ContinuationIncEval extends AbstractIncEval {
     return env;
   }
   
-  public ExpressionSimplifier getSimplifier() {
-    return simplifier;
+  public Function<Expression2, Expression2> getCpsTransform() {
+    return cpsTransform;
   }
   
   public SExpression getDefs() {
     return defs;
-  }
-  
-  public Expression2 getLfConversion() {
-    return lfConversion;
   }
 
   @Override
@@ -146,8 +141,8 @@ public class ContinuationIncEval extends AbstractIncEval {
    * 
    * @return
    */
-  protected IncEvalState nextState(IncEvalState prev, Object continuation, Environment env, Object denotation,
-      Object diagram, Object otherArgs, LogFunction log) {
+  protected IncEvalState nextState(IncEvalState prev, Object continuation, Environment env,
+      Object denotation, Object diagram, Object otherArgs, LogFunction log) {
     return new IncEvalState(continuation, env, denotation, diagram, 1.0 * prev.getProb(), null);
   }
 
@@ -176,16 +171,10 @@ public class ContinuationIncEval extends AbstractIncEval {
   
   @Override
   public AmbFunctionValue lfToContinuation(Expression2 lf, Environment env) {
-    if (lfConversion != null) {
-      lf = Expression2.nested(lfConversion, lf);
-    }
-    lf = simplifier.apply(lf);
-    
-    // System.out.println("lfToContinuation: " + lf);
-    Expression2 cpsLf = simplifier.apply(CpsTransform.apply(lf, Expression2.constant(FINAL_CONTINUATION)));
+    Expression2 cpsLf = cpsTransform.apply(lf);
     // System.out.println(cpsLf);
     // System.out.println("lfToContinuation: " + lf + " -> " + cpsLf);
-    
+
     SExpression cpsSexp = sexpParser.parse(cpsLf.toString());
     EvalResult evalResult = eval.eval(cpsSexp, env, null);
     // System.out.println(evalResult.getValue());
@@ -319,6 +308,28 @@ public class ContinuationIncEval extends AbstractIncEval {
         QueueContinuations queueContinuations) {
       this.finalContinuation = finalContinuation;
       this.queueContinuations = queueContinuations;
+    }
+  }
+  
+  public static class SimplifierCpsTransform implements Function<Expression2, Expression2> {
+    
+    private final ExpressionSimplifier simplifier;
+    private final Expression2 lfConversion;
+    
+    public SimplifierCpsTransform(ExpressionSimplifier simplifier, Expression2 lfConversion) {
+      this.simplifier = Preconditions.checkNotNull(simplifier);
+      this.lfConversion = lfConversion;
+    }
+    
+    @Override
+    public Expression2 apply(Expression2 lf) {
+      if (lfConversion != null) {
+        lf = Expression2.nested(lfConversion, lf);
+      }
+      lf = simplifier.apply(lf);
+
+      // System.out.println("lfToContinuation: " + lf);
+      return simplifier.apply(CpsTransform.apply(lf, Expression2.constant(FINAL_CONTINUATION)));
     }
   }
 }

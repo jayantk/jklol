@@ -115,9 +115,7 @@ public class KbParametricContinuationIncEval implements ParametricIncEval {
 
     public KbContinuationIncEval(ContinuationIncEval eval,
         KbModel kbModel) {
-      super(eval.getEval(), eval.getEnv(), eval.getSimplifier(),
-          eval.getDefs(), eval.getLfConversion());
-
+      super(eval.getEval(), eval.getEnv(), eval.getCpsTransform(), eval.getDefs());
       this.kbModel = Preconditions.checkNotNull(kbModel);
     }
 

@@ -21,6 +21,7 @@ import com.jayantkrish.jklol.lisp.ConsValue;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval;
+import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval.SimplifierCpsTransform;
 import com.jayantkrish.jklol.lisp.inc.ParametricContinuationIncEval;
 import com.jayantkrish.jklol.lisp.inc.ParametricContinuationIncEval.StateFeatures;
 import com.jayantkrish.jklol.lisp.inc.ParametricIncEval;
@@ -32,7 +33,6 @@ import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.training.DefaultLogFunction;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.Lbfgs;
-import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IndexedList;
 
@@ -129,7 +129,8 @@ public class GroundedParserTrainingTest extends TestCase {
     
     String evalDefString = "(begin " + Joiner.on(" ").join(evalDefs) + ")";
     SExpression defs = sexpParser.parse(evalDefString);
-    ContinuationIncEval eval = new ContinuationIncEval(ambEval, env, simplifier, defs, null);
+    SimplifierCpsTransform transform = new SimplifierCpsTransform(simplifier, null);
+    ContinuationIncEval eval = new ContinuationIncEval(ambEval, env, transform, defs);
     
     FeatureVectorGenerator<StateFeatures> featureVectorGen =
         new DictionaryFeatureVectorGenerator<StateFeatures, String>(StateFeatureGen.getFeatureNames(

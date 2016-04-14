@@ -146,7 +146,7 @@ public class ParametricContinuationIncEval implements ParametricIncEval {
     public FeaturizedContinuationIncEval(ContinuationIncEval eval,
         Factor classifier, VariableNumMap featureVar, Assignment labelAssignment,
         FeatureVectorGenerator<StateFeatures> featureGen) {
-      super(eval.eval, eval.env, eval.simplifier, eval.defs, eval.lfConversion);
+      super(eval.eval, eval.env, eval.cpsTransform, eval.defs);
       
       this.classifier = Preconditions.checkNotNull(classifier);
       this.featureVar = Preconditions.checkNotNull(featureVar);

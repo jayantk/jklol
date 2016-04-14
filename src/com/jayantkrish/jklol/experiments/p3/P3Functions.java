@@ -9,26 +9,58 @@ import com.jayantkrish.jklol.lisp.EvalContext;
 import com.jayantkrish.jklol.lisp.FunctionValue;
 
 public class P3Functions {
+  
+  public static abstract class LoggingFunctionValue implements FunctionValue {
+    
+    private final String timerName;
+    private static final boolean ENABLE_LOGGING = true;
+    
+    public LoggingFunctionValue(String timerName) {
+      this.timerName = Preconditions.checkNotNull(timerName);
+    }
 
-  public static class GetEntities implements FunctionValue {
     @Override
     public Object apply(List<Object> argumentValues, EvalContext context) {
+      if (ENABLE_LOGGING) {
+        context.getLog().startTimer(timerName);
+        Object result = apply2(argumentValues, context);
+        context.getLog().stopTimer(timerName);
+        return result;
+      } else {
+        return apply2(argumentValues, context);
+      }
+    }
+
+    public abstract Object apply2(List<Object> argumentValues, EvalContext context);
+  }
+
+  public static class GetEntities extends LoggingFunctionValue {
+    public GetEntities() {
+      super("p3functions/get_entities");
+    }
+    
+    @Override
+    public Object apply2(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       KbState state = (KbState) argumentValues.get(0);
       return ConsValue.listToConsList(state.getEnvironment().getEntities());
     }
   }
   
-  public static class KbGet implements FunctionValue {
+  public static class KbGet extends LoggingFunctionValue {
+    public KbGet() {
+      super("p3functions/kb_get");
+    }
+
     @Override
-    public Object apply(List<Object> argumentValues, EvalContext context) {
+    public Object apply2(List<Object> argumentValues, EvalContext context) {
       KbState state = (KbState) argumentValues.get(0);
       String predicate = (String) argumentValues.get(1);
       Object entity = argumentValues.get(2);
       
       if (entity instanceof ConsValue) {
         Object arg1 = ((ConsValue) entity).getCar();
-        Object arg2 = ((ConsValue) entity).getCar();
+        Object arg2 = ((ConsValue) entity).getCdr();
         
         return state.getRelationValue(predicate, arg1, arg2);
       } else {
@@ -37,9 +69,13 @@ public class P3Functions {
     }
   }
   
-  public static class KbSet implements FunctionValue {
+  public static class KbSet extends LoggingFunctionValue {
+    public KbSet() {
+      super("p3functions/kb_set");
+    }
+
     @Override
-    public Object apply(List<Object> argumentValues, EvalContext context) {
+    public Object apply2(List<Object> argumentValues, EvalContext context) {
       KbState state = (KbState) argumentValues.get(0);
       String predicate = (String) argumentValues.get(1);
       Object entity = argumentValues.get(2);
@@ -47,7 +83,7 @@ public class P3Functions {
       
       if (entity instanceof ConsValue) {
         Object arg1 = ((ConsValue) entity).getCar();
-        Object arg2 = ((ConsValue) entity).getCar();
+        Object arg2 = ((ConsValue) entity).getCdr();
 
         return state.setRelationValue(predicate, arg1, arg2, value);
       } else {
@@ -56,9 +92,13 @@ public class P3Functions {
     }
   }
   
-  public static class ListToSet implements FunctionValue {
+  public static class ListToSet extends LoggingFunctionValue {
+    public ListToSet() {
+      super("p3functions/list_to_set");
+    }
+    
     @Override
-    public Object apply(List<Object> argumentValues, EvalContext context) {
+    public Object apply2(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       return Sets.newHashSet(ConsValue.consListToList(argumentValues.get(0)));
     }

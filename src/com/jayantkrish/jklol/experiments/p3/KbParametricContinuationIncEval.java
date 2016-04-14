@@ -137,6 +137,11 @@ public class KbParametricContinuationIncEval implements ParametricIncEval {
       log.startTimer("evaluate_continuation/queue/model");
       double prob = 1.0;
       IndexedList<String> predicateNames = kbModel.getPredicateNames();
+      /*
+      System.out.println(state.getCategories());
+      System.out.println(state.getRelations());
+      System.out.println(predicateNames);
+      */
       List<Tensor> classifiers = kbModel.getClassifiers();
       for (String predicate : features.getPredicates()) {
         int index = predicateNames.getIndex(predicate);

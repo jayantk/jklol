@@ -10,7 +10,7 @@ mkdir -p $EXPERIMENT_DIR
 # Common data files for all models
 export CATEGORY_FILE_PATH="osm_kb.domain.entities"
 export RELATION_FILE_PATH="osm_kb.domain.relations"
-export TRAINING_FILE_PATH="training.annotated.txt"
+export TRAINING_FILE_PATH="training.txt"
 export CATEGORY_FEATURE_NAMES="$DATA_DIR/data/category_feature_names.txt"
 export RELATION_FEATURE_NAMES="$DATA_DIR/data/relation_feature_names.txt"
 export DEFS="$DATA_DIR/data/defs.lisp"
@@ -48,7 +48,8 @@ for i in $DATA_DIR/scene/0*; do
     FOLD_NAMES+=($name)
 done
 
-NUM_FOLDS=${#FOLD_NAMES[@]}
+# NUM_FOLDS=${#FOLD_NAMES[@]}
+NUM_FOLDS=1
 
 export PARSER_FILENAME="parser.ser"
 export KBMODEL_FILENAME="kbmodel.ser"

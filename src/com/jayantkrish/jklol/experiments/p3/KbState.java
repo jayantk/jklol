@@ -124,6 +124,6 @@ public class KbState {
 
   @Override
   public String toString() {
-    return categories.toString();
+    return categories.toString() + " " + relations.toString();
   }
 }

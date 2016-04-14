@@ -15,7 +15,6 @@ import com.jayantkrish.jklol.ccg.gi.GroundedCcgParse;
 import com.jayantkrish.jklol.ccg.gi.GroundedParser;
 import com.jayantkrish.jklol.ccg.gi.GroundedParserInference;
 import com.jayantkrish.jklol.ccg.gi.GroundedParserPipelinedInference;
-import com.jayantkrish.jklol.ccg.gi.ValueGroundedParseExample;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.experiments.p3.KbParametricContinuationIncEval.KbContinuationIncEval;
@@ -70,11 +69,11 @@ public class TestP3 extends AbstractCli {
     DiscreteVariable relationFeatureNames = new DiscreteVariable("relationFeatures",
         IoUtils.readLines(options.valueOf(relationFeatures)));
     
-    List<ValueGroundedParseExample> examples = Lists.newArrayList();
+    List<P3Example> examples = Lists.newArrayList();
     for (String trainingDataEnv : options.valuesOf(testData)) {
       examples.addAll(P3Utils.readTrainingData(trainingDataEnv, categoryFeatureNames,
           relationFeatureNames, options.valueOf(categoryFilename), options.valueOf(relationFilename),
-          options.valueOf(exampleFilename)));
+          options.valueOf(exampleFilename), null, null, null));
     }
     
     CcgParser ccgParser = IoUtils.readSerializedObject(options.valueOf(parserOpt), CcgParser.class);
@@ -89,11 +88,11 @@ public class TestP3 extends AbstractCli {
     evaluate(examples, parser, inf);
   }
   
-  private static void evaluate(List<ValueGroundedParseExample> examples, GroundedParser parser,
+  private static void evaluate(List<P3Example> examples, GroundedParser parser,
       GroundedParserInference inf) {
     int numCorrect = 0;
     int numNoPrediction = 0;
-    for (ValueGroundedParseExample ex : examples) {
+    for (P3Example ex : examples) {
       System.out.println(ex.getSentence());
       Set<?> s = (Set<?>) ex.getLabel();
       System.out.println(s + " " + s.size());

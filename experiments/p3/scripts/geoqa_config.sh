@@ -1,6 +1,6 @@
 export DATA_DIR="experiments/p3/geoqa"
 export OUT_DIR="$DATA_DIR/output/"
-export EXPERIMENT_NAME="wordskip6"
+export EXPERIMENT_NAME="wordskip8"
 export EXPERIMENT_DIR="$OUT_DIR/$EXPERIMENT_NAME/"
 
 mkdir -p $OUT_DIR
@@ -10,6 +10,7 @@ mkdir -p $EXPERIMENT_DIR
 export CATEGORY_FILE_PATH="cat_features.txt"
 export RELATION_FILE_PATH="rel_features.txt"
 export TRAINING_FILE_PATH="training.txt"
+export WORLD_FILE_PATH="world.txt"
 export CATEGORY_FEATURE_NAMES="$DATA_DIR/data/category_feature_names.txt"
 export RELATION_FEATURE_NAMES="$DATA_DIR/data/relation_feature_names.txt"
 export DEFS="$DATA_DIR/data/defs.lisp"

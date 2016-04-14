@@ -1,1 +1,1 @@
-scene_config.sh
+geoqa_config.sh

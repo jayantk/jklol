@@ -13,7 +13,7 @@ public class P3Functions {
   public static abstract class LoggingFunctionValue implements FunctionValue {
     
     private final String timerName;
-    private static final boolean ENABLE_LOGGING = true;
+    private static final boolean ENABLE_LOGGING = false;
     
     public LoggingFunctionValue(String timerName) {
       this.timerName = Preconditions.checkNotNull(timerName);
@@ -43,7 +43,7 @@ public class P3Functions {
     public Object apply2(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       KbState state = (KbState) argumentValues.get(0);
-      return ConsValue.listToConsList(state.getEnvironment().getEntities());
+      return ConsValue.listToConsList(state.getEnvironment().getEntities().items());
     }
   }
   

@@ -130,6 +130,49 @@ public class DenseTensorBase extends AbstractTensorBase {
     return HeapUtils.findLargestItemIndexes(values, n);
   }
 
+  public double[][] toMatrix(int[] rowDims, int[] colDims) {
+    int[] dims = getDimensionNumbers();
+    int[] sizes = getDimensionSizes();
+    
+    int numRows = 1;
+    int[] rowMuls = new int[rowDims.length];
+    for (int i = 0; i < rowDims.length; i++) {
+      int index = Ints.indexOf(dims, rowDims[i]);
+      rowMuls[i] = numRows;
+      numRows *= sizes[index];
+    }
+    
+    int numCols = 1;
+    int[] colMuls = new int[colDims.length];
+    for (int i = 0; i < colDims.length; i++) {
+      int index = Ints.indexOf(dims, colDims[i]);
+      colMuls[i] = numCols;
+      numCols *= sizes[index];
+    }
+
+    double[][] matrix = new double[numRows][numCols];
+    int[] dimKey = new int[sizes.length];
+    for (int i = 0; i < values.length; i++) {
+      keyNumToDimKey(i, dimKey);
+      
+      int rowInd = 0;
+      for (int j = 0; j < rowDims.length; j++) {
+        int index = Ints.indexOf(dims, rowDims[j]);
+        rowInd += dimKey[index] * rowMuls[j];
+      }
+
+      int colInd = 0;
+      for (int j = 0; j < colDims.length; j++) {
+        int index = Ints.indexOf(dims, colDims[j]);
+        colInd += dimKey[index] * colMuls[j];
+      }
+
+      matrix[rowInd][colInd] = values[i];
+    }
+
+    return matrix;
+  }
+
   protected int[] getDimensionMapping(int[] otherDimensionNums) {
     int[] mapping = new int[otherDimensionNums.length];
     int otherInd = 0;

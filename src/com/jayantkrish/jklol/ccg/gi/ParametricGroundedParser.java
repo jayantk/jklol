@@ -23,7 +23,7 @@ public class ParametricGroundedParser implements ParametricFamily<GroundedParser
   private final ParametricIncEval evalFamily;
   
   public static final String CCG_PARAMETER_NAME="ccg";
-  public static final String EVAL_PARAMETER_NAME="ccg";
+  public static final String EVAL_PARAMETER_NAME="eval";
   
   public ParametricGroundedParser(ParametricCcgParser ccgFamily,
       ParametricIncEval evalFamily) {

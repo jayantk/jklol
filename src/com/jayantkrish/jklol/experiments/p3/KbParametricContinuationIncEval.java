@@ -82,13 +82,15 @@ public class KbParametricContinuationIncEval implements ParametricIncEval {
     List<SufficientStatistics> gradientList = gradient.coerceToList().getStatistics();
     List<SufficientStatistics> parameterList = currentParameters.coerceToList().getStatistics();
     
-    for (String predicate : features.getPredicates()) {
-      int index = predicateNames.getIndex(predicate);
+    List<String> predicates = features.getPredicateNames();
+    List<Tensor> predicateFeatures = features.getFeatures();
+    for (int i = 0; i < predicates.size(); i++) {
+      int index = predicateNames.getIndex(predicates.get(i));
       ParametricFactor family = families.get(index);
       VariableNumMap featureVar = featureVars.get(index);
       Assignment labelAssignment = labelAssignments.get(index);
 
-      Assignment a = featureVar.outcomeArrayToAssignment(features.getFeatureVector(predicate));
+      Assignment a = featureVar.outcomeArrayToAssignment(predicateFeatures.get(i));
       family.incrementSufficientStatisticsFromAssignment(gradientList.get(index),
           parameterList.get(index), a.union(labelAssignment), count);
     }
@@ -135,18 +137,20 @@ public class KbParametricContinuationIncEval implements ParametricIncEval {
       log.startTimer("evaluate_continuation/queue/model");
       double prob = 1.0;
       IndexedList<String> predicateNames = kbModel.getPredicateNames();
+      List<Tensor> classifiers = kbModel.getClassifiers();
       /*
       System.out.println(state.getCategories());
       System.out.println(state.getRelations());
       System.out.println(predicateNames);
       */
-      List<Tensor> classifiers = kbModel.getClassifiers();
-      for (String predicate : features.getPredicates()) {
-        int index = predicateNames.getIndex(predicate);
+      List<String> predicates = features.getPredicateNames();
+      List<Tensor> predicateFeatures = features.getFeatures();
+      for (int i = 0; i < predicates.size(); i++) {
+        int index = predicateNames.getIndex(predicates.get(i));
         Tensor classifier = classifiers.get(index);
-
-        Tensor featureVector = features.getFeatureVector(predicate)
-            .relabelDimensions(classifier.getDimensionNumbers());
+        
+        Tensor featureVector = predicateFeatures.get(i).relabelDimensions(
+            classifier.getDimensionNumbers());
         prob *= Math.exp(classifier.innerProduct(featureVector).getByDimKey(new int[0]));
       }
       log.stopTimer("evaluate_continuation/queue/model");

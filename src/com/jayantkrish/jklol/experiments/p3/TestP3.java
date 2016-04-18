@@ -20,6 +20,7 @@ import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.experiments.p3.KbParametricContinuationIncEval.KbContinuationIncEval;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.util.CountAccumulator;
+import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class TestP3 extends AbstractCli {
@@ -30,6 +31,8 @@ public class TestP3 extends AbstractCli {
   private OptionSpec<String> exampleFilename;
   private OptionSpec<String> defs;
 
+  private OptionSpec<String> categories;
+  private OptionSpec<String> relations;
   private OptionSpec<String> categoryFeatures;
   private OptionSpec<String> relationFeatures;
   
@@ -53,6 +56,10 @@ public class TestP3 extends AbstractCli {
     defs = parser.accepts("defs").withRequiredArg().withValuesSeparatedBy(',')
         .ofType(String.class);
     
+    categories = parser.accepts("categories").withRequiredArg()
+        .ofType(String.class).required();
+    relations = parser.accepts("relations").withRequiredArg()
+        .ofType(String.class).required();
     categoryFeatures = parser.accepts("categoryFeatures").withRequiredArg()
         .ofType(String.class).required();
     relationFeatures = parser.accepts("relationFeatures").withRequiredArg()
@@ -64,6 +71,8 @@ public class TestP3 extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
+    IndexedList<String> categoryList = IndexedList.create(IoUtils.readLines(options.valueOf(categories)));
+    IndexedList<String> relationList = IndexedList.create(IoUtils.readLines(options.valueOf(relations)));
     DiscreteVariable categoryFeatureNames = new DiscreteVariable("categoryFeatures",
         IoUtils.readLines(options.valueOf(categoryFeatures)));
     DiscreteVariable relationFeatureNames = new DiscreteVariable("relationFeatures",
@@ -73,7 +82,7 @@ public class TestP3 extends AbstractCli {
     for (String trainingDataEnv : options.valuesOf(testData)) {
       examples.addAll(P3Utils.readTrainingData(trainingDataEnv, categoryFeatureNames,
           relationFeatureNames, options.valueOf(categoryFilename), options.valueOf(relationFilename),
-          options.valueOf(exampleFilename), null, null, null));
+          options.valueOf(exampleFilename), null, categoryList, relationList));
     }
     
     CcgParser ccgParser = IoUtils.readSerializedObject(options.valueOf(parserOpt), CcgParser.class);

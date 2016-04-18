@@ -86,8 +86,8 @@ public class TrainP3 extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
-    List<String> categoryList = IoUtils.readLines(options.valueOf(categories));
-    List<String> relationList = IoUtils.readLines(options.valueOf(relations));
+    IndexedList<String> categoryList = IndexedList.create(IoUtils.readLines(options.valueOf(categories)));
+    IndexedList<String> relationList = IndexedList.create(IoUtils.readLines(options.valueOf(relations)));
     DiscreteVariable categoryFeatureNames = new DiscreteVariable("categoryFeatures",
         IoUtils.readLines(options.valueOf(categoryFeatures)));
     DiscreteVariable relationFeatureNames = new DiscreteVariable("relationFeatures",
@@ -105,7 +105,7 @@ public class TrainP3 extends AbstractCli {
     List<String> lexiconLines = IoUtils.readLines(options.valueOf(lexicon));
     ParametricCcgParser ccgFamily  = getCcgParser(lexiconLines);
     ParametricIncEval evalFamily = getEval(lexiconLines, options.valuesOf(defs),
-        categoryFeatureNames, relationFeatureNames, categoryList, relationList);
+        categoryFeatureNames, relationFeatureNames, categoryList.items(), relationList.items());
     ParametricGroundedParser family = new ParametricGroundedParser(ccgFamily, evalFamily);
 
     GroundedParserInference inf = new GroundedParserPipelinedInference(

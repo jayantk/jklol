@@ -1,24 +1,26 @@
 package com.jayantkrish.jklol.experiments.p3;
 
-import java.util.Collection;
-import java.util.Map;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.tensor.Tensor;
 
 public class KbFeatures {
 
-  private final Map<String, Tensor> predicateFeatures;
+  private final List<String> predicateNames;
+  private final List<Tensor> features;
   
-  public KbFeatures(Map<String, Tensor> predicateFeatures) {
-    this.predicateFeatures = Preconditions.checkNotNull(predicateFeatures);
+  public KbFeatures(List<String> predicateNames, List<Tensor> features) {
+    this.predicateNames = Preconditions.checkNotNull(predicateNames);
+    this.features = Preconditions.checkNotNull(features);
+    Preconditions.checkArgument(features.size() == predicateNames.size());
   }
   
-  public Collection<String> getPredicates() {
-    return predicateFeatures.keySet();
+  public List<String> getPredicateNames() {
+    return predicateNames;
   }
   
-  public Tensor getFeatureVector(String predicate) {
-    return predicateFeatures.get(predicate);
+  public List<Tensor> getFeatures() {
+    return features;
   }
 }

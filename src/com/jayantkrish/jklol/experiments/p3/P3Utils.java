@@ -34,6 +34,7 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -43,16 +44,15 @@ public class P3Utils {
   public static List<P3Example> readTrainingData(String path,
       DiscreteVariable categoryFeatureNames, DiscreteVariable relationFeatureNames,
       String categoryFilePath, String relationFilePath, String trainingFilePath,
-      String worldFilePath, List<String> categories, List<String> relations) {
+      String worldFilePath, IndexedList<String> categories, IndexedList<String> relations) {
     DiscreteFactor categoryFeatures = TableFactor.fromDelimitedFile(
         IoUtils.readLines(path + "/" + categoryFilePath), ",");
     
     VariableNumMap entityVar = categoryFeatures.getVars().getFirstVariables(1)
         .relabelVariableNums(new int[] {0});
+    List<Object> entities = entityVar.getDiscreteVariables().get(0).getValues();
     VariableNumMap truthVar = VariableNumMap.singleton(2, "truthVar",
         new DiscreteVariable("truthVar", Arrays.asList("F", "T")));
-    VariableNumMap lispTruthVar = VariableNumMap.singleton(2, "lispTruthVar",
-        new DiscreteVariable("truthVar", Arrays.asList(ConstantValue.FALSE, ConstantValue.TRUE)));
     VariableNumMap entityFeatureVar = VariableNumMap.singleton(3, "entityFeatures",
         categoryFeatureNames);
 
@@ -60,9 +60,6 @@ public class P3Utils {
         VariableNumMap.unionAll(entityVar, truthVar, entityFeatureVar),
         IoUtils.readLines(path + "/" + categoryFilePath), ",", false,
         DenseTensorBuilder.getFactory());
-    categoryFeatures = new TableFactor(
-        VariableNumMap.unionAll(entityVar, lispTruthVar, entityFeatureVar),
-        categoryFeatures.getWeights());
     
     VariableNumMap entityVar1 = entityVar;
     VariableNumMap entityVar2 = entityVar.relabelVariableNums(new int[] {1});
@@ -73,15 +70,19 @@ public class P3Utils {
         VariableNumMap.unionAll(entityVar1, entityVar2, truthVar, entityPairFeatureVar),
         IoUtils.readLines(path + "/" + relationFilePath), ",", false,
         DenseTensorBuilder.getFactory());
-    relationFeatures = new TableFactor(
-        VariableNumMap.unionAll(entityVar1, entityVar2, lispTruthVar, entityPairFeatureVar),
-        relationFeatures.getWeights());
     
     String[] parts = path.split("/");
     String id = parts[parts.length - 1];
+    
+    DenseTensor categoryFeatureTensor = DenseTensor.copyOf(categoryFeatures.conditional(
+        truthVar.outcomeArrayToAssignment("T")).getWeights());
+    DenseTensor relationFeatureTensor = DenseTensor.copyOf(relationFeatures.conditional(
+        truthVar.outcomeArrayToAssignment("T")).getWeights());
 
-    KbEnvironment env = new KbEnvironment(id, categoryFeatures, relationFeatures);
-    KbState state = KbState.unassigned(env);
+    KbEnvironment env = new KbEnvironment(id, IndexedList.create(entities),
+        categoryFeatureTensor.toMatrix(new int[] {0}, new int[] {3}),
+        relationFeatureTensor.toMatrix(new int[] {0, 1}, new int[] {3}));
+    KbState state = KbState.unassigned(env, categories, relations);
     
     KbState stateLabel = null;
     if (worldFilePath != null) {
@@ -102,7 +103,6 @@ public class P3Utils {
             relationMap.put(entityParts[0], entityParts[1]);
           }
           
-          List<Object> entities = env.getEntities();
           for (Object arg1 : entities) {
             for (Object arg2 : entities) {
               if (relationMap.containsEntry(arg1, arg2)) {

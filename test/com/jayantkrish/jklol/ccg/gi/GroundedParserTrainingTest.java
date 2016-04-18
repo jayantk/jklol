@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.ConsValue;
+import com.jayantkrish.jklol.lisp.ConstantValue;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval;
@@ -53,7 +54,10 @@ public class GroundedParserTrainingTest extends TestCase {
     "equals,((S{0}\\NP{1}){0}/NP{2}){0},(lambda (x y) (=-k x y)),0 equals",
     "x,N{0},(resolve-k ~\"x~\")",
     "foo,N{0},(rpred-k ~\"even~\"),0 foo",
-    "foo,N{0},3,0 foo"
+    "foo,N{0},3,0 foo",
+    "randbool,NP{0},(randbool-k)",
+    "and,((NP{1}\\NP{1}){0}/NP{2}){0},(lambda (x y) (and-k x y)),0 and",
+    "or,((NP{1}\\NP{1}){0}/NP{2}){0},(lambda (x y) (or-k x y)),0 or",
 //    "1_or_2,N{0},1,0 num",
 //    "1_or_2,N{0},2,0 num",
   };
@@ -63,6 +67,9 @@ public class GroundedParserTrainingTest extends TestCase {
     "(define +-k (k x y) (k (+ x y)))",
     "(define *-k (k x y) (k (* x y)))",
     "(define =-k (k x y) (k (= x y)))",
+    "(define and-k (k x y) (k (and* x y)))",
+    "(define or-k (k x y) (k (or* x y)))",
+    "(define quote-k (k x) (k (quote x)))",
     "(define map (f l) (if (nil? l) l (cons (f (car l)) (map f (cdr l)))))",
     "(define select (l1 l2) (if (nil? l1) (list) (let ((rest (select (cdr l1) (cdr l2)))) (if (car l2) (cons (car l1) rest) rest))))",
     "(define reverse (x result) (if (nil? x) result (reverse (cdr x) (cons (car x) result))))",
@@ -85,6 +92,7 @@ public class GroundedParserTrainingTest extends TestCase {
     "(define resolve-k (k name) (lambda (world) (let ((v (alist-get name world))) (if (not (nil? v)) ((k v) world) ((amb-k (lambda (v) (cput-k k name v)) possible-values) world)))))",
     "(define resolve-predicate-k (k name) (map-k k (lambda (k2 v) (resolve-k k2 (list name v))) entities))",
     "(define rpred-k (k name) (resolve-predicate-k (lambda (v) (k (select entities v))) name))",
+    "(define randbool-k (k) (amb-k k (list #t #f)))",
   };
   
   private static final String[] sentences = {
@@ -92,6 +100,7 @@ public class GroundedParserTrainingTest extends TestCase {
     "a even",
     "a even",
     "foo",
+    "randbool and randbool",
   };
 
   private static final String[] labels = {
@@ -99,6 +108,7 @@ public class GroundedParserTrainingTest extends TestCase {
     "2",
     "4",
     "3",
+    "#t",
   };
 
   private static final String[] ruleArray = {"DUMMY{0} BLAH{0}"};
@@ -161,6 +171,8 @@ public class GroundedParserTrainingTest extends TestCase {
     assertDistributionEquals(parser, inf, "foo", new Object[] {3}, new double[] {1.0});
     assertDistributionEquals(parser, inf, "a even", new Object[] {2, 4}, new double[] {0.5, 0.5});
     assertDistributionEquals(parser, inf, "a even plus 1", new Object[] {3, 5}, new double[] {0.5, 0.5});
+    assertDistributionEquals(parser, inf, "randbool and randbool",
+        new Object[] {ConstantValue.TRUE, ConstantValue.FALSE}, new double[] {0.25, 0.75});
   }
   
   public void testNormalizedTraining() {

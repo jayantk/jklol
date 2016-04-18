@@ -6,9 +6,7 @@ import com.jayantkrish.jklol.ccg.gi.GroundedParseExample;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
-import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
-import com.jayantkrish.jklol.util.Assignment;
 
 public class P3Example implements GroundedParseExample {
 
@@ -81,38 +79,11 @@ public class P3Example implements GroundedParseExample {
     
     public double apply(IncEvalState state) {
       KbState diagram = (KbState) state.getDiagram();
-      
-      for (String category : diagram.getCategories()) {
-        DiscreteFactor assignment = diagram.getCategoryAssignment(category);
-        DiscreteFactor labelAssignment = label.getCategoryAssignment(category);
-        
-        double numAssigned = assignment.innerProduct(assignment)
-            .getUnnormalizedProbability(Assignment.EMPTY);
-        double labelEqual = assignment.innerProduct(labelAssignment)
-            .getUnnormalizedProbability(Assignment.EMPTY);
-        
-        // Use a small tolerance for double equality here.
-        if (Math.abs(numAssigned - labelEqual) > 0.0001) {
-          return Double.NEGATIVE_INFINITY;
-        }
+      if (diagram.isConsistentWith(label)) {
+        return 0.0;
+      } else {
+        return Double.NEGATIVE_INFINITY;
       }
-      
-      for (String relation : diagram.getRelations()) {
-        DiscreteFactor assignment = diagram.getRelationAssignment(relation);
-        DiscreteFactor labelAssignment = label.getRelationAssignment(relation);
-
-        double numAssigned = assignment.innerProduct(assignment)
-            .getUnnormalizedProbability(Assignment.EMPTY);
-        double labelEqual = assignment.innerProduct(labelAssignment)
-            .getUnnormalizedProbability(Assignment.EMPTY);
-        
-        // Use a small tolerance for double equality here.
-        if (Math.abs(numAssigned - labelEqual) > 0.0001) {
-          return Double.NEGATIVE_INFINITY;
-        }
-      }
-      
-      return 0.0;
     }
   }
 }

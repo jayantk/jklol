@@ -33,7 +33,8 @@ public class ListSufficientStatistics implements SufficientStatistics {
    */
   public ListSufficientStatistics(List<String> names, List<SufficientStatistics> statistics) {
     Preconditions.checkNotNull(statistics);
-    Preconditions.checkArgument(names.size() == statistics.size());
+    Preconditions.checkArgument(names.size() == statistics.size(),
+        "Wrong number of names. Got: %s", names);
     this.names = IndexedList.create(names);
     this.statistics = Lists.newArrayList(statistics);
   }

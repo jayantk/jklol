@@ -61,7 +61,10 @@ public class AmbEval {
   private static final int OPT_MM_SYMBOL_INDEX = 13;
   private static final int NEW_FG_SCOPE_INDEX = 14;
   
-  private static final int PERIOD_INDEX = 15;
+  private static final int SC_AND_INDEX = 15;
+  private static final int SC_OR_INDEX = 16;
+  
+  private static final int PERIOD_INDEX = 17;
   
   private final IndexedList<String> symbolTable;
 
@@ -131,6 +134,7 @@ public class AmbEval {
           LispUtil.checkArgument(subexpressions.size() == 2, "Invalid eval arguments: %s", subexpressions);
           Object value = eval(subexpressions.get(1), environment, builder, context).getValue();
           LispUtil.checkArgument(value instanceof SExpression, "Argument to eval must be an expression. Got: %s", value);
+          System.out.println(value);
           return eval((SExpression) value, environment, builder, context);
 
         case APPLY_SYMBOL_INDEX:
@@ -148,6 +152,8 @@ public class AmbEval {
         case OPT_SYMBOL_INDEX: return doOpt(subexpressions, environment, builder, context);
         case OPT_MM_SYMBOL_INDEX: return doOptMm(subexpressions, environment, builder, context);
         case NEW_FG_SCOPE_INDEX: return doNewFgScope(subexpressions, environment, builder, context);
+        case SC_AND_INDEX: return doAnd(subexpressions, environment, builder, context);
+        case SC_OR_INDEX: return doOr(subexpressions, environment, builder, context);
         }
       }
       try {
@@ -272,11 +278,13 @@ public class AmbEval {
     if (!(testCondition instanceof AmbValue)) {
       // This condition evaluates to the same value in all program 
       // executions that reach this point.
+      LispUtil.checkArgument(ConstantValue.isBooleanConstant(testCondition), 
+          "Illegal argument to if: %s", testCondition);
       if (ConstantValue.TRUE.equals(testCondition)) {
         return eval(subexpressions.get(2), environment, builder, context);
       } else {
         return eval(subexpressions.get(3), environment, builder, context);
-      }
+      } 
     } else {
       // We disallow this case for the moment.
       // This case is broken in Java, hence the Preconditions exception.
@@ -558,6 +566,34 @@ public class AmbEval {
     return result;
   }
 
+  public EvalResult doAnd(List<SExpression> subexpressions, Environment environment,
+      ParametricBfgBuilder gfgBuilder, EvalContext context) {
+    for (int i = 1; i < subexpressions.size(); i++) {
+      EvalResult result = eval(subexpressions.get(i), environment, gfgBuilder, context);
+      Object value = result.getValue();
+      LispUtil.checkArgument(ConstantValue.isBooleanConstant(value),
+          "Illegal argument to and*: %s", value);
+      if (ConstantValue.FALSE.equals(value)) {
+        return new EvalResult(ConstantValue.FALSE);
+      }
+    }
+    return new EvalResult(ConstantValue.TRUE);
+  }
+
+  public EvalResult doOr(List<SExpression> subexpressions, Environment environment,
+      ParametricBfgBuilder gfgBuilder, EvalContext context) {
+    for (int i = 1; i < subexpressions.size(); i++) {
+      EvalResult result = eval(subexpressions.get(i), environment, gfgBuilder, context);
+      Object value = result.getValue();
+      LispUtil.checkArgument(ConstantValue.isBooleanConstant(value),
+          "Illegal argument to or*: %s", value);
+      if (ConstantValue.TRUE.equals(value)) {
+        return new EvalResult(ConstantValue.TRUE);
+      }
+    }
+    return new EvalResult(ConstantValue.FALSE);
+  }
+
   public EvalResult doFunctionApplication(List<SExpression> subexpressions, Environment environment,
       ParametricBfgBuilder gfgBuilder, EvalContext context) {
     List<Object> values = Lists.newArrayList();
@@ -754,6 +790,9 @@ public class AmbEval {
     symbolTable.add("opt");
     symbolTable.add("opt-mm");
     symbolTable.add("new-fg-scope");
+    
+    symbolTable.add("and*");
+    symbolTable.add("or*");
     
     symbolTable.add(".");
 

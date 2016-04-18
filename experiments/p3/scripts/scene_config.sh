@@ -1,7 +1,7 @@
 
 export DATA_DIR="experiments/p3/scene"
 export OUT_DIR="$DATA_DIR/output/"
-export EXPERIMENT_NAME="wordskip8"
+export EXPERIMENT_NAME="wordskip9"
 export EXPERIMENT_DIR="$OUT_DIR/$EXPERIMENT_NAME/"
 
 mkdir -p $OUT_DIR
@@ -13,6 +13,7 @@ export RELATION_FILE_PATH="osm_kb.domain.relations"
 export TRAINING_FILE_PATH="training.txt"
 export CATEGORY_FEATURE_NAMES="$DATA_DIR/data/category_feature_names.txt"
 export RELATION_FEATURE_NAMES="$DATA_DIR/data/relation_feature_names.txt"
+export WORLD_FILE_PATH="world.txt"
 export DEFS="$DATA_DIR/data/defs.lisp"
 
 # Configuration for lexicon preprocessing and various
@@ -48,8 +49,8 @@ for i in $DATA_DIR/scene/0*; do
     FOLD_NAMES+=($name)
 done
 
-# NUM_FOLDS=${#FOLD_NAMES[@]}
-NUM_FOLDS=1
+NUM_FOLDS=${#FOLD_NAMES[@]}
+# NUM_FOLDS=1
 
 export PARSER_FILENAME="parser.ser"
 export KBMODEL_FILENAME="kbmodel.ser"

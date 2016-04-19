@@ -8,7 +8,7 @@ import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 
 public class ExpressionSimplifierTest extends TestCase {
 
-  ExpressionSimplifier simplifier, canonicalizer, conjunction;
+  ExpressionSimplifier simplifier, canonicalizer, conjunction, exists;
 
   public void setUp() {
     simplifier = new ExpressionSimplifier(Arrays.
@@ -20,6 +20,11 @@ public class ExpressionSimplifierTest extends TestCase {
         <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
             new VariableCanonicalizationReplacementRule(),
             new CommutativeReplacementRule("and:<t*,t>")));
+    exists = new ExpressionSimplifier(Arrays.
+        <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
+            new VariableCanonicalizationReplacementRule(),
+            new CommutativeReplacementRule("and:<t*,t>"),
+            new ExistsReplacementRule("exists:<<e,t>,t>", "and:<t*,t>", "=")));
   }
   
   public void testSimplifyLambda() {
@@ -104,6 +109,16 @@ public class ExpressionSimplifierTest extends TestCase {
   public void testConjunction6() {
     runTest(conjunction, "(lambda ($0) (lambda ($1) (and:<t*,t> (river:<r,t> $1) ($0 $1))))",
         "(lambda ($0) (lambda ($1) (and:<t*,t> ($0 $1) (river:<r,t> $1))))");
+  }
+  
+  public void testExists1() {
+    runTest(exists, "(exists:<<e,t>,t> (lambda ($0) (and:<t*,t> (river:<r,t> $0) (= $0 \"foo\"))))",
+        "(and:<t*,t> (= \"foo\" \"foo\") (river:<r,t> \"foo\"))");
+  }
+
+  public void testExists2() {
+    runTest(exists, "(lambda ($1) (and:<t*,t> (city:<e,t> $1) (exists:<<e,t>,t> (lambda ($0) (and:<t*,t> (river:<r,t> $0) (= $0 \"foo\") (in-rel:<e,<e,t>> $0 $1))))))",
+        "(lambda ($0) (and:<t*,t> (= \"foo\" \"foo\") (city:<e,t> $0) (in-rel:<e,<e,t>> \"foo\" $0) (river:<r,t> \"foo\")))");
   }
 
   private void runTest(ExpressionSimplifier simp, String input, String expected) {

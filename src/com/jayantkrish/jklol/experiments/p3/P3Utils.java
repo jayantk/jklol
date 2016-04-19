@@ -15,7 +15,9 @@ import com.jayantkrish.jklol.ccg.lambda.ExplicitTypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
+import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.CpsTransform;
+import com.jayantkrish.jklol.ccg.lambda2.ExistsReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
@@ -196,15 +198,23 @@ public class P3Utils {
 
     Expression2 lfConversion = ExpressionParser.expression2().parse(
         "(lambda (x) (list-to-set-c (get-denotation x)))");
-    P3CpsTransform transform = new P3CpsTransform(simplifier, ExplicitTypeDeclaration.getDefault(),
-        lfConversion);
+    
+    ExpressionSimplifier continuationSimplifier = new ExpressionSimplifier(
+        Arrays.<ExpressionReplacementRule>asList(
+            new LambdaApplicationReplacementRule(),
+            new VariableCanonicalizationReplacementRule()));
+    
+    P3CpsTransform transform = new P3CpsTransform(simplifier, continuationSimplifier,
+        ExplicitTypeDeclaration.getDefault(), lfConversion);
     return new ContinuationIncEval(ambEval, env, transform, defs);
   }
 
   public static ExpressionSimplifier getSimplifier() {
     return new ExpressionSimplifier(Arrays.<ExpressionReplacementRule>asList(
         new LambdaApplicationReplacementRule(),
-        new VariableCanonicalizationReplacementRule()));
+        new VariableCanonicalizationReplacementRule(),
+        new CommutativeReplacementRule("and:<t*,t>"),
+        new ExistsReplacementRule("exists:<<e,t>,t>", "and:<t*,t>", "equal?:<⊤,<⊤,t>>")));
   }
 
   private P3Utils() {
@@ -214,14 +224,17 @@ public class P3Utils {
   public static class P3CpsTransform implements Function<Expression2, Expression2> {
     
     private final ExpressionSimplifier simplifier;
+    private final ExpressionSimplifier continuationSimplifier;
     private final TypeDeclaration typeDeclaration;
     private final Expression2 lfConversion;
     
     private static Type ENTITY_SET_TYPE = Type.parseFrom("<e,t>");
 
     public P3CpsTransform(ExpressionSimplifier simplifier,
-        TypeDeclaration typeDeclaration, Expression2 lfConversion) {
+        ExpressionSimplifier continuationSimplifier, TypeDeclaration typeDeclaration,
+        Expression2 lfConversion) {
       this.simplifier = simplifier;
+      this.continuationSimplifier = continuationSimplifier;
       this.typeDeclaration = typeDeclaration;
       this.lfConversion = lfConversion;
     }
@@ -230,12 +243,12 @@ public class P3Utils {
     public Expression2 apply(Expression2 lf) {
       lf = simplifier.apply(lf);
       Type t = StaticAnalysis.inferType(lf, typeDeclaration);
-      
+
       if (t.equals(ENTITY_SET_TYPE)) {
         lf = Expression2.nested(lfConversion, lf);
       }
       
-      return simplifier.apply(CpsTransform.apply(lf, Expression2.constant(
+      return continuationSimplifier.apply(CpsTransform.apply(lf, Expression2.constant(
           ContinuationIncEval.FINAL_CONTINUATION)));
     }
   }

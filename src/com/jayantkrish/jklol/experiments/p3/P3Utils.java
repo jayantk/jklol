@@ -244,7 +244,7 @@ public class P3Utils {
       lf = simplifier.apply(lf);
       Type t = StaticAnalysis.inferType(lf, typeDeclaration);
 
-      if (t.equals(ENTITY_SET_TYPE)) {
+      if (typeDeclaration.unify(t, ENTITY_SET_TYPE).equals(ENTITY_SET_TYPE)) {
         lf = Expression2.nested(lfConversion, lf);
       }
       

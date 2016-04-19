@@ -1,6 +1,6 @@
 export DATA_DIR="experiments/p3/geoqa"
 export OUT_DIR="$DATA_DIR/output/"
-export EXPERIMENT_NAME="wordskip10"
+export EXPERIMENT_NAME="exists3_oldcode"
 export EXPERIMENT_DIR="$OUT_DIR/$EXPERIMENT_NAME/"
 
 mkdir -p $OUT_DIR

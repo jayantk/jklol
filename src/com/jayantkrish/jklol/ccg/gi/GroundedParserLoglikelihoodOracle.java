@@ -67,7 +67,7 @@ public class GroundedParserLoglikelihoodOracle implements
 
       if (example.isCorrect(lf, parse.getDenotation(), parse.getDiagram())) {
         conditionalParses.add(parse);
-        // System.out.println(parse.getSubtreeProbability() + " " + lf + " " + parse.getSyntacticParse());
+        System.out.println(parse.getSubtreeProbability() + " " + lf + " " + parse.getSyntacticParse());
       }
     }
     

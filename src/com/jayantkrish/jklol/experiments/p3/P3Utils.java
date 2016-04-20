@@ -212,9 +212,9 @@ public class P3Utils {
   public static ExpressionSimplifier getSimplifier() {
     return new ExpressionSimplifier(Arrays.<ExpressionReplacementRule>asList(
         new LambdaApplicationReplacementRule(),
-        new VariableCanonicalizationReplacementRule(),
-        new CommutativeReplacementRule("and:<t*,t>"),
-        new ExistsReplacementRule("exists:<<e,t>,t>", "and:<t*,t>", "equal?:<⊤,<⊤,t>>")
+        new VariableCanonicalizationReplacementRule()
+        // new CommutativeReplacementRule("and:<t*,t>"),
+        // new ExistsReplacementRule("exists:<<e,t>,t>", "and:<t*,t>", "equal?:<⊤,<⊤,t>>")
         ));
   }
 

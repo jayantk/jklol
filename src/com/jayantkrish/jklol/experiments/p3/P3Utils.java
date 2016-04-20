@@ -212,9 +212,9 @@ public class P3Utils {
   public static ExpressionSimplifier getSimplifier() {
     return new ExpressionSimplifier(Arrays.<ExpressionReplacementRule>asList(
         new LambdaApplicationReplacementRule(),
-        new VariableCanonicalizationReplacementRule()
-        // new CommutativeReplacementRule("and:<t*,t>"),
-        // new ExistsReplacementRule("exists:<<e,t>,t>", "and:<t*,t>", "equal?:<⊤,<⊤,t>>")
+        new VariableCanonicalizationReplacementRule(),
+        new CommutativeReplacementRule("and:<t*,t>"),
+        new ExistsReplacementRule("exists:<<e,t>,t>", "and:<t*,t>", "equal?:<⊤,<⊤,t>>")
         ));
   }
 
@@ -248,7 +248,7 @@ public class P3Utils {
       if (typeDeclaration.unify(t, ENTITY_SET_TYPE).equals(ENTITY_SET_TYPE)) {
         lf = Expression2.nested(lfConversion, lf);
       }
-      
+
       return continuationSimplifier.apply(CpsTransform.apply(lf, Expression2.constant(
           ContinuationIncEval.FINAL_CONTINUATION)));
     }

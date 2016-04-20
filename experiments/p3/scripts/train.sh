@@ -21,8 +21,8 @@ do
     KB_MODEL="$MODEL_DIR/$KBMODEL_FILENAME"
     LOG="$MODEL_DIR/train_log.txt"
 
-    # 
-    CMD="./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TrainP3 --lexicon $LEXICON --trainingData $TRAIN --exampleFilename $TRAINING_FILE_PATH --categoryFilename $CATEGORY_FILE_PATH --relationFilename $RELATION_FILE_PATH --defs $DEFS,$GENDEFS --categories $CATEGORIES --categoryFeatures $CATEGORY_FEATURE_NAMES --relations $RELATIONS --relationFeatures $RELATION_FEATURE_NAMES --worldFilename $WORLD_FILE_PATH --parserOut $PARSER --kbModelOut $KB_MODEL --batchSize 1 --iterations 10 --clipGradients 1.0"
+    # --worldFilename $WORLD_FILE_PATH
+    CMD="./scripts/run.sh com.jayantkrish.jklol.experiments.p3.TrainP3 --lexicon $LEXICON --trainingData $TRAIN --exampleFilename $TRAINING_FILE_PATH --categoryFilename $CATEGORY_FILE_PATH --relationFilename $RELATION_FILE_PATH --defs $DEFS,$GENDEFS --categories $CATEGORIES --categoryFeatures $CATEGORY_FEATURE_NAMES --relations $RELATIONS --relationFeatures $RELATION_FEATURE_NAMES --parserOut $PARSER --kbModelOut $KB_MODEL --batchSize 1 --iterations 30 --clipGradients 1.0"
 
     echo $CMD
     $CMD > $LOG &

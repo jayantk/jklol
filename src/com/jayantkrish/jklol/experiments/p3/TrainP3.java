@@ -30,6 +30,7 @@ import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
+import com.jayantkrish.jklol.util.Pseudorandom;
 
 public class TrainP3 extends AbstractCli {
 
@@ -100,7 +101,7 @@ public class TrainP3 extends AbstractCli {
           options.valueOf(exampleFilename), options.valueOf(worldFilename), categoryList, relationList));
     }
     
-    Collections.shuffle(examples);
+    Collections.shuffle(examples, Pseudorandom.get());
     
     List<String> lexiconLines = IoUtils.readLines(options.valueOf(lexicon));
     ParametricCcgParser ccgFamily  = getCcgParser(lexiconLines);

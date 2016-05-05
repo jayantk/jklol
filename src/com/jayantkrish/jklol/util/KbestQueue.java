@@ -39,19 +39,21 @@ public class KbestQueue<T> implements SearchQueue<T> {
    * 
    * @param toQueue
    * @param score
-   * @return
+   * @return the removed element if an element was removed, 
+   * {@code null} otherwise.  
    */
-  public final void offer(T toQueue, double score) {
+  public final T offer(T toQueue, double score) {
     HeapUtils.offer(keys, values, size, toQueue, score);
     size++;
 
     if (size > maxElements) {
-      HeapUtils.removeMin(keys, values, size);
-      size--;
+      return removeMin();
+    } else {
+      return null;
     }
   }
   
-  public T removeMin() {
+  public final T removeMin() {
     T min = keys[0];
     HeapUtils.removeMin(keys, values, size);
     size--;

@@ -118,8 +118,14 @@ public class KbFeatureGenerator implements Serializable {
       for (int j = 0; j < numCountFeatures - 1; j++) {
         featureNames.add(categoryNames.get(i) + "_size_=" + j);
       }
-      featureNames.add(categoryNames.get(i) + "_size_>=" + (categoryNames.size() - 1));
+      featureNames.add(categoryNames.get(i) + "_size_>=" + (numCountFeatures - 1));
     }
+    
+    for (int j = 0; j < numCountFeatures - 1; j++) {
+      featureNames.add("denotation_size_=" + j);
+    }
+    featureNames.add("denotation_size_>=" + (numCountFeatures - 1));
+  
     return featureNames;
   }
 }

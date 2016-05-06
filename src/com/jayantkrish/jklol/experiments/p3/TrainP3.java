@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.experiments.p3;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -10,7 +11,7 @@ import joptsimple.OptionSpec;
 
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgCkyInference;
-import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
+import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.gi.GroundedParser;
 import com.jayantkrish.jklol.ccg.gi.GroundedParserInference;
@@ -127,8 +128,25 @@ public class TrainP3 extends AbstractCli {
   private static ParametricCcgParser getCcgParser(List<String> lexiconLines) {
     List<String> unkLexiconLines = Collections.emptyList();
     List<String> ruleLines = Lists.newArrayList("FOO{0} BAR{0}");
+    
+    // Find any entity lexicon entries
+    List<LexiconEntry> entityEntries = Lists.newArrayList();
+    for (String lexiconLine : lexiconLines) {
+      LexiconEntry entry = LexiconEntry.parseLexiconEntry(lexiconLine);
+      Set<String> headAssignment = entry.getCategory().getAssignment().get(0);
+
+      if (headAssignment.contains("entity")) {
+        entityEntries.add(entry);
+      }
+    }
+    
+    if (entityEntries.size() == 0) {
+      entityEntries = null;
+    }
+    
     return ParametricCcgParser.parseFromLexicon(lexiconLines, unkLexiconLines,
-        ruleLines, new DefaultCcgFeatureFactory(false, true), null, false, null, true);
+        ruleLines, new P3CcgFeatureFactory(false, true, entityEntries), null, false, null,
+        true);
   }
 
   private static ParametricIncEval getEval(List<String> lexiconLines,

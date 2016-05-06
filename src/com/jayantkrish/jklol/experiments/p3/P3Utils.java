@@ -196,16 +196,13 @@ public class P3Utils {
 
     SExpression defs = LispUtil.readProgram(defFilenames, symbolTable);
 
-    Expression2 lfConversion = ExpressionParser.expression2().parse(
-        "(lambda (x) (list-to-set-c (get-denotation x)))");
-    
     ExpressionSimplifier continuationSimplifier = new ExpressionSimplifier(
         Arrays.<ExpressionReplacementRule>asList(
             new LambdaApplicationReplacementRule(),
             new VariableCanonicalizationReplacementRule()));
     
     P3CpsTransform transform = new P3CpsTransform(simplifier, continuationSimplifier,
-        ExplicitTypeDeclaration.getDefault(), lfConversion);
+        ExplicitTypeDeclaration.getDefault());
     return new ContinuationIncEval(ambEval, env, transform, defs);
   }
 
@@ -232,12 +229,12 @@ public class P3Utils {
     private static Type ENTITY_SET_TYPE = Type.parseFrom("<e,t>");
 
     public P3CpsTransform(ExpressionSimplifier simplifier,
-        ExpressionSimplifier continuationSimplifier, TypeDeclaration typeDeclaration,
-        Expression2 lfConversion) {
+        ExpressionSimplifier continuationSimplifier, TypeDeclaration typeDeclaration) {
       this.simplifier = simplifier;
       this.continuationSimplifier = continuationSimplifier;
       this.typeDeclaration = typeDeclaration;
-      this.lfConversion = lfConversion;
+      this.lfConversion = ExpressionParser.expression2().parse(
+        "(lambda (x y) (list-to-set-c (get-denotation x y)))");
     }
 
     @Override
@@ -246,7 +243,7 @@ public class P3Utils {
       Type t = StaticAnalysis.inferType(lf, typeDeclaration);
 
       if (typeDeclaration.unify(t, ENTITY_SET_TYPE).equals(ENTITY_SET_TYPE)) {
-        lf = Expression2.nested(lfConversion, lf);
+        lf = Expression2.nested(lfConversion, lf, Expression2.stringValue(lf.toString()));
       }
 
       return continuationSimplifier.apply(CpsTransform.apply(lf, Expression2.constant(

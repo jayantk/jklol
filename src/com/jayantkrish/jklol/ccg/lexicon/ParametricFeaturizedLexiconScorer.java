@@ -11,6 +11,14 @@ import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.Assignment;
 
+/**
+ * Parametric family of lexicon scorers that use 
+ * annotated feature vectors on each span of the 
+ * input sentence.
+ * 
+ * @author jayantk
+ *
+ */
 public class ParametricFeaturizedLexiconScorer implements ParametricLexiconScorer {
   private static final long serialVersionUID = 2L;
 

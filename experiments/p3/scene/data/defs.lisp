@@ -1,13 +1,14 @@
  
 (define and:<t*,t> (continuation . rest) (continuation (apply and rest)))
 
-(define exists:<<e,t>,t> (continuation f-c)
-  (get-denotation (lambda (x) (continuation (not (nil? x))))
-		  f-c))
 
-(define get-denotation (continuation f-c)
+(define exists:<<e,t>,t> (continuation f-c)
+n  (lambda (world)
+    ((filter-c (lambda (x) (continuation (not (nil? x)))) f-c (get-entities world)) world)))
+
+(define get-denotation (continuation f-c expr)
   (lambda (world)
-    ((filter-c continuation f-c (get-entities world)) world)))
+    ((filter-c (lambda (v) (score-k continuation v expr)) f-c (get-entities world)) world)))
 
 (define list-to-set-c (k l)
   (k (list-to-set l)))
@@ -31,6 +32,11 @@
 
 ; Queues continuation k applied v and each world in worlds for execution.
 (define amb-world-c (k v worlds) (lambda (world) ((queue-k k (list v)) worlds) ))
+
+; Scores denotation with a model for tag
+; (define score-k (k denotation tag) (lambda (world)
+;				     ((queue-k k (list denotation) (list tag)) (list world))))
+(define score-k (k denotation tag) (lambda (world) ((k denotation) world)))
 
 (define resolve-c (k test-proc candidate-proc)
   (lambda (world)

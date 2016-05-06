@@ -1,7 +1,7 @@
 
 export DATA_DIR="experiments/p3/scene"
 export OUT_DIR="$DATA_DIR/output/"
-export EXPERIMENT_NAME="wordskip10_noworld"
+export EXPERIMENT_NAME="denotation2_10iter_world"
 export EXPERIMENT_DIR="$OUT_DIR/$EXPERIMENT_NAME/"
 
 mkdir -p $OUT_DIR

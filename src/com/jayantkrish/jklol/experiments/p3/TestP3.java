@@ -119,7 +119,8 @@ public class TestP3 extends AbstractCli {
           denotationCounts.increment(ImmutableSet.copyOf((Set<?>) d), prob);
         }
       }
-      
+
+      System.out.println("   " + parses.size() + " parses");      
       int numToPrint = Math.min(parses.size(), 10);
       for (int i = 0; i < numToPrint; i++) {
         GroundedCcgParse parse = parses.get(i);

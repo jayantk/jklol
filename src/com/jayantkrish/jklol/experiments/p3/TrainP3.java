@@ -121,7 +121,7 @@ public class TrainP3 extends AbstractCli {
     IoUtils.serializeObjectToFile(((KbContinuationIncEval) parser.getEval()).getKbModel(),
         options.valueOf(kbModelOut));
     
-    // System.out.println(family.getParameterDescription(parameters));
+    System.out.println(family.getParameterDescription(parameters));
   }
   
   private static ParametricCcgParser getCcgParser(List<String> lexiconLines) {

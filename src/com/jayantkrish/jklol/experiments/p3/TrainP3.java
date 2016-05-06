@@ -164,7 +164,17 @@ public class TrainP3 extends AbstractCli {
       labelAssignments.add(labelAssignment);
     }
 
-    KbFeatureGenerator featureGen = new KbFeatureGenerator();
+    String globalFeaturePredicateName = "**global**";
+    KbFeatureGenerator featureGen = new KbFeatureGenerator(true, globalFeaturePredicateName, 4);
+    List<String> globalFeatureNames = featureGen.getGlobalPredicateFeatureNames(categories);
+    DiscreteVariable globalFeatureVar = new DiscreteVariable("globalFeatures", globalFeatureNames);
+    ParametricLinearClassifierFactor globalFamily = new ParametricLinearClassifierFactor(
+        input, output, VariableNumMap.EMPTY, globalFeatureVar, null, false);
+
+    predicateNames.add(globalFeaturePredicateName);
+    families.add(globalFamily);
+    featureVars.add(input);
+    labelAssignments.add(labelAssignment);
     
     return new KbParametricContinuationIncEval(predicateNames, families, featureVars,
         labelAssignments, featureGen, P3Utils.getIncEval(defFilenames));

@@ -28,10 +28,10 @@ public class KbParametricContinuationIncEval implements ParametricIncEval {
   private final List<ParametricLinearClassifierFactor> families;
   private final List<VariableNumMap> featureVars;
   private final List<Assignment> labelAssignments;
-
+  
   private final KbFeatureGenerator featureGenerator;
   
-  private final ContinuationIncEval eval;
+  private final ContinuationIncEval eval;  
   
   public KbParametricContinuationIncEval(IndexedList<String> predicateNames,
       List<ParametricLinearClassifierFactor> families, List<VariableNumMap> featureVars,
@@ -56,7 +56,7 @@ public class KbParametricContinuationIncEval implements ParametricIncEval {
     for (int i = 0; i < families.size(); i++) {
       statistics.add(families.get(i).getNewSufficientStatistics());
     }
-
+    
     return new ListSufficientStatistics(predicateNames, statistics);
   }
 
@@ -68,8 +68,8 @@ public class KbParametricContinuationIncEval implements ParametricIncEval {
       LinearClassifierFactor classifier = families.get(i).getModelFromParameters(parameterList.get(i));
       classifiers.add(classifier.getFeatureWeightsForClass(labelAssignments.get(i)));
     }
+
     KbModel kbModel = new KbModel(predicateNames, classifiers, featureGenerator);
-    
     return new KbContinuationIncEval(eval, kbModel);
   }
 
@@ -153,6 +153,7 @@ public class KbParametricContinuationIncEval implements ParametricIncEval {
             classifier.getDimensionNumbers());
         prob *= Math.exp(classifier.innerProduct(featureVector).getByDimKey(new int[0]));
       }
+      
       log.stopTimer("evaluate_continuation/queue/model");
 
       return new IncEvalState(continuation, env, denotation, diagram, prob, null);

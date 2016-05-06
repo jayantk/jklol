@@ -10,6 +10,18 @@ import com.jayantkrish.jklol.util.IndexedList;
 
 public class KbFeatureGenerator implements Serializable {
   private static final long serialVersionUID = 1L;
+  
+  private final boolean useGlobalPredicateFeatures;
+  private final String globalFeaturePredicateName;
+  
+  private final int numCountFeatures;
+  
+  public KbFeatureGenerator(boolean useGlobalPredicateFeatures,
+      String globalFeaturePredicateName, int numCountFeatures) {
+    this.useGlobalPredicateFeatures = useGlobalPredicateFeatures;
+    this.globalFeaturePredicateName = globalFeaturePredicateName;
+    this.numCountFeatures = numCountFeatures;
+  }
 
   public KbFeatures apply(KbState state) {
     KbEnvironment env = state.getEnvironment();
@@ -58,7 +70,56 @@ public class KbFeatureGenerator implements Serializable {
         features.add(new DenseTensor(new int[] {0}, new int[] {numFeatures}, featureVector));
       }
     }
+    
+    if (useGlobalPredicateFeatures) {
+      Tensor globalFeatures = generateGlobalPredicateFeatures(state);
+      predicateNames.add(globalFeaturePredicateName);
+      features.add(globalFeatures);
+    }
 
     return new KbFeatures(predicateNames, features);
+  }
+  
+  private Tensor generateGlobalPredicateFeatures(KbState state) {
+    IndexedList<String> categoryNames = state.getCategories();
+    double[] featureVector = new double[categoryNames.size() * numCountFeatures];
+
+    int[][] categoryAssignment = state.getCategoryAssignment();
+    int numEntities = state.getEnvironment().getEntities().size();
+    for (int i = 0; i < categoryAssignment.length; i++) {
+      if (categoryAssignment[i] != null) {
+        // If every entity has been assigned, count the number of
+        // entities that the predicate is true for.
+        int count = 0;
+        boolean complete = true;
+        for (int j = 0; j < numEntities; j++) {
+          if (categoryAssignment[i][j] == KbState.UNASSIGNED_INT) {
+            complete = false;
+            break;
+          } else if (categoryAssignment[i][j] == KbState.TRUE_INT) {
+            count++;
+          }
+        }
+        
+        if (complete) {
+          int featureIndex = Math.min(count, numCountFeatures - 1);
+          featureVector[i * numCountFeatures + featureIndex] = 1.0;
+        }
+      }
+    }
+
+    return new DenseTensor(new int[] {0}, new int[] {categoryNames.size() * numCountFeatures},
+        featureVector);
+  }
+  
+  public List<String> getGlobalPredicateFeatureNames(List<String> categoryNames) {
+    List<String> featureNames = Lists.newArrayList();
+    for (int i = 0; i < categoryNames.size(); i++) {
+      for (int j = 0; j < numCountFeatures - 1; j++) {
+        featureNames.add(categoryNames.get(i) + "_size_=" + j);
+      }
+      featureNames.add(categoryNames.get(i) + "_size_>=" + (categoryNames.size() - 1));
+    }
+    return featureNames;
   }
 }

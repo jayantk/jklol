@@ -23,10 +23,12 @@ public class SegregatedKbestQueue<T> implements SearchQueue<T> {
   }
 
   @Override
-  public void offer(T item, double score) {
+  public T offer(T item, double score) {
     int index = hash.apply(item);
     if (index >= 0) {
-      queues.get(index).offer(item, score);
+      return queues.get(index).offer(item, score);
+    } else {
+      return null;
     }
   }
 

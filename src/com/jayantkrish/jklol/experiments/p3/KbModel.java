@@ -10,6 +10,10 @@ import com.jayantkrish.jklol.util.IndexedList;
 public class KbModel implements Serializable {
   private static final long serialVersionUID = 1L;
 
+  // Classifier weights for features that factorize
+  // per predicate instance. Global features may
+  // be included by creating a special "predicate"
+  // to contain them.
   private final IndexedList<String> predicateNames;
   private final List<Tensor> classifiers;
   

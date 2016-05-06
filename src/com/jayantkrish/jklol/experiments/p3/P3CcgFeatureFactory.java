@@ -44,11 +44,12 @@ public class P3CcgFeatureFactory extends DefaultCcgFeatureFactory {
           Ints.max(scorerVars.getVariableNumsArray()) + 1, "lexicon features", featureDictionary);
       TableFactorBuilder builder = new TableFactorBuilder(scorerVars.union(featureVar),
           SparseTensorBuilder.getFactory());
+      VariableNumMap builderVars = builder.getVars();
 
       for (LexiconEntry entry : entityEntries) {
         List<String> words = entry.getWords();
         CcgCategory category = entry.getCategory();
-        Assignment a = scorerVars.outcomeArrayToAssignment(words, category, ENTITY_NAME_MATCH);        
+        Assignment a = builderVars.outcomeArrayToAssignment(words, category, ENTITY_NAME_MATCH);        
         builder.incrementWeight(a, words.size());
       }
 

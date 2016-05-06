@@ -13,7 +13,7 @@ import com.jayantkrish.jklol.ccg.LexiconEntryInfo;
 import com.jayantkrish.jklol.ccg.UnaryCombinator;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
-import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
+import com.jayantkrish.jklol.lisp.inc.IncEvalState;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class GroundedCcgParse extends CcgParse {

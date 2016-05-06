@@ -5,7 +5,6 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
-import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LogFunction;

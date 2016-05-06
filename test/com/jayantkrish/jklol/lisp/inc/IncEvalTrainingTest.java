@@ -18,7 +18,6 @@ import com.jayantkrish.jklol.lisp.ConsValue;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval.SimplifierCpsTransform;
-import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 import com.jayantkrish.jklol.lisp.inc.ParametricContinuationIncEval.StateFeatures;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;

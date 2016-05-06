@@ -5,7 +5,7 @@ import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.ShiftReduceStack;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.inc.IncEval;
-import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
+import com.jayantkrish.jklol.lisp.inc.IncEvalState;
 
 public class GroundedParser {
   private final CcgParser parser;

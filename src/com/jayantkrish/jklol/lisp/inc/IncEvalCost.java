@@ -1,6 +1,5 @@
 package com.jayantkrish.jklol.lisp.inc;
 
-import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 
 public interface IncEvalCost {
 

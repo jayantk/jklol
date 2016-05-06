@@ -2,7 +2,6 @@ package com.jayantkrish.jklol.lisp.inc;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
-import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 
 public class ValueIncEvalExample extends AbstractIncEvalExample {
   

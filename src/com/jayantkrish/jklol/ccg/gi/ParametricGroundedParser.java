@@ -9,7 +9,7 @@ import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.inc.IncEval;
-import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
+import com.jayantkrish.jklol.lisp.inc.IncEvalState;
 import com.jayantkrish.jklol.lisp.inc.ParametricIncEval;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.ParametricFamily;

@@ -5,7 +5,6 @@ import java.util.Arrays;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
-import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.Factor;
 import com.jayantkrish.jklol.models.ObjectVariable;

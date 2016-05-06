@@ -21,7 +21,7 @@ import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval;
 import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval.SimplifierCpsTransform;
 import com.jayantkrish.jklol.lisp.inc.IncEval;
-import com.jayantkrish.jklol.lisp.inc.IncEval.IncEvalState;
+import com.jayantkrish.jklol.lisp.inc.IncEvalState;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.IndexedList;
 

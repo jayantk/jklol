@@ -82,7 +82,7 @@ public class KbFeatureGenerator implements Serializable {
   
   private Tensor generateGlobalPredicateFeatures(KbState state) {
     IndexedList<String> categoryNames = state.getCategories();
-    double[] featureVector = new double[categoryNames.size() * numCountFeatures];
+    double[] featureVector = new double[(categoryNames.size() + 1) * numCountFeatures];
 
     int[][] categoryAssignment = state.getCategoryAssignment();
     int numEntities = state.getEnvironment().getEntities().size();
@@ -104,6 +104,7 @@ public class KbFeatureGenerator implements Serializable {
         if (complete) {
           int featureIndex = Math.min(count, numCountFeatures - 1);
           featureVector[i * numCountFeatures + featureIndex] = 1.0;
+          featureVector[categoryNames.size() * numCountFeatures + featureIndex] += 1.0;
         }
       }
     }
@@ -122,9 +123,16 @@ public class KbFeatureGenerator implements Serializable {
     }
     
     for (int j = 0; j < numCountFeatures - 1; j++) {
+      featureNames.add("category_size_=" + j);
+    }
+    featureNames.add("category_size_>=" + (numCountFeatures - 1));
+
+    /*
+    for (int j = 0; j < numCountFeatures - 1; j++) {
       featureNames.add("denotation_size_=" + j);
     }
     featureNames.add("denotation_size_>=" + (numCountFeatures - 1));
+    */
   
     return featureNames;
   }

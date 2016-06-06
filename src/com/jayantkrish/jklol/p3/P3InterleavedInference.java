@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -16,30 +16,30 @@ import com.jayantkrish.jklol.ccg.chart.CcgChart;
 import com.jayantkrish.jklol.ccg.chart.CcgLeftToRightChart;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.ccg.chart.ChartEntry;
-import com.jayantkrish.jklol.ccg.gi.GroundedParser.State;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
 import com.jayantkrish.jklol.lisp.inc.IncEvalState;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.p3.P3Model.State;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.util.KbestQueue;
 import com.jayantkrish.jklol.util.SearchQueue;
 import com.jayantkrish.jklol.util.SegregatedKbestQueue;
 
-public class GroundedParserInterleavedInference extends AbstractGroundedParserInference {
+public class P3InterleavedInference extends AbstractGroundedParserInference {
   private final int beamSize;
   private final int maxStackSize;
   
   private final int TEMP_HEAP_MAX_SIZE=100000;
   
-  public GroundedParserInterleavedInference(int beamSize, int maxStackSize) {
+  public P3InterleavedInference(int beamSize, int maxStackSize) {
     this.beamSize = beamSize;
     this.maxStackSize = maxStackSize;
   }
 
   @Override
-  public List<GroundedCcgParse> beamSearch(GroundedParser parser, AnnotatedSentence sentence,
+  public List<P3Parse> beamSearch(P3Model parser, AnnotatedSentence sentence,
       Object initialDiagram, ChartCost chartFilter, IncEvalCost evalCost,
       LogFunction log) {
     CcgLeftToRightChart chart = new CcgLeftToRightChart(sentence, Integer.MAX_VALUE);
@@ -138,11 +138,11 @@ public class GroundedParserInterleavedInference extends AbstractGroundedParserIn
       numSteps++;
     }
 
-    List<GroundedCcgParse> parses = Lists.newArrayList();
+    List<P3Parse> parses = Lists.newArrayList();
     while (finishedHeap.size() > 0) {
       State state = finishedHeap.removeMin();
       ShiftReduceStack stack = state.stack;
-      GroundedCcgParse parse = decodeParseFromSpan(stack.spanStart, stack.spanEnd,
+      P3Parse parse = decodeParseFromSpan(stack.spanStart, stack.spanEnd,
           stack.chartEntryIndex, chart, parser.getCcgParser());
       parses.add(parse.addDiagram(state.diagram));
     }
@@ -153,7 +153,7 @@ public class GroundedParserInterleavedInference extends AbstractGroundedParserIn
 
   private void offerParseStates(State state, SearchQueue<ShiftReduceStack> tempHeap,
       SearchQueue<State> heap, SearchQueue<State> finishedHeap, SearchQueue<State> tempStateHeap, 
-      List<IncEvalState> tempEvalResults, CcgChart chart, GroundedParser parser,
+      List<IncEvalState> tempEvalResults, CcgChart chart, P3Model parser,
       IncEvalCost evalCost, LogFunction log) {
     ShiftReduceStack[] tempHeapKeys = tempHeap.getItems();
     for (int j = 0; j < tempHeap.size(); j++) {
@@ -171,7 +171,7 @@ public class GroundedParserInterleavedInference extends AbstractGroundedParserIn
       if (result.entry.getAdditionalInfo() == null && parser.getEval().isEvaluatable(syntax)
           && (result.size == 1 || !result.entry.isTerminal())) {
         log.startTimer("grounded_parser/shift_reduce/initialize_continuation");
-        GroundedCcgParse parse = decodeParseFromSpan(result.spanStart, result.spanEnd,
+        P3Parse parse = decodeParseFromSpan(result.spanStart, result.spanEnd,
             result.chartEntryIndex, chart, parser.getCcgParser());
 
         continuationEnv = Environment.extend(state.env);
@@ -198,7 +198,7 @@ public class GroundedParserInterleavedInference extends AbstractGroundedParserIn
 
   private void evaluateContinuation(State state, List<IncEvalState> tempEvalResults,
       SearchQueue<State> heap, SearchQueue<State> finishedHeap, SearchQueue<State> tempHeap,
-      CcgChart chart, GroundedParser parser, IncEvalCost evalCost, LogFunction log) {
+      CcgChart chart, P3Model parser, IncEvalCost evalCost, LogFunction log) {
     IncEvalState next = state.evalResult;
     while (next != null) {
       tempEvalResults.clear();
@@ -244,7 +244,7 @@ public class GroundedParserInterleavedInference extends AbstractGroundedParserIn
    */
   private void queueEvalState(IncEvalState evalResult, ShiftReduceStack cur,
       SearchQueue<State> heap, SearchQueue<State> finishedHeap,
-      CcgChart chart, GroundedParser parser, IncEvalCost evalCost) {
+      CcgChart chart, P3Model parser, IncEvalCost evalCost) {
     if (evalResult.getContinuation() == null) {
       // Evaluation has finished (for now) and the search must switch back
       // to parsing. Create a new entry on the CCG chart representing the
@@ -290,7 +290,7 @@ public class GroundedParserInterleavedInference extends AbstractGroundedParserIn
     }
   }
 
-  private GroundedCcgParse decodeParseFromSpan(int spanStart, int spanEnd,
+  private P3Parse decodeParseFromSpan(int spanStart, int spanEnd,
       int beamIndex, CcgChart chart, CcgParser parser) {
     DiscreteVariable syntaxVarType = parser.getSyntaxVarType();
     ChartEntry entry = chart.getChartEntriesForSpan(spanStart, spanEnd)[beamIndex];
@@ -311,15 +311,15 @@ public class GroundedParserInterleavedInference extends AbstractGroundedParserIn
           entry.getLexiconTrigger(), entry.getLexiconIndex(), spanStart, spanEnd,
           entry.getRightSpanStart(), entry.getRightSpanEnd());
 
-      return GroundedCcgParse.forTerminal(syntax, lexiconEntryInfo, posTags.subList(spanStart, spanEnd + 1),
+      return P3Parse.forTerminal(syntax, lexiconEntryInfo, posTags.subList(spanStart, spanEnd + 1),
           parser.variableToIndexedPredicateArray(syntax.getHeadVariable(), entry.getAssignments()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())),
           terminals.subList(spanStart, spanEnd + 1), chart.getChartEntryProbsForSpan(spanStart, spanEnd)[beamIndex],
           entry.getRootUnaryRule(), spanStart, spanEnd, evalState);
     } else {
-      GroundedCcgParse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
+      P3Parse left = decodeParseFromSpan(entry.getLeftSpanStart(), entry.getLeftSpanEnd(),
           entry.getLeftChartIndex(), chart, parser);
-      GroundedCcgParse right = decodeParseFromSpan(entry.getRightSpanStart(), entry.getRightSpanEnd(),
+      P3Parse right = decodeParseFromSpan(entry.getRightSpanStart(), entry.getRightSpanEnd(),
           entry.getRightChartIndex(), chart, parser);
 
       if (entry.getLeftUnaryRule() != null) {
@@ -334,7 +334,7 @@ public class GroundedParserInterleavedInference extends AbstractGroundedParserIn
       double nodeProb = chart.getChartEntryProbsForSpan(spanStart, spanEnd)[beamIndex] /
           (left.getSubtreeProbability() * right.getSubtreeProbability());
 
-      return GroundedCcgParse.forNonterminal(syntax,
+      return P3Parse.forNonterminal(syntax,
           parser.variableToIndexedPredicateArray(syntax.getHeadVariable(), entry.getAssignments()),
           Arrays.asList(parser.longArrayToFilledDependencyArray(entry.getDependencies())), nodeProb,
           left, right, entry.getCombinator(), entry.getRootUnaryRule(), spanStart, spanEnd, evalState);

@@ -13,11 +13,6 @@ import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
-import com.jayantkrish.jklol.ccg.gi.GroundedParser;
-import com.jayantkrish.jklol.ccg.gi.GroundedParserInference;
-import com.jayantkrish.jklol.ccg.gi.GroundedParserLoglikelihoodOracle;
-import com.jayantkrish.jklol.ccg.gi.GroundedParserPipelinedInference;
-import com.jayantkrish.jklol.ccg.gi.ParametricGroundedParser;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.experiments.p3.KbParametricContinuationIncEval.KbContinuationIncEval;
 import com.jayantkrish.jklol.lisp.inc.ParametricIncEval;
@@ -26,6 +21,11 @@ import com.jayantkrish.jklol.models.ObjectVariable;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.p3.P3Model;
+import com.jayantkrish.jklol.p3.P3Inference;
+import com.jayantkrish.jklol.p3.P3LoglikelihoodOracle;
+import com.jayantkrish.jklol.p3.P3BeamInference;
+import com.jayantkrish.jklol.p3.ParametricP3Model;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.util.Assignment;
@@ -95,7 +95,7 @@ public class TrainP3 extends AbstractCli {
     DiscreteVariable relationFeatureNames = new DiscreteVariable("relationFeatures",
         IoUtils.readLines(options.valueOf(relationFeatures)));
     
-    List<P3Example> examples = Lists.newArrayList();
+    List<P3KbExample> examples = Lists.newArrayList();
     for (String trainingDataEnv : options.valuesOf(trainingData)) {
       examples.addAll(P3Utils.readTrainingData(trainingDataEnv, categoryFeatureNames,
           relationFeatureNames, options.valueOf(categoryFilename), options.valueOf(relationFilename),
@@ -108,16 +108,16 @@ public class TrainP3 extends AbstractCli {
     ParametricCcgParser ccgFamily  = getCcgParser(lexiconLines);
     ParametricIncEval evalFamily = getEval(lexiconLines, options.valuesOf(defs),
         categoryFeatureNames, relationFeatureNames, categoryList.items(), relationList.items());
-    ParametricGroundedParser family = new ParametricGroundedParser(ccgFamily, evalFamily);
+    ParametricP3Model family = new ParametricP3Model(ccgFamily, evalFamily);
 
-    GroundedParserInference inf = new GroundedParserPipelinedInference(
+    P3Inference inf = new P3BeamInference(
         CcgCkyInference.getDefault(100), P3Utils.getSimplifier(), 10, 100, false);
-    GroundedParserLoglikelihoodOracle oracle = new GroundedParserLoglikelihoodOracle(family, inf);
+    P3LoglikelihoodOracle oracle = new P3LoglikelihoodOracle(family, inf);
     GradientOptimizer trainer = createGradientOptimizer(examples.size());
     
     SufficientStatistics initialParameters = oracle.initializeGradient();
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);
-    GroundedParser parser = family.getModelFromParameters(parameters);
+    P3Model parser = family.getModelFromParameters(parameters);
     IoUtils.serializeObjectToFile(parser.getCcgParser(), options.valueOf(parserOut));
     IoUtils.serializeObjectToFile(((KbContinuationIncEval) parser.getEval()).getKbModel(),
         options.valueOf(kbModelOut));

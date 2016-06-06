@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
 
 import java.util.List;
 
@@ -7,15 +7,21 @@ import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.LogFunction;
 
-public interface GroundedParserInference {
+/**
+ * Interface for inference algorithms for P3.
+ * 
+ * @author jayantk
+ *
+ */
+public interface P3Inference {
 
-  public List<GroundedCcgParse> beamSearch(GroundedParser parser, AnnotatedSentence sentence,
+  public List<P3Parse> beamSearch(P3Model parser, AnnotatedSentence sentence,
       Object initialDiagram, ChartCost chartFilter, IncEvalCost evalCost, LogFunction log);
   
-  public List<GroundedCcgParse> beamSearch(GroundedParser parser, AnnotatedSentence sentence,
+  public List<P3Parse> beamSearch(P3Model parser, AnnotatedSentence sentence,
       Object initialDiagram);
   
-  public List<GroundedCcgParse> beamSearch(GroundedParser parser, AnnotatedSentence sentence,
+  public List<P3Parse> beamSearch(P3Model parser, AnnotatedSentence sentence,
       Object initialDiagram, ChartCost chartFilter, IncEvalCost evalCost);
 
 }

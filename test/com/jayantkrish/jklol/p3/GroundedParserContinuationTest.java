@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -23,6 +23,10 @@ import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval.SimplifierCpsTransform
 import com.jayantkrish.jklol.lisp.inc.IncEval;
 import com.jayantkrish.jklol.lisp.inc.IncEvalState;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.p3.P3Parse;
+import com.jayantkrish.jklol.p3.P3Model;
+import com.jayantkrish.jklol.p3.P3Inference;
+import com.jayantkrish.jklol.p3.P3InterleavedInference;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class GroundedParserContinuationTest extends TestCase {
@@ -60,7 +64,7 @@ public class GroundedParserContinuationTest extends TestCase {
 
   private static final String[] ruleArray = {"DUMMY{0} BLAH{0}"};
 
-  private GroundedParser parser;
+  private P3Model parser;
   private ExpressionParser<SExpression> sexpParser;
   private ExpressionParser<Expression2> exp2Parser;
   private Environment env;
@@ -89,14 +93,14 @@ public class GroundedParserContinuationTest extends TestCase {
     SExpression defs = sexpParser.parse(evalDefString);
     SimplifierCpsTransform transform = new SimplifierCpsTransform(simplifier, null);
     eval = new ContinuationIncEval(ambEval, env, transform, defs);
-    parser = new GroundedParser(ccgParser, eval);
+    parser = new P3Model(ccgParser, eval);
   }
 
   public void testParse() {
-    List<GroundedCcgParse> parses = beamSearch(parser,
+    List<P3Parse> parses = beamSearch(parser,
         Arrays.asList("x", "+", "x"), "(list )");
 
-    for (GroundedCcgParse parse : parses) {
+    for (P3Parse parse : parses) {
       System.out.println(parse.getSubtreeProbability() + " " + parse.getLogicalForm()
           + " " + parse.getDenotation() + " " + parse.getSyntacticParse() + " " + parse.getDiagram());
     }
@@ -133,18 +137,18 @@ public class GroundedParserContinuationTest extends TestCase {
     return eval.evaluateBeam(lf, initialDiagram, 100);
   }
 
-  public List<GroundedCcgParse> beamSearch(GroundedParser parser, List<String> words,
+  public List<P3Parse> beamSearch(P3Model parser, List<String> words,
       String initialDiagramExpression) {
     AnnotatedSentence sentence = new AnnotatedSentence(words,
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG));
 
     Object initialDiagram = ambEval.eval(sexpParser.parse(initialDiagramExpression), env, null).getValue();
-    GroundedParserInference inf = new GroundedParserInterleavedInference(100, -1);
+    P3Inference inf = new P3InterleavedInference(100, -1);
     return inf.beamSearch(parser, sentence, initialDiagram);
   }
   
-  public GroundedCcgParse parse(GroundedParser parser, List<String> words, String initialDiagramExpression) {
-    List<GroundedCcgParse> parses = beamSearch(parser, words, initialDiagramExpression);
+  public P3Parse parse(P3Model parser, List<String> words, String initialDiagramExpression) {
+    List<P3Parse> parses = beamSearch(parser, words, initialDiagramExpression);
 
     if (parses.size() > 0) {
       return parses.get(0);

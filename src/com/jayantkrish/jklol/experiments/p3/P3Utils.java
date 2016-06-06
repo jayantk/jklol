@@ -43,7 +43,7 @@ import com.jayantkrish.jklol.util.IoUtils;
 
 public class P3Utils {
 
-  public static List<P3Example> readTrainingData(String path,
+  public static List<P3KbExample> readTrainingData(String path,
       DiscreteVariable categoryFeatureNames, DiscreteVariable relationFeatureNames,
       String categoryFilePath, String relationFilePath, String trainingFilePath,
       String worldFilePath, IndexedList<String> categories, IndexedList<String> relations) {
@@ -149,7 +149,7 @@ public class P3Utils {
       }
     }
 
-    List<P3Example> examples = Lists.newArrayList();
+    List<P3KbExample> examples = Lists.newArrayList();
     for (String exampleString : IoUtils.readLines(path + "/" + trainingFilePath)) {
       if (exampleString.startsWith("*") || exampleString.startsWith("#") || exampleString.trim().length() == 0) {
         continue;
@@ -173,7 +173,7 @@ public class P3Utils {
       if (denotationParts.length > 1 || denotationParts[0].length() != 0) {
         denotation.addAll(Arrays.asList(denotationParts));
       }
-      examples.add(new P3Example(sentence, state, denotation, stateLabel));
+      examples.add(new P3KbExample(sentence, state, denotation, stateLabel));
     }
 
     return examples;

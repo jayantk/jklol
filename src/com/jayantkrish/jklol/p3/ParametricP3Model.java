@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
 
 import java.util.Arrays;
 import java.util.List;
@@ -16,7 +16,7 @@ import com.jayantkrish.jklol.models.parametric.ParametricFamily;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
-public class ParametricGroundedParser implements ParametricFamily<GroundedParser> {
+public class ParametricP3Model implements ParametricFamily<P3Model> {
   private static final long serialVersionUID = 1L;
   
   private final ParametricCcgParser ccgFamily;
@@ -25,7 +25,7 @@ public class ParametricGroundedParser implements ParametricFamily<GroundedParser
   public static final String CCG_PARAMETER_NAME="ccg";
   public static final String EVAL_PARAMETER_NAME="eval";
   
-  public ParametricGroundedParser(ParametricCcgParser ccgFamily,
+  public ParametricP3Model(ParametricCcgParser ccgFamily,
       ParametricIncEval evalFamily) {
     this.ccgFamily = Preconditions.checkNotNull(ccgFamily);
     this.evalFamily = Preconditions.checkNotNull(evalFamily);
@@ -38,11 +38,11 @@ public class ParametricGroundedParser implements ParametricFamily<GroundedParser
   }
 
   @Override
-  public GroundedParser getModelFromParameters(SufficientStatistics parameters) {
+  public P3Model getModelFromParameters(SufficientStatistics parameters) {
     List<SufficientStatistics> parameterList = parameters.coerceToList().getStatistics();
     CcgParser parser = ccgFamily.getModelFromParameters(parameterList.get(0));
     IncEval eval = evalFamily.getModelFromParameters(parameterList.get(1));
-    return new GroundedParser(parser, eval);
+    return new P3Model(parser, eval);
   }
 
   @Override
@@ -62,7 +62,7 @@ public class ParametricGroundedParser implements ParametricFamily<GroundedParser
   
   public void incrementSufficientStatistics(SufficientStatistics gradient,
       SufficientStatistics currentParameters, AnnotatedSentence sentence,
-      Object diagram, GroundedCcgParse parse, double count) {
+      Object diagram, P3Parse parse, double count) {
     List<SufficientStatistics> gradientList = gradient.coerceToList().getStatistics();
     List<SufficientStatistics> parameterList = currentParameters.coerceToList().getStatistics();
     

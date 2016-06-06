@@ -8,7 +8,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.gi.GroundedCcgParse;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.CpsTransform;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -24,6 +23,7 @@ import com.jayantkrish.jklol.lisp.FunctionValue;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.LispUtil;
 import com.jayantkrish.jklol.lisp.SExpression;
+import com.jayantkrish.jklol.p3.P3Parse;
 import com.jayantkrish.jklol.training.LogFunction;
 
 /**
@@ -164,7 +164,7 @@ public class ContinuationIncEval extends AbstractIncEval {
   }
   
   @Override
-  public AmbFunctionValue parseToContinuation(GroundedCcgParse parse, Environment env) {
+  public AmbFunctionValue parseToContinuation(P3Parse parse, Environment env) {
     Expression2 lf = parse.getUnevaluatedLogicalForm(env, eval.getSymbolTable());
     return lfToContinuation(lf, env);
   }

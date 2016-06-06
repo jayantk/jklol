@@ -2,13 +2,13 @@ package com.jayantkrish.jklol.experiments.p3;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
-import com.jayantkrish.jklol.ccg.gi.GroundedParseExample;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
 import com.jayantkrish.jklol.lisp.inc.IncEvalState;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.p3.P3Example;
 
-public class P3Example implements GroundedParseExample {
+public class P3KbExample implements P3Example {
 
   private final AnnotatedSentence sentence;
   private final Object diagram;
@@ -18,7 +18,7 @@ public class P3Example implements GroundedParseExample {
   private final KbState diagramLabel;
   private final KbStateCost diagramCost;
 
-  public P3Example(AnnotatedSentence sentence, Object diagram, 
+  public P3KbExample(AnnotatedSentence sentence, Object diagram, 
       Object denotationLabel, KbState diagramLabel) {
     this.sentence = Preconditions.checkNotNull(sentence);
     this.diagram = diagram;

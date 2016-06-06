@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -15,6 +15,9 @@ import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.inc.AmbIncEval;
 import com.jayantkrish.jklol.lisp.inc.IncEval;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.p3.P3Parse;
+import com.jayantkrish.jklol.p3.P3Model;
+import com.jayantkrish.jklol.p3.P3Inference;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public abstract class GroundedParserTest extends TestCase {
@@ -32,12 +35,12 @@ public abstract class GroundedParserTest extends TestCase {
 
   private static final String[] ruleArray = {"DUMMY{0} BLAH{0}"};
 
-  private GroundedParser parser;
-  private GroundedParserInference inf;
+  private P3Model parser;
+  private P3Inference inf;
   
   private static final double TOLERANCE = 1e-6;
   
-  public GroundedParserTest(GroundedParserInference inf) {
+  public GroundedParserTest(P3Inference inf) {
     this.inf = inf;
   }
   
@@ -53,13 +56,13 @@ public abstract class GroundedParserTest extends TestCase {
     ExpressionSimplifier simplifier = ExpressionSimplifier.lambdaCalculus();
     
     IncEval eval = new AmbIncEval(ambEval, env, simplifier);
-    parser = new GroundedParser(ccgParser, eval);
+    parser = new P3Model(ccgParser, eval);
   }
 
   public void testParse() {
-    List<GroundedCcgParse> parses = beamSearch(parser, Arrays.asList("1_or_2", "+", "2"));
+    List<P3Parse> parses = beamSearch(parser, Arrays.asList("1_or_2", "+", "2"));
 
-    for (GroundedCcgParse parse : parses) {
+    for (P3Parse parse : parses) {
       System.out.println(parse.getSubtreeProbability() + " " + parse.getLogicalForm() + " " + parse.getDenotation());
     }
     
@@ -70,7 +73,7 @@ public abstract class GroundedParserTest extends TestCase {
     assertEquals(3, parses.get(1).getDenotation());
   }
 
-  public List<GroundedCcgParse> beamSearch(GroundedParser parser, List<String> words) {
+  public List<P3Parse> beamSearch(P3Model parser, List<String> words) {
     AnnotatedSentence sentence = new AnnotatedSentence(words,
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG));
     Object initialDiagram = null;
@@ -80,8 +83,8 @@ public abstract class GroundedParserTest extends TestCase {
     return inf.beamSearch(parser, sentence, initialDiagram);
   }
   
-  public GroundedCcgParse parse(GroundedParser parser, List<String> words) {
-    List<GroundedCcgParse> parses = beamSearch(parser, words);
+  public P3Parse parse(P3Model parser, List<String> words) {
+    List<P3Parse> parses = beamSearch(parser, words);
 
     if (parses.size() > 0) {
       return parses.get(0);

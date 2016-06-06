@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.CcgParser;
@@ -7,11 +7,11 @@ import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.inc.IncEval;
 import com.jayantkrish.jklol.lisp.inc.IncEvalState;
 
-public class GroundedParser {
+public class P3Model {
   private final CcgParser parser;
   private final IncEval incrEval;
   
-  public GroundedParser(CcgParser parser, IncEval incrEval) {
+  public P3Model(CcgParser parser, IncEval incrEval) {
     this.parser = Preconditions.checkNotNull(parser);
     this.incrEval = Preconditions.checkNotNull(incrEval);
   }

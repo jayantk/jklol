@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
 
 import java.util.List;
 import java.util.Map;
@@ -21,15 +21,15 @@ import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
 
-public class GroundedParserNormalizedLoglikelihoodOracle 
-  implements GradientOracle<GroundedParser, GroundedParseExample> {
+public class P3NormalizedLoglikelihoodOracle 
+  implements GradientOracle<P3Model, P3Example> {
 
-  private final ParametricGroundedParser family;
+  private final ParametricP3Model family;
   private final ExpressionSimplifier simplifier;
   private final int parserBeamSize;
   private final int evalBeamSize;
   
-  public GroundedParserNormalizedLoglikelihoodOracle(ParametricGroundedParser family, 
+  public P3NormalizedLoglikelihoodOracle(ParametricP3Model family, 
       ExpressionSimplifier simplifier, int parserBeamSize, int evalBeamSize) {
     this.family = Preconditions.checkNotNull(family);
     this.simplifier = Preconditions.checkNotNull(simplifier);
@@ -43,14 +43,14 @@ public class GroundedParserNormalizedLoglikelihoodOracle
   }
 
   @Override
-  public GroundedParser instantiateModel(SufficientStatistics parameters) {
+  public P3Model instantiateModel(SufficientStatistics parameters) {
     return family.getModelFromParameters(parameters);
   }
 
   @Override
   public double accumulateGradient(SufficientStatistics gradient,
-      SufficientStatistics currentParameters, GroundedParser model,
-      GroundedParseExample example, LogFunction log) {
+      SufficientStatistics currentParameters, P3Model model,
+      P3Example example, LogFunction log) {
     AnnotatedSentence sentence = example.getSentence();
     Object diagram = example.getDiagram();
     

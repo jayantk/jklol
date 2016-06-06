@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
 
 import java.util.List;
 import java.util.Set;
@@ -16,17 +16,17 @@ import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.inc.IncEvalState;
 import com.jayantkrish.jklol.util.IndexedList;
 
-public class GroundedCcgParse extends CcgParse {
+public class P3Parse extends CcgParse {
   
-  private final GroundedCcgParse myLeft;
-  private final GroundedCcgParse myRight;
+  private final P3Parse myLeft;
+  private final P3Parse myRight;
   
   private final IncEvalState state;
   private final Object diagram;
 
-  protected GroundedCcgParse(HeadedSyntacticCategory syntax, LexiconEntryInfo lexiconEntry,
+  protected P3Parse(HeadedSyntacticCategory syntax, LexiconEntryInfo lexiconEntry,
       List<String> spannedWords, List<String> posTags, Set<IndexedPredicate> heads,
-      List<DependencyStructure> dependencies, double probability, GroundedCcgParse left, GroundedCcgParse right,
+      List<DependencyStructure> dependencies, double probability, P3Parse left, P3Parse right,
       Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd, IncEvalState state,
       Object diagram) {
     super(syntax, lexiconEntry, spannedWords, posTags, heads, dependencies, probability, left, right,
@@ -37,33 +37,33 @@ public class GroundedCcgParse extends CcgParse {
     this.diagram = diagram;
   }
 
-  public static GroundedCcgParse forTerminal(HeadedSyntacticCategory syntax, LexiconEntryInfo lexiconEntry,
+  public static P3Parse forTerminal(HeadedSyntacticCategory syntax, LexiconEntryInfo lexiconEntry,
       List<String> posTags, Set<IndexedPredicate> heads, List<DependencyStructure> deps,
       List<String> spannedWords, double probability, UnaryCombinator unaryRule,
       int spanStart, int spanEnd, IncEvalState state) {
-    return new GroundedCcgParse(syntax, lexiconEntry, spannedWords, posTags, heads, deps, probability,
+    return new P3Parse(syntax, lexiconEntry, spannedWords, posTags, heads, deps, probability,
         null, null, null, unaryRule, spanStart, spanEnd, state, null);
   }
 
-  public static GroundedCcgParse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
-      List<DependencyStructure> dependencies, double probability, GroundedCcgParse left,
-      GroundedCcgParse right, Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd,
+  public static P3Parse forNonterminal(HeadedSyntacticCategory syntax, Set<IndexedPredicate> heads,
+      List<DependencyStructure> dependencies, double probability, P3Parse left,
+      P3Parse right, Combinator combinator, UnaryCombinator unaryRule, int spanStart, int spanEnd,
       IncEvalState state) {
-    return new GroundedCcgParse(syntax, null, null, null, heads, dependencies, probability, left,
+    return new P3Parse(syntax, null, null, null, heads, dependencies, probability, left,
         right, combinator, unaryRule, spanStart, spanEnd, state, null);
   }
   
-  public static GroundedCcgParse fromCcgParse(CcgParse parse) {
+  public static P3Parse fromCcgParse(CcgParse parse) {
     if (parse.isTerminal()) {
-      return new GroundedCcgParse(parse.getHeadedSyntacticCategory(),
+      return new P3Parse(parse.getHeadedSyntacticCategory(),
           parse.getLexiconEntry(), parse.getWords(), parse.getPosTags(), parse.getSemanticHeads(),
           parse.getNodeDependencies(), parse.getNodeProbability(), null, null,
           null, parse.getUnaryRule(), parse.getSpanStart(), parse.getSpanEnd(), null, null);
     } else {
-      GroundedCcgParse left = fromCcgParse(parse.getLeft());
-      GroundedCcgParse right = fromCcgParse(parse.getRight());
+      P3Parse left = fromCcgParse(parse.getLeft());
+      P3Parse right = fromCcgParse(parse.getRight());
       
-      return new GroundedCcgParse(parse.getHeadedSyntacticCategory(),
+      return new P3Parse(parse.getHeadedSyntacticCategory(),
           parse.getLexiconEntry(), parse.getWords(), parse.getPosTags(), parse.getSemanticHeads(),
           parse.getNodeDependencies(), parse.getNodeProbability(), left, right,
           parse.getCombinator(), parse.getUnaryRule(), parse.getSpanStart(), parse.getSpanEnd(),
@@ -71,7 +71,7 @@ public class GroundedCcgParse extends CcgParse {
     }
   }
 
-  public GroundedCcgParse getParseForSpan(int spanStart, int spanEnd) {
+  public P3Parse getParseForSpan(int spanStart, int spanEnd) {
     if (!isTerminal()) {
       if (getLeft().getSpanStart() <= spanStart && getLeft().getSpanEnd() >= spanEnd) {
         return getLeft().getParseForSpan(spanStart, spanEnd);
@@ -90,7 +90,7 @@ public class GroundedCcgParse extends CcgParse {
    * 
    * @return
    */
-  public GroundedCcgParse getLeft() {
+  public P3Parse getLeft() {
     return myLeft;
   }
 
@@ -99,12 +99,12 @@ public class GroundedCcgParse extends CcgParse {
    * 
    * @return
    */
-  public GroundedCcgParse getRight() {
+  public P3Parse getRight() {
     return myRight;
   }
   
-  public GroundedCcgParse addUnaryRule(UnaryCombinator rule, HeadedSyntacticCategory newSyntax) {
-    return new GroundedCcgParse(newSyntax, getLexiconEntry(), getWords(), getPosTags(), getSemanticHeads(),
+  public P3Parse addUnaryRule(UnaryCombinator rule, HeadedSyntacticCategory newSyntax) {
+    return new P3Parse(newSyntax, getLexiconEntry(), getWords(), getPosTags(), getSemanticHeads(),
         getNodeDependencies(), getNodeProbability(), getLeft(), getRight(), getCombinator(), rule,
         getSpanStart(), getSpanEnd(), state, diagram);
   }
@@ -147,14 +147,14 @@ public class GroundedCcgParse extends CcgParse {
     }
   }
 
-  public GroundedCcgParse addDiagram(Object diagram) {
-    return new GroundedCcgParse(getHeadedSyntacticCategory(), getLexiconEntry(), getWords(), getPosTags(), getSemanticHeads(),
+  public P3Parse addDiagram(Object diagram) {
+    return new P3Parse(getHeadedSyntacticCategory(), getLexiconEntry(), getWords(), getPosTags(), getSemanticHeads(),
         getNodeDependencies(), getNodeProbability(), getLeft(), getRight(), getCombinator(), getUnaryRule(),
         getSpanStart(), getSpanEnd(), state, diagram);
   }
   
-  public GroundedCcgParse addState(IncEvalState newState, double newProb) {
-    return new GroundedCcgParse(getHeadedSyntacticCategory(), getLexiconEntry(), getWords(), getPosTags(), getSemanticHeads(),
+  public P3Parse addState(IncEvalState newState, double newProb) {
+    return new P3Parse(getHeadedSyntacticCategory(), getLexiconEntry(), getWords(), getPosTags(), getSemanticHeads(),
         getNodeDependencies(), newProb, getLeft(), getRight(), getCombinator(), getUnaryRule(),
         getSpanStart(), getSpanEnd(), newState, diagram);
   }

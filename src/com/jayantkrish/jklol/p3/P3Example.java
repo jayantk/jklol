@@ -1,11 +1,11 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
 
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
 import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
-public interface GroundedParseExample {
+public interface P3Example {
 
   public AnnotatedSentence getSentence();
 

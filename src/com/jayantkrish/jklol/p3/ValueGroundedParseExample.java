@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
@@ -6,7 +6,7 @@ import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 
-public class ValueGroundedParseExample implements GroundedParseExample {
+public class ValueGroundedParseExample implements P3Example {
   
   private final AnnotatedSentence sentence;
   private final Object diagram;

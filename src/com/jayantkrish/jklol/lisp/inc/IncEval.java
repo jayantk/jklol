@@ -3,9 +3,9 @@ package com.jayantkrish.jklol.lisp.inc;
 import java.util.List;
 
 import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
-import com.jayantkrish.jklol.ccg.gi.GroundedCcgParse;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.p3.P3Parse;
 import com.jayantkrish.jklol.training.LogFunction;
 
 /**
@@ -55,7 +55,7 @@ public interface IncEval {
    * @param env
    * @return
    */
-  public Object parseToContinuation(GroundedCcgParse parse, Environment env);
+  public Object parseToContinuation(P3Parse parse, Environment env);
   
   /**
    * Produces a continuation from an expression. 

@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -28,6 +28,14 @@ import com.jayantkrish.jklol.lisp.inc.ParametricContinuationIncEval.StateFeature
 import com.jayantkrish.jklol.lisp.inc.ParametricIncEval;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.p3.P3Parse;
+import com.jayantkrish.jklol.p3.P3Model;
+import com.jayantkrish.jklol.p3.P3Inference;
+import com.jayantkrish.jklol.p3.P3LoglikelihoodOracle;
+import com.jayantkrish.jklol.p3.P3NormalizedLoglikelihoodOracle;
+import com.jayantkrish.jklol.p3.P3BeamInference;
+import com.jayantkrish.jklol.p3.ParametricP3Model;
+import com.jayantkrish.jklol.p3.ValueGroundedParseExample;
 import com.jayantkrish.jklol.preprocessing.DictionaryFeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
@@ -115,7 +123,7 @@ public class GroundedParserTrainingTest extends TestCase {
   
   private static final Object initialDiagram = ConsValue.listToConsList(Collections.emptyList());
 
-  private ParametricGroundedParser family;
+  private ParametricP3Model family;
   
   private ExpressionParser<SExpression> sexpParser;
   private Environment env;
@@ -149,23 +157,23 @@ public class GroundedParserTrainingTest extends TestCase {
     ParametricIncEval evalFamily = ParametricContinuationIncEval.fromFeatureGenerator(
         featureVectorGen, eval);
 
-    family = new ParametricGroundedParser(ccgFamily, evalFamily);
+    family = new ParametricP3Model(ccgFamily, evalFamily);
   }
 
   public void testTraining() {
     List<ValueGroundedParseExample> examples = parseExamples(sentences, labels);
 
     // GroundedParserInference inf = new GroundedParserInterleavedInference(20, 3);
-    GroundedParserInference inf = new GroundedParserPipelinedInference(
+    P3Inference inf = new P3BeamInference(
         CcgCkyInference.getDefault(100), ExpressionSimplifier.lambdaCalculus(), 10, 100, false);
-    GroundedParserLoglikelihoodOracle oracle = new GroundedParserLoglikelihoodOracle(family, inf);
+    P3LoglikelihoodOracle oracle = new P3LoglikelihoodOracle(family, inf);
     // GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(1000,
     // 1, 1, true, true, Double.MAX_VALUE, 0.0, new DefaultLogFunction());
     GradientOptimizer trainer = new Lbfgs(100, 10, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);
-    GroundedParser parser = family.getModelFromParameters(parameters);
+    P3Model parser = family.getModelFromParameters(parameters);
     System.out.println(family.getParameterDescription(parameters));
     
     assertDistributionEquals(parser, inf, "foo", new Object[] {3}, new double[] {1.0});
@@ -179,9 +187,9 @@ public class GroundedParserTrainingTest extends TestCase {
     List<ValueGroundedParseExample> examples = parseExamples(sentences, labels);
 
     // GroundedParserInference inf = new GroundedParserInterleavedInference(20, 3);
-    GroundedParserInference inf = new GroundedParserPipelinedInference(
+    P3Inference inf = new P3BeamInference(
         CcgCkyInference.getDefault(100), ExpressionSimplifier.lambdaCalculus(), 10, 100, true);
-    GroundedParserNormalizedLoglikelihoodOracle oracle = new GroundedParserNormalizedLoglikelihoodOracle(
+    P3NormalizedLoglikelihoodOracle oracle = new P3NormalizedLoglikelihoodOracle(
         family, ExpressionSimplifier.lambdaCalculus(), 100, 100);
     /*
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(1000,
@@ -191,7 +199,7 @@ public class GroundedParserTrainingTest extends TestCase {
 
     SufficientStatistics initialParameters = oracle.initializeGradient();
     SufficientStatistics parameters = trainer.train(oracle, initialParameters, examples);
-    GroundedParser parser = family.getModelFromParameters(parameters);
+    P3Model parser = family.getModelFromParameters(parameters);
     System.out.println(family.getParameterDescription(parameters));
 
     assertDistributionEquals(parser, inf, "foo", new Object[] {3}, new double[] {1.0});
@@ -199,17 +207,17 @@ public class GroundedParserTrainingTest extends TestCase {
     assertDistributionEquals(parser, inf, "a even plus 1", new Object[] {3, 5}, new double[] {0.5, 0.5});
   }
   
-  private void assertDistributionEquals(GroundedParser parser, GroundedParserInference inf,
+  private void assertDistributionEquals(P3Model parser, P3Inference inf,
       String sentence, Object[] values, double[] probs) {
     Preconditions.checkArgument(values.length == probs.length);
     
     AnnotatedSentence annotatedSentence = toSentence(sentence);
-    List<GroundedCcgParse> parses = inf.beamSearch(parser, annotatedSentence, initialDiagram);
+    List<P3Parse> parses = inf.beamSearch(parser, annotatedSentence, initialDiagram);
     CountAccumulator<Object> denotationProbs = CountAccumulator.create();
     System.out.println(sentence);
     int numToPrint = 10;
     int numPrinted = 0;
-    for (GroundedCcgParse parse : parses) {
+    for (P3Parse parse : parses) {
       if (numPrinted < numToPrint) {
         System.out.println("   " + parse.getDenotation() + " " + parse.getSubtreeProbability()
             + " " + parse.getLogicalForm());

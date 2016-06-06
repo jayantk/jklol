@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
 
 import java.util.List;
 
@@ -21,7 +21,7 @@ import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.util.CountAccumulator;
 
 
-public class GroundedParserPipelinedInference extends AbstractGroundedParserInference {
+public class P3BeamInference extends AbstractGroundedParserInference {
   
   private final CcgInference ccgInference;
   private final ExpressionSimplifier simplifier;
@@ -30,13 +30,13 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
   private final boolean locallyNormalize;
   
   // Natural ordering on parses that sorts them by probability.
-  private final static Ordering<GroundedCcgParse> parseOrdering = new Ordering<GroundedCcgParse>() {
-    public int compare(GroundedCcgParse left, GroundedCcgParse right) {
+  private final static Ordering<P3Parse> parseOrdering = new Ordering<P3Parse>() {
+    public int compare(P3Parse left, P3Parse right) {
       return Doubles.compare(left.getSubtreeProbability(), right.getSubtreeProbability());
     }
   };
   
-  public GroundedParserPipelinedInference(CcgInference ccgInference, ExpressionSimplifier simplifier,
+  public P3BeamInference(CcgInference ccgInference, ExpressionSimplifier simplifier,
       int numLogicalForms, int evalBeamSize, boolean locallyNormalize) {
     this.ccgInference = Preconditions.checkNotNull(ccgInference);
     this.simplifier = simplifier;
@@ -46,7 +46,7 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
   }
 
   @Override
-  public List<GroundedCcgParse> beamSearch(GroundedParser parser, AnnotatedSentence sentence,
+  public List<P3Parse> beamSearch(P3Model parser, AnnotatedSentence sentence,
       Object initialDiagram, ChartCost chartFilter, IncEvalCost cost,
       LogFunction log) {
 
@@ -69,7 +69,7 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
     List<Expression2> sortedLfs = lfProbs.getSortedKeys();
 
     int numEvaluated = 0;
-    List<GroundedCcgParse> parses = Lists.newArrayList();
+    List<P3Parse> parses = Lists.newArrayList();
     for (Expression2 lf : sortedLfs) {
       if (numEvaluated == numLogicalForms) {
         break;
@@ -100,7 +100,7 @@ public class GroundedParserPipelinedInference extends AbstractGroundedParserInfe
 
       for (CcgParse ccgParse : lfMap.get(lf)) {
         for (IncEvalState state : states) {
-          GroundedCcgParse parse = GroundedCcgParse.fromCcgParse(ccgParse).addDiagram(state.getDiagram())
+          P3Parse parse = P3Parse.fromCcgParse(ccgParse).addDiagram(state.getDiagram())
               .addState(state, ccgParse.getNodeProbability() * state.getProb()
                   / (parsePartitionFunction * evalPartitionFunction));
           parses.add(parse);

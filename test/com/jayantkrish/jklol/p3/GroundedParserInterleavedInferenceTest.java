@@ -1,8 +1,10 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
+
+import com.jayantkrish.jklol.p3.P3InterleavedInference;
 
 public class GroundedParserInterleavedInferenceTest extends GroundedParserTest {
 
   public GroundedParserInterleavedInferenceTest() {
-    super(new GroundedParserInterleavedInference(10, -1));
+    super(new P3InterleavedInference(10, -1));
   }
 }

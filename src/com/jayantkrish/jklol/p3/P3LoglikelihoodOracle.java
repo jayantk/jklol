@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.ccg.gi;
+package com.jayantkrish.jklol.p3;
 
 import java.util.Collection;
 import java.util.List;
@@ -15,15 +15,15 @@ import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.LogFunction;
 
-public class GroundedParserLoglikelihoodOracle implements 
-  GradientOracle<GroundedParser, GroundedParseExample> {
+public class P3LoglikelihoodOracle implements 
+  GradientOracle<P3Model, P3Example> {
   
-  private final ParametricGroundedParser family;
-  private final GroundedParserInference inference;
+  private final ParametricP3Model family;
+  private final P3Inference inference;
   private final ExpressionSimplifier simplifier;
 
-  public GroundedParserLoglikelihoodOracle(ParametricGroundedParser family,
-      GroundedParserInference inference) {
+  public P3LoglikelihoodOracle(ParametricP3Model family,
+      P3Inference inference) {
     this.family = Preconditions.checkNotNull(family);
     this.inference = inference;
     this.simplifier = ExpressionSimplifier.lambdaCalculus();
@@ -35,14 +35,14 @@ public class GroundedParserLoglikelihoodOracle implements
   }
 
   @Override
-  public GroundedParser instantiateModel(SufficientStatistics parameters) {
+  public P3Model instantiateModel(SufficientStatistics parameters) {
     return family.getModelFromParameters(parameters);
   }
 
   @Override
   public double accumulateGradient(SufficientStatistics gradient,
-      SufficientStatistics currentParameters, GroundedParser model,
-      GroundedParseExample example, LogFunction log) {
+      SufficientStatistics currentParameters, P3Model model,
+      P3Example example, LogFunction log) {
     AnnotatedSentence sentence = example.getSentence();
     Object diagram = example.getDiagram();
     
@@ -55,11 +55,11 @@ public class GroundedParserLoglikelihoodOracle implements
     IncEvalCost labelCost = example.getLabelCost();
     ChartCost chartFilter = example.getChartFilter();
     System.out.println("conditional evaluations:");
-    List<GroundedCcgParse> conditionalParsesInit = inference.beamSearch(
+    List<P3Parse> conditionalParsesInit = inference.beamSearch(
         model, sentence, diagram, chartFilter, labelCost, log);
     
-    List<GroundedCcgParse> conditionalParses = Lists.newArrayList();
-    for (GroundedCcgParse parse : conditionalParsesInit) {
+    List<P3Parse> conditionalParses = Lists.newArrayList();
+    for (P3Parse parse : conditionalParsesInit) {
       Expression2 lf = parse.getLogicalForm();
       if (lf != null) {
         lf = simplifier.apply(lf);
@@ -81,7 +81,7 @@ public class GroundedParserLoglikelihoodOracle implements
     log.startTimer("update_gradient/input_marginal");
     IncEvalCost marginCost = example.getMarginCost();
     System.out.println("unconditional evaluations:");
-    List<GroundedCcgParse> unconditionalParses = null;
+    List<P3Parse> unconditionalParses = null;
     if (marginCost == null && chartFilter == null && labelCost == null) {
       unconditionalParses = conditionalParsesInit;
     } else {
@@ -97,13 +97,13 @@ public class GroundedParserLoglikelihoodOracle implements
 
     log.startTimer("update_gradient/increment_gradient");
     double unconditionalPartitionFunction = getPartitionFunction(unconditionalParses);
-    for (GroundedCcgParse parse : unconditionalParses) {
+    for (P3Parse parse : unconditionalParses) {
       family.incrementSufficientStatistics(gradient, currentParameters, sentence, diagram, parse,
           -1.0 * parse.getSubtreeProbability() / unconditionalPartitionFunction);
     }
 
     double conditionalPartitionFunction = getPartitionFunction(conditionalParses);
-    for (GroundedCcgParse parse : conditionalParses) {
+    for (P3Parse parse : conditionalParses) {
       family.incrementSufficientStatistics(gradient, currentParameters, sentence, diagram, parse,
           parse.getSubtreeProbability() / conditionalPartitionFunction);
     }
@@ -116,9 +116,9 @@ public class GroundedParserLoglikelihoodOracle implements
     return Math.log(conditionalPartitionFunction) - Math.log(unconditionalPartitionFunction);
   }
   
-  public double getPartitionFunction(Collection<GroundedCcgParse> parses) {
+  public double getPartitionFunction(Collection<P3Parse> parses) {
     double partitionFunction = 0.0;
-    for (GroundedCcgParse parse : parses) {
+    for (P3Parse parse : parses) {
       partitionFunction += parse.getSubtreeProbability();
     }
     return partitionFunction;

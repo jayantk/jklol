@@ -1,6 +1,6 @@
 export DATA_DIR="experiments/p3/geoqa"
 export OUT_DIR="$DATA_DIR/output/"
-export EXPERIMENT_NAME="denotation2_1iter_world"
+export EXPERIMENT_NAME="denotation4_10iter_world"
 export EXPERIMENT_DIR="$OUT_DIR/$EXPERIMENT_NAME/"
 
 mkdir -p $OUT_DIR

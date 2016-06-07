@@ -23,7 +23,6 @@ import com.jayantkrish.jklol.lisp.FunctionValue;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.LispUtil;
 import com.jayantkrish.jklol.lisp.SExpression;
-import com.jayantkrish.jklol.p3.P3Parse;
 import com.jayantkrish.jklol.training.LogFunction;
 
 /**
@@ -178,11 +177,6 @@ public class ContinuationIncEval extends AbstractIncEval {
     return (AmbFunctionValue) evalResult.getValue();
   }
   
-  @Override
-  public boolean isEvaluatable(HeadedSyntacticCategory syntax) {
-    return syntax.isAtomic();
-  }
-
   public static class QueueContinuations implements FunctionValue {
     private final List<Object> continuations;
     private final List<Object> denotations;

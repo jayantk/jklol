@@ -2,14 +2,12 @@ package com.jayantkrish.jklol.lisp.inc;
 
 import java.util.List;
 
-import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
-import com.jayantkrish.jklol.p3.P3Parse;
 import com.jayantkrish.jklol.training.LogFunction;
 
 /**
- * Oracle for evaluating logical forms during CCG parsing. 
+ * Interface for evaluating logical forms. 
  * 
  * @author jayantk
  *
@@ -52,15 +50,6 @@ public interface IncEval {
    * @return
    */
   public Object lfToContinuation(Expression2 lf, Environment env);
-  
-  /**
-   * Returns {@code true} if a CCG parse with root {@code syntax}
-   * produces a logical form that should be evaluated.
-   * 
-   * @param syntax
-   * @return
-   */
-  public boolean isEvaluatable(HeadedSyntacticCategory syntax);
 
   /**
    * Evaluates {@code lf} to completion using a beam search and 

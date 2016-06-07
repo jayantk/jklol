@@ -5,7 +5,6 @@ import java.util.List;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
@@ -17,7 +16,6 @@ import com.jayantkrish.jklol.lisp.ParametricBfgBuilder;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteFactor.Outcome;
-import com.jayantkrish.jklol.p3.P3Parse;
 import com.jayantkrish.jklol.training.LogFunction;
 
 public class AmbIncEval extends AbstractIncEval {
@@ -81,10 +79,5 @@ public class AmbIncEval extends AbstractIncEval {
   @Override
   public Object lfToContinuation(Expression2 lf, Environment env) {
     return simplifier.apply(lf);
-  }
-
-  @Override
-  public boolean isEvaluatable(HeadedSyntacticCategory syntax) {
-    return syntax.isAtomic();
   }
 }

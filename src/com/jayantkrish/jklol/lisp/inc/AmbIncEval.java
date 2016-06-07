@@ -79,12 +79,6 @@ public class AmbIncEval extends AbstractIncEval {
   }
 
   @Override
-  public Object parseToContinuation(P3Parse parse, Environment env) {
-    Expression2 lf = parse.getUnevaluatedLogicalForm(env, eval.getSymbolTable());
-    return lfToContinuation(lf, env);
-  }
-  
-  @Override
   public Object lfToContinuation(Expression2 lf, Environment env) {
     return simplifier.apply(lf);
   }

@@ -164,12 +164,6 @@ public class ContinuationIncEval extends AbstractIncEval {
   }
   
   @Override
-  public AmbFunctionValue parseToContinuation(P3Parse parse, Environment env) {
-    Expression2 lf = parse.getUnevaluatedLogicalForm(env, eval.getSymbolTable());
-    return lfToContinuation(lf, env);
-  }
-  
-  @Override
   public AmbFunctionValue lfToContinuation(Expression2 lf, Environment env) {
     Expression2 cpsLf = cpsTransform.apply(lf);
     // System.out.println(cpsLf);

@@ -43,20 +43,7 @@ public interface IncEval {
    * @return
    */
   public Environment getEnvironment();
-  
-  /**
-   * Produces a continuation from a parse. The continuation represents
-   * an evaluatable object (in the simplest case, the evaluatable expression
-   * itself) that can be used in {@code evaluateContinuation}. The returned
-   * continuation should use any previous evaluation results from {@code parse}
-   * instead of re-evaluating these expressions.
-   * 
-   * @param parse
-   * @param env
-   * @return
-   */
-  public Object parseToContinuation(P3Parse parse, Environment env);
-  
+
   /**
    * Produces a continuation from an expression. 
    * 

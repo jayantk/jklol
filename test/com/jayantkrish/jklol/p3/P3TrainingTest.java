@@ -45,7 +45,7 @@ import com.jayantkrish.jklol.training.Lbfgs;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IndexedList;
 
-public class GroundedParserTrainingTest extends TestCase {
+public class P3TrainingTest extends TestCase {
 
     private static final String[] lexicon = {
     "1,NP{0},1,0 num",

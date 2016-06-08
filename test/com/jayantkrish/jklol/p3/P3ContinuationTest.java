@@ -9,6 +9,7 @@ import junit.framework.TestCase;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.CcgCkyInference;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.DefaultCcgFeatureFactory;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
@@ -23,13 +24,9 @@ import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval.SimplifierCpsTransform
 import com.jayantkrish.jklol.lisp.inc.IncEval;
 import com.jayantkrish.jklol.lisp.inc.IncEvalState;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
-import com.jayantkrish.jklol.p3.P3Parse;
-import com.jayantkrish.jklol.p3.P3Model;
-import com.jayantkrish.jklol.p3.P3Inference;
-import com.jayantkrish.jklol.p3.P3InterleavedInference;
 import com.jayantkrish.jklol.util.IndexedList;
 
-public class GroundedParserContinuationTest extends TestCase {
+public class P3ContinuationTest extends TestCase {
 
   private static final String[] lexicon = {
     "1,N{0},1,0 num",
@@ -143,7 +140,8 @@ public class GroundedParserContinuationTest extends TestCase {
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG));
 
     Object initialDiagram = ambEval.eval(sexpParser.parse(initialDiagramExpression), env, null).getValue();
-    P3Inference inf = new P3InterleavedInference(100, -1);
+    P3Inference inf = new P3BeamInference(CcgCkyInference.getDefault(100),
+        ExpressionSimplifier.lambdaCalculus(), 10, 100, false);
     return inf.beamSearch(parser, sentence, initialDiagram);
   }
   

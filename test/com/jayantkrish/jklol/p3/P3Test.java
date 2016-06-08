@@ -20,7 +20,7 @@ import com.jayantkrish.jklol.p3.P3Model;
 import com.jayantkrish.jklol.p3.P3Inference;
 import com.jayantkrish.jklol.util.IndexedList;
 
-public abstract class GroundedParserTest extends TestCase {
+public abstract class P3Test extends TestCase {
 
   private static final String[] lexicon = {
     "1,N{0},1,0 num",
@@ -40,7 +40,7 @@ public abstract class GroundedParserTest extends TestCase {
   
   private static final double TOLERANCE = 1e-6;
   
-  public GroundedParserTest(P3Inference inf) {
+  public P3Test(P3Inference inf) {
     this.inf = inf;
   }
   

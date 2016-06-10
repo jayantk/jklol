@@ -226,15 +226,15 @@ public class CfgAlignmentModel implements Serializable {
         trees.addAll(getBestAlignments(example, lexiconNumParses));
       }
 
-      System.out.println(example.getWords());
+      // System.out.println(example.getWords());
       for (AlignedExpressionTree tree : trees) {
-        System.out.println(tree);
+        // System.out.println(tree);
 
         for (LexiconEntry entry : tree.generateLexiconEntries(typeDeclaration)) {
           alignments.incrementOutcome(entry.getWords(), entry, 1);
-          System.out.println("   " + entry);
+          // System.out.println("   " + entry);
         }
-        System.out.println("");
+        // System.out.println("");
       }
     }
     return alignments;

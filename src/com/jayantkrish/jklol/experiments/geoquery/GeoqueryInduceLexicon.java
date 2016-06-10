@@ -312,6 +312,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
         initial, trainingData);
 
     if (!convex) {
+      System.out.println("\nRetraining lexicon learning model with nonconvex objective");
       // Train a nonconvex model initializing the parameters using the convex model.
       trainedParameters = em.train(new CfgAlignmentEmOracle(pam, smoothing, optimizer, convex),
           trainedParameters, trainingData);
@@ -338,8 +339,8 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),
         trainingExamples);
 
-    System.out.println("final parameters:");
-    System.out.println(family.getParameterDescription(parameters));
+    // System.out.println("final parameters:");
+    // System.out.println(family.getParameterDescription(parameters));
     
     return family.getModelFromParameters(parameters);
   }

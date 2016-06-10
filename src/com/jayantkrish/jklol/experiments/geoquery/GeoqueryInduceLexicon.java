@@ -71,6 +71,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
   private OptionSpec<Double> smoothingParam;
   private OptionSpec<Integer> nGramLength;
   private OptionSpec<Integer> lexiconNumParses;
+  private OptionSpec<Void> loglinear;
   
   // Configuration for the semantic parser.
   private OptionSpec<Integer> parserIterations;
@@ -101,6 +102,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(0.01);
     nGramLength = parser.accepts("nGramLength").withRequiredArg().ofType(Integer.class).defaultsTo(1);
     lexiconNumParses = parser.accepts("lexiconNumParses").withRequiredArg().ofType(Integer.class).defaultsTo(-1);
+    loglinear = parser.accepts("loglinear");
     
     parserIterations = parser.accepts("parserIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     beamSize = parser.accepts("beamSize").withRequiredArg().ofType(Integer.class).defaultsTo(100);
@@ -116,6 +118,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     List<List<AlignmentExample>> folds = Lists.newArrayList();
     System.out.println("Reading data...");
     readFolds(options.valueOf(trainingDataFolds), foldNames, folds, options.has(testOpt), typeDeclaration);
+    System.out.println("\n");
     
     List<String> additionalLexiconEntries = IoUtils.readLines(options.valueOf(additionalLexicon));
 
@@ -150,8 +153,8 @@ public class GeoqueryInduceLexicon extends AbstractCli {
 
       SemanticParserLoss loss = runFold(trainingData, heldOut, typeDeclaration, options.valueOf(emIterations),
           options.valueOf(smoothingParam), options.valueOf(nGramLength), options.valueOf(lexiconNumParses),
-          options.valueOf(parserIterations), options.valueOf(l2Regularization), options.valueOf(beamSize),
-          options.valueOf(unknownWordThreshold), additionalLexiconEntries, 
+          options.valueOf(loglinear), options.valueOf(parserIterations), options.valueOf(l2Regularization),
+          options.valueOf(beamSize), options.valueOf(unknownWordThreshold), additionalLexiconEntries, 
           lexiconOutputFilename, trainingErrorOutputFilename, testErrorOutputFilename,
           alignmentModelOutputFilename, parserModelOutputFilename);
       losses.add(loss);
@@ -174,7 +177,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
   
   private static SemanticParserLoss runFold(List<AlignmentExample> trainingData, List<AlignmentExample> testData,
       TypeDeclaration typeDeclaration, int emIterations, double smoothingAmount, int nGramLength, int lexiconNumParses,
-      int parserIterations, double l2Regularization, int beamSize, int unknownWordThreshold, List<String> additionalLexiconEntries,
+      boolean loglinear, int parserIterations, double l2Regularization, int beamSize, int unknownWordThreshold, List<String> additionalLexiconEntries,
       String lexiconOutputFilename, String trainingErrorOutputFilename, String testErrorOutputFilename, String alignmentModelOutputFilename,
       String parserModelOutputFilename) {
 
@@ -186,7 +189,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
 
     // Train the alignment model and generate lexicon entries.
     PairCountAccumulator<List<String>, LexiconEntry> alignments = trainAlignmentModel(trainingData,
-        entityNames, typeDeclaration, smoothingAmount, emIterations, nGramLength, lexiconNumParses, true, false);
+        entityNames, typeDeclaration, smoothingAmount, emIterations, nGramLength, lexiconNumParses, loglinear, false);
     
     CountAccumulator<String> wordCounts = CountAccumulator.create();
     for (AlignmentExample trainingExample : trainingData) {
@@ -301,7 +304,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
       optimizer = new Lbfgs(numIterations, 10, 1e-6, new NullLogFunction());
     }
 
-    System.out.println("Training lexicon learning model with Expectation Maximization...");
+    System.out.println("\nTraining lexicon learning model with Expectation Maximization...");
     // Train the alignment model with EM.
     ExpectationMaximization em = new ExpectationMaximization(emIterations, new DefaultLogFunction(1, false));
     // Train a convex model.
@@ -387,7 +390,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
             new CommutativeReplacementRule("and:<t*,t>")));
     Set<String> constantsToIgnore = Sets.newHashSet("and:<t*,t>");
 
-    System.out.println(trainingDataFile);
+    System.out.println("  " + trainingDataFile);
     int totalTreeSize = 0; 
     for (CcgExample ccgExample : ccgExamples) {
       ExpressionTree tree = ExpressionTree.fromExpression(ccgExample.getLogicalForm(),

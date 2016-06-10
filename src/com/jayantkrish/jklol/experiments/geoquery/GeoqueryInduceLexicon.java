@@ -153,7 +153,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
 
       SemanticParserLoss loss = runFold(trainingData, heldOut, typeDeclaration, options.valueOf(emIterations),
           options.valueOf(smoothingParam), options.valueOf(nGramLength), options.valueOf(lexiconNumParses),
-          options.valueOf(loglinear), options.valueOf(parserIterations), options.valueOf(l2Regularization),
+          options.has(loglinear), options.valueOf(parserIterations), options.valueOf(l2Regularization),
           options.valueOf(beamSize), options.valueOf(unknownWordThreshold), additionalLexiconEntries, 
           lexiconOutputFilename, trainingErrorOutputFilename, testErrorOutputFilename,
           alignmentModelOutputFilename, parserModelOutputFilename);

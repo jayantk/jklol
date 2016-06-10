@@ -251,6 +251,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     CcgInference inferenceAlgorithm = new CcgCkyInference(null, beamSize,
         -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors());
 
+    System.out.println("\nTraining CCG parser.");
     CcgParser ccgParser = trainSemanticParser(ccgTrainingExamples, lexiconEntryLines,
         unknownLexiconEntryLines, ruleEntries, featureFactory, inferenceAlgorithm, comparator,
         parserIterations, l2Regularization);

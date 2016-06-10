@@ -6,7 +6,7 @@ A machine learning library with many different kinds of models, such as:
 * Graphical models
 * Sequence models
 * Context-free grammars
-* <a href="tree/master/src/com/jayantkrish/jklol/ccg">Combinatory Categorial Grammar semantic parsers</a>
+* <a href="src/com/jayantkrish/jklol/ccg">Combinatory Categorial Grammar semantic parsers</a>
 
 These models are built using useful core primitives for learning and
 inference:

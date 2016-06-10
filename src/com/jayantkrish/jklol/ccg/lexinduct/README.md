@@ -29,7 +29,7 @@ code applying PAL to Geoquery</a>.
 
 ## Publications
 
-The PAL algorithm is described in the following paper:
+If you use the PAL algorithm, please cite the following paper:
 
 Jayant Krishnamurthy. Probabilistic Models for Learning a Semantic
 Parser Lexicon. NAACL 2016

@@ -10,7 +10,6 @@ be trained to either maximize loglikelihood or margin-based objectives
 using various forms of supervision. In both cases, the parser has a
 rich collection of features similar to the C&C parser.
 
-
 ### Grammar 
 
 Syntactic categories for this parser are specified in standard CCG
@@ -120,3 +119,6 @@ A full example experiment for training a semantic parser on the
 GeoQuery data set is provided in the experiments/geoquery
 directory. See the experiments/geoquery/README for more information.
 
+### Lexicon Learning
+
+See the <a href="lexinduct">PAL algorithm for lexicon learning</a>.

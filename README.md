@@ -6,13 +6,13 @@ A machine learning library with many different kinds of models, such as:
 * Graphical models
 * Sequence models
 * Context-free grammars
-* Combinatory Categorial Grammar semantic parsing 
+* <a href="tree/master/src/com/jayantkrish/jklol/ccg">Combinatory Categorial Grammar semantic parsers</a>
 
 These models are built using useful core primitives for learning and
 inference:
 
-* Gradient-based optimization -- stochastic gradient, adagrad, and LBFGS
-* Tensor math -- sparse and dense tensors
+* Optimization -- stochastic gradient, Adagrad, LBFGS, and Expectation Maximization.
+* Tensor math -- supports both sparse and dense tensors.
 
 ## Installation
 

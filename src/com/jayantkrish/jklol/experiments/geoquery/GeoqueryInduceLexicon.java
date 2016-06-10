@@ -50,6 +50,7 @@ import com.jayantkrish.jklol.training.ExpectationMaximization;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.training.GradientOracle;
 import com.jayantkrish.jklol.training.Lbfgs;
+import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.training.StochasticGradientTrainer;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -113,6 +114,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     
     List<String> foldNames = Lists.newArrayList();
     List<List<AlignmentExample>> folds = Lists.newArrayList();
+    System.out.println("Reading data...");
     readFolds(options.valueOf(trainingDataFolds), foldNames, folds, options.has(testOpt), typeDeclaration);
     
     List<String> additionalLexiconEntries = IoUtils.readLines(options.valueOf(additionalLexicon));
@@ -120,6 +122,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     List<String> foldsToRun = Lists.newArrayList();
     if (options.has(foldNameOpt)) {
       foldsToRun.add(options.valueOf(foldNameOpt));
+      System.out.println("Running fold: " + options.valueOf(foldNameOpt));
     } else {
       foldsToRun.addAll(foldNames);
     }
@@ -295,9 +298,10 @@ public class GeoqueryInduceLexicon extends AbstractCli {
       initial.increment(1);
     } else {
       int numIterations = 1000;
-      optimizer = new Lbfgs(numIterations, 10, 1e-6, new DefaultLogFunction(numIterations - 1, false));
+      optimizer = new Lbfgs(numIterations, 10, 1e-6, new NullLogFunction());
     }
 
+    System.out.println("Training lexicon learning model with Expectation Maximization...");
     // Train the alignment model with EM.
     ExpectationMaximization em = new ExpectationMaximization(emIterations, new DefaultLogFunction(1, false));
     // Train a convex model.
@@ -391,7 +395,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
       examples.add(new AlignmentExample(ccgExample.getSentence().getWords(), tree));
       totalTreeSize += tree.size();
     }
-    System.out.println("Average tree size: " + (totalTreeSize / examples.size()));
+    // System.out.println("  average tree size: " + (totalTreeSize / examples.size()));
     return examples;
   }
 

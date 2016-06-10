@@ -98,9 +98,6 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     Set<ExpressionNode> expressions = Sets.newHashSet();
     expressions.add(SKIP_EXPRESSION);
 
-    System.out.println("num terminals: " + terminalVarValues.size());
-    System.out.println(terminalVarValues);
-
     int nGramLength = 0;
     for (List<String> terminalVarValue : terminalVarValues) {
       nGramLength = Math.max(nGramLength, terminalVarValue.size());
@@ -162,8 +159,9 @@ public class ParametricCfgAlignmentModel implements ParametricFamily<CfgAlignmen
     DiscreteFactor sparsityFactor = terminalBuilder.build();
     DiscreteFactor constantFactor = TableFactor.zero(VariableNumMap.unionAll(terminalVar, parentVar, ruleVar));
     
-    System.out.println("nonterminal sparsity: " + nonterminalSparsityFactor.size());
-    System.out.println("terminal sparsity: " + sparsityFactor.size());
+    System.out.println("Grammar statistics:");
+    System.out.println("  # of nonterminal production rules: " + nonterminalSparsityFactor.size());
+    System.out.println("  # of terminal production rules: " + sparsityFactor.size());
 
     ParametricFactor rootFactor = null;
     ParametricFactor ruleFactor = null;

@@ -1,13 +1,27 @@
-== Introduction == 
-Basic setup for running semantic parsing experiments on the GeoQuery
-data set. The original data set is available from 
+# Geoquery Semantic Parsing Experiment
 
-http://www.cs.utexas.edu/users/ml/nldata/geoquery.html
+This package contains code for an example experiment that learns a CCG
+lexicon and trains a CCG semantic parser on the Geoquery data set.
 
-This setup uses a version of this data set from the University of
-Washington Semantic Parsing Framework, available here:
+Additional data and scripts for running 
 
-https://bitbucket.org/yoavartzi/spf
+## Running the Experiment
+
+From the root jklol directory, run:
+
+    ./experiments/geoquery/scripts/induce_lexicon_cv.sh
+	
+This script will induce a lexicon and train a parser on a single fold
+of Geoquery. It takes a few minutes to run and outputs logging
+information to `experiments/geoquery/output`.
+
+## Data
+
+The original Geoquery data set is available <a
+href="http://www.cs.utexas.edu/users/ml/nldata/geoquery.html">here</a>. This
+experiment uses a version of this data set from the <a
+href="https://bitbucket.org/yoavartzi/spf">University of Washington
+Semantic Parsing Framework</a>.
 
 == Directory structure ==
 data - The GeoQuery data set reformatted into a jklol-readable format.

@@ -14,7 +14,7 @@ mkdir -p $OUT_DIR
 PROC=()
 for i in `seq 0 9`;
 do
-    CMD="./scripts/run.sh com.jayantkrish.jklol.experiments.geoquery.GeoqueryInduceLexicon --trainingDataFolds $DATA_DIR --outputDir $OUT_DIR --emIterations 20 --smoothing 0.1 --parserIterations 50 --beamSize 100 --l2Regularization 0.0 --additionalLexicon $ENTITY_LEXICON --foldName fold$i.ccg --unknownWordThreshold 0 --maxBatchesPerThread 1 --maxThreads 4 --loglinear"
+    CMD="./scripts/run.sh com.jayantkrish.jklol.experiments.geoquery.GeoqueryInduceLexicon --trainingDataFolds $DATA_DIR --outputDir $OUT_DIR --emIterations 20 --smoothing 0.1 --parserIterations 50 --beamSize 100 --l2Regularization 0.0 --additionalLexicon $ENTITY_LEXICON --foldName fold$i.ccg --maxBatchesPerThread 1 --maxThreads 4 --loglinear"
 
     echo $CMD
     $CMD > $OUT_DIR/log_fold$i.txt &

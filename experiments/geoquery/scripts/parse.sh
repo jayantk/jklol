@@ -1,7 +1,6 @@
 #!/bin/bash -e
 
-MODEL=out.ser
+MODEL=experiments/geoquery/output/parser.fold0.ccg.ser
 
-./scripts/run.sh com.jayantkrish.jklol.ccg.cli.ParseCcg --model $MODEL --numParses 1 --printLf $@ 
-
+./scripts/run.sh com.jayantkrish.jklol.experiments.geoquery.GeoqueryRunParser --noPrintOptions --model $MODEL $@
 

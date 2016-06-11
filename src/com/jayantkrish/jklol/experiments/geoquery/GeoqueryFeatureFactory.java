@@ -380,6 +380,4 @@ public class GeoqueryFeatureFactory implements CcgFeatureFactory {
       return onesFactor;
     }
   }
-  
-  
 }

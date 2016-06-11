@@ -1,19 +1,49 @@
 # Geoquery Semantic Parsing Experiment
 
 This package contains code for an example experiment that learns a CCG
-lexicon and trains a CCG semantic parser on the Geoquery data set.
-
-Additional data and scripts for running 
+lexicon and trains a CCG semantic parser on the Geoquery data
+set. Scripts, data, and additional resources for this experiment are
+in the `experiments/geoquery` directory.
 
 ## Running the Experiment
 
 From the root jklol directory, run:
 
-    ./experiments/geoquery/scripts/induce_lexicon_cv.sh
+    ./experiments/geoquery/scripts/run_singlefold_experiment.sh
 	
-This script will induce a lexicon and train a parser on a single fold
-of Geoquery. It takes a few minutes to run and outputs logging
-information to `experiments/geoquery/output`.
+This script will learn a lexicon and train a parser on a single fold
+of Geoquery. It takes a few minutes to run and outputs trained models,
+results and logging information to `experiments/geoquery/output/`. You
+can watch training progress by running:
+
+    less -S experiments/geoquery/output/log_fold0.txt 
+
+Then type "F" to have less automatically update the file
+contents. When training finishes, the script will print training and
+test accuracy:
+
+    > Training Accuracy
+    > 0.946296
+    > Test Accuracy
+    > 0.816667
+
+(The accuracy computation requires <a
+href="https://stedolan.github.io/jq/">jq</a> to be installed.)
+Training also populates the `experiments/geoquery/output` folder with
+several files:
+
+* entity_lexicon.txt -- lexicon of entity names provided with Geoquery
+* lexicon.fold0.ccg.txt -- learned lexicon (on folds 1-9), including the entity names from above
+* log_fold0.txt -- training logfile
+* parser.fold0.ccg.ser -- serialized CCG parsing model
+* training_error.fold0.ccg.json -- the parser's predictions on the training examples (folds 1-9)
+* test_error.fold0.ccg.json -- the parser's predictions on the test examples (fold 0)
+
+At this point, you can inspect the model's predictions via the json
+files. You can also run the parser on new questions:
+
+    ./experiments/geoquery/scripts/parse.sh what is the biggest city in texas
+    > logical form: (argmax:<<e,t>,<<e,i>,e>> (lambda ($0) (and:<t*,t> (city:<c,t> $0) (loc:<lo,<lo,t>> $0 texas:s))) (lambda ($0) (size:<lo,i> $0)))
 
 ## Data
 
@@ -21,33 +51,10 @@ The original Geoquery data set is available <a
 href="http://www.cs.utexas.edu/users/ml/nldata/geoquery.html">here</a>. This
 experiment uses a version of this data set from the <a
 href="https://bitbucket.org/yoavartzi/spf">University of Washington
-Semantic Parsing Framework</a>.
+Semantic Parsing Framework</a>. These examples are in
+`experiments/geoquery/data` in a simple text format.
 
-== Directory structure ==
-data - The GeoQuery data set reformatted into a jklol-readable format.
+## Exploring the Code 
 
-grammar - Example CCG lexicon and grammar rules, and a list of known
-entity names for GeoQuery.
-
-scripts - scripts for lexicon generation, training and testing a
-semantic parser.
-
-
-== Running the Experiment ==
-The run_experiments.sh script will generate a lexicon, train a
-semantic parser, and evaluate its training error. It should be run
-from the root jklol directory, as follows:
-
-./experiments/geoquery/scripts/run_experiment.sh
-
-This script trains and evaluates a CCG semantic parser on the entire
-GeoQuery data set using a (very naively) automatically generated
-lexicon. The parser is trained as a linear model using the structured
-perceptron algorithm.
-
-Running the experiment will also save a semantic parsing model to
-"out.ser" in the base directory. This model can be used to parse new
-text using the parse.sh script. For example:
-
-./experiments/geoquery/scripts/parse.sh city in Texas
-
+The Java code for this experiment is in `GeoqueryInduceLexicon.java`
+and has extensive comments.

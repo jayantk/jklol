@@ -39,7 +39,6 @@ import com.jayantkrish.jklol.ccg.lexinduct.ExpressionTree;
 import com.jayantkrish.jklol.ccg.lexinduct.ParametricCfgAlignmentModel;
 import com.jayantkrish.jklol.ccg.util.SemanticParserExampleLoss;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils;
-import com.jayantkrish.jklol.ccg.util.SemanticParserUtils.SemanticParserLoss;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
@@ -56,6 +55,16 @@ import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IoUtils;
 import com.jayantkrish.jklol.util.PairCountAccumulator;
 
+/**
+ * A Geoquery semantic parsing experiment. This experiment
+ * learns a CCG lexicon, uses it to train a CCG semantic
+ * parser, then makes predictions on a training and test set.
+ * The lexicon, parser, and predictions are all output to 
+ * disk for later analysis.
+ *   
+ * @author jayantk
+ *
+ */
 public class GeoqueryInduceLexicon extends AbstractCli {
 
   private OptionSpec<String> trainingDataFolds;
@@ -63,8 +72,6 @@ public class GeoqueryInduceLexicon extends AbstractCli {
   
   private OptionSpec<String> foldNameOpt;
   private OptionSpec<Void> testOpt;
-  
-  private OptionSpec<Integer> unknownWordThreshold;
   
   // Configuration for the alignment model
   private OptionSpec<Integer> emIterations;
@@ -92,11 +99,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     // Optional option to only run one fold
     foldNameOpt = parser.accepts("foldName").withRequiredArg().ofType(String.class);
     testOpt = parser.accepts("test");
-    
-    // Word count below which the word is mapped to the "unknown" symbol.
-    unknownWordThreshold = parser.accepts("unknownWordThreshold").withRequiredArg()
-        .ofType(Integer.class).defaultsTo(0);
-    
+
     // Optional arguments
     emIterations = parser.accepts("emIterations").withRequiredArg().ofType(Integer.class).defaultsTo(10);
     smoothingParam = parser.accepts("smoothing").withRequiredArg().ofType(Double.class).defaultsTo(0.01);
@@ -120,6 +123,8 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     readFolds(options.valueOf(trainingDataFolds), foldNames, folds, options.has(testOpt), typeDeclaration);
     System.out.println("\n");
     
+    // Read in additional lexicon entries for training the parser.
+    // These entries are entity names included with the data set.
     List<String> additionalLexiconEntries = IoUtils.readLines(options.valueOf(additionalLexicon));
 
     List<String> foldsToRun = Lists.newArrayList();
@@ -130,7 +135,6 @@ public class GeoqueryInduceLexicon extends AbstractCli {
       foldsToRun.addAll(foldNames);
     }
 
-    List<SemanticParserLoss> losses = Lists.newArrayList();
     for (String foldName : foldsToRun) {
       int foldIndex = foldNames.indexOf(foldName);
 
@@ -151,43 +155,32 @@ public class GeoqueryInduceLexicon extends AbstractCli {
       String trainingErrorOutputFilename = outputDirString + "/training_error." + foldName + ".json";
       String testErrorOutputFilename = outputDirString + "/test_error." + foldName + ".json";
 
-      SemanticParserLoss loss = runFold(trainingData, heldOut, typeDeclaration, options.valueOf(emIterations),
+      runFold(trainingData, heldOut, typeDeclaration, options.valueOf(emIterations),
           options.valueOf(smoothingParam), options.valueOf(nGramLength), options.valueOf(lexiconNumParses),
           options.has(loglinear), options.valueOf(parserIterations), options.valueOf(l2Regularization),
-          options.valueOf(beamSize), options.valueOf(unknownWordThreshold), additionalLexiconEntries, 
-          lexiconOutputFilename, trainingErrorOutputFilename, testErrorOutputFilename,
-          alignmentModelOutputFilename, parserModelOutputFilename);
-      losses.add(loss);
+          options.valueOf(beamSize), additionalLexiconEntries, lexiconOutputFilename,
+          trainingErrorOutputFilename, testErrorOutputFilename, alignmentModelOutputFilename,
+          parserModelOutputFilename);
     }
-    
-    SemanticParserLoss overall = new SemanticParserLoss(0, 0, 0, 0);
-    for (int i = 0; i < losses.size(); i++) {
-      System.out.println(foldNames.get(i));
-      System.out.println("PRECISION: " + losses.get(i).getPrecision());
-      System.out.println("RECALL: " + losses.get(i).getRecall());
-      System.out.println("LEXICON RECALL: " + losses.get(i).getLexiconRecall());
-      overall = overall.add(losses.get(i));
-    }
-    
-    System.out.println("== Overall ==");
-    System.out.println("PRECISION: " + overall.getPrecision());
-    System.out.println("RECALL: " + overall.getRecall());
-    System.out.println("LEXICON RECALL: " + overall.getLexiconRecall());
   }
   
-  private static SemanticParserLoss runFold(List<AlignmentExample> trainingData, List<AlignmentExample> testData,
+  private static void runFold(List<AlignmentExample> trainingData, List<AlignmentExample> testData,
       TypeDeclaration typeDeclaration, int emIterations, double smoothingAmount, int nGramLength, int lexiconNumParses,
-      boolean loglinear, int parserIterations, double l2Regularization, int beamSize, int unknownWordThreshold, List<String> additionalLexiconEntries,
-      String lexiconOutputFilename, String trainingErrorOutputFilename, String testErrorOutputFilename, String alignmentModelOutputFilename,
-      String parserModelOutputFilename) {
+      boolean loglinear, int parserIterations, double l2Regularization, int beamSize, List<String> additionalLexiconEntries,
+      String lexiconOutputFilename, String trainingErrorOutputFilename, String testErrorOutputFilename,
+      String alignmentModelOutputFilename, String parserModelOutputFilename) {
 
-    // Find all entity names in the given lexicon entries
+    // Treat the additional lexicon entries as entity names. These
+    // names can be generated as bigrams by the lexicon learning
+    // model.
     Set<List<String>> entityNames = Sets.newHashSet();
     for (LexiconEntry lexiconEntry : LexiconEntry.parseLexiconEntries(additionalLexiconEntries)) {
       entityNames.add(lexiconEntry.getWords());
     }
 
-    // Train the alignment model and generate lexicon entries.
+    // Train the lexicon learning model and generate
+    // lexicon entries. The method returns counts
+    // for each lexicon entry.
     PairCountAccumulator<List<String>, LexiconEntry> alignments = trainAlignmentModel(trainingData,
         entityNames, typeDeclaration, smoothingAmount, emIterations, nGramLength, lexiconNumParses, loglinear, false);
     
@@ -196,68 +189,81 @@ public class GeoqueryInduceLexicon extends AbstractCli {
       wordCounts.incrementByOne(trainingExample.getWords());
     }
 
-    // Log the generated lexicon and model.
+    // Log the generated lexicon.
     Collection<LexiconEntry> allEntries = alignments.getKeyValueMultimap().values();
     List<String> lexiconEntryLines = Lists.newArrayList();
-    List<String> unknownLexiconEntryLines = Lists.newArrayList();
     lexiconEntryLines.addAll(additionalLexiconEntries);
     for (LexiconEntry lexiconEntry : allEntries) {
       Expression2 lf = lexiconEntry.getCategory().getLogicalForm();
       if (lf.isConstant()) {
-        // Edit the semantics of entities
+        // Add an additional head to entity lexicon entries to 
+        // create a type-based backoff dependency feature. 
         String type = lf.getConstant().split(":")[1];
         String newHead = "entity:" + type;
         String oldHeadString = "\"0 " + lexiconEntry.getCategory().getSemanticHeads().get(0) + "\"";
         String newHeadString = "\"0 " + newHead + "\",\"0 " + lf.getConstant() + "\"";
         String lexString = lexiconEntry.toCsvString().replace(oldHeadString, newHeadString);
         lexiconEntryLines.add(lexString);
-      } else if (lexiconEntry.getWords().size() == 1 &&
-          wordCounts.getCount(lexiconEntry.getWords().get(0)) <= unknownWordThreshold) {
-        // Note that all generated entries have only one word.
-
-        String lexString = lexiconEntry.toCsvString();
-        lexString = lexString.replace("\"" + lexiconEntry.getWords().get(0) + "\"", "\"" + ParametricCcgParser.DEFAULT_POS_TAG + "\"");
-        lexString = lexString.replace(lexiconEntry.getWords().get(0) + "#", ParametricCcgParser.DEFAULT_POS_TAG + "#");
-        unknownLexiconEntryLines.add(lexString);
       } else {
         lexiconEntryLines.add(lexiconEntry.toCsvString());
       }
     }
 
-    List<String> allLexiconEntries = Lists.newArrayList(lexiconEntryLines);
-    allLexiconEntries.addAll(unknownLexiconEntryLines);
-    Collections.sort(allLexiconEntries);
-    IoUtils.writeLines(lexiconOutputFilename, allLexiconEntries);
+    Collections.sort(lexiconEntryLines);
+    IoUtils.writeLines(lexiconOutputFilename, lexiconEntryLines);
     // IoUtils.serializeObjectToFile(model, alignmentModelOutputFilename);
     
-    // Initialize CCG parser components.
+    // Reformat the data to a format suitable for the CCG parser.
     List<CcgExample> ccgTrainingExamples = alignmentExamplesToCcgExamples(trainingData);
-    List<String> ruleEntries = Arrays.asList("\"DUMMY{0} DUMMY{0}\",\"(lambda ($L) $L)\"");
 
-    // Generate a dictionary of string context features.
+    // The parser uses string context features from adjacent words.
+    // Add an annotation to each question with the string context
+    // feature vectors generated by featureGen.
     List<StringContext> contexts = StringContext.getContextsFromExamples(ccgTrainingExamples);
     FeatureVectorGenerator<StringContext> featureGen = DictionaryFeatureVectorGenerator
         .createFromData(contexts, new GeoqueryFeatureGenerator(), true);
-
     ccgTrainingExamples = SemanticParserUtils.annotateFeatures(ccgTrainingExamples, featureGen,
         GeoqueryUtil.FEATURE_ANNOTATION_NAME);
+    
+    // A CcgFeatureFactory defines the set of features used in
+    // the CCG parser. Many different kinds of features can be
+    // included, such as lexicon entry features, dependency 
+    // features, and dependency distance features.
     CcgFeatureFactory featureFactory = new GeoqueryFeatureFactory(true, true, false, false,
         GeoqueryUtil.FEATURE_ANNOTATION_NAME, featureGen.getFeatureDictionary(),
         LexiconEntry.parseLexiconEntries(additionalLexiconEntries));
 
+    // The parser is trained by comparing predicted logical forms
+    // with the labeled logical forms. ExpressionComparator 
+    // implements this comparison, which in this case is done by
+    // simplifying both logical forms to a canonical representation
+    // then comparing equality.
     ExpressionSimplifier simplifier = GeoqueryUtil.getExpressionSimplifier();
     ExpressionComparator comparator = new SimplificationComparator(simplifier);
 
+    // Inference algorithm for training the parser. This is CKY-style
+    // chart parsing with a beam search.
     CcgInference inferenceAlgorithm = new CcgCkyInference(null, beamSize,
         -1, Integer.MAX_VALUE, Runtime.getRuntime().availableProcessors());
 
+    // The parser can use lexicon entries for unknown words and 
+    // also arbitrary binary and unary rules. The set of rules can't be
+    // empty, so create a dummy rule.
+    List<String> unknownLexiconEntryLines = Lists.newArrayList();
+    List<String> ruleEntries = Arrays.asList("\"DUMMY{0} DUMMY{0}\",\"(lambda ($L) $L)\"");
+    
+    // Train the parser
     System.out.println("\nTraining CCG parser.");
     CcgParser ccgParser = trainSemanticParser(ccgTrainingExamples, lexiconEntryLines,
         unknownLexiconEntryLines, ruleEntries, featureFactory, inferenceAlgorithm, comparator,
         parserIterations, l2Regularization);
 
-    IoUtils.serializeObjectToFile(ccgParser, parserModelOutputFilename);
+    // Save the trained parser and feature generator to disk.
+    GeoqueryModel model = new GeoqueryModel(ccgParser, featureGen);
+    IoUtils.serializeObjectToFile(model, parserModelOutputFilename);
     
+    // Make training and test predictions and store them to
+    // disk as json files.
     List<SemanticParserExampleLoss> trainingExampleLosses = Lists.newArrayList();    
     SemanticParserUtils.testSemanticParser(ccgTrainingExamples, ccgParser,
         inferenceAlgorithm, simplifier, comparator, trainingExampleLosses, false);
@@ -266,11 +272,9 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     List<CcgExample> ccgTestExamples = alignmentExamplesToCcgExamples(testData);
     ccgTestExamples = SemanticParserUtils.annotateFeatures(ccgTestExamples, featureGen, GeoqueryUtil.FEATURE_ANNOTATION_NAME);
     List<SemanticParserExampleLoss> testExampleLosses = Lists.newArrayList();    
-    SemanticParserLoss testLoss = SemanticParserUtils.testSemanticParser(ccgTestExamples, ccgParser,
+    SemanticParserUtils.testSemanticParser(ccgTestExamples, ccgParser,
         inferenceAlgorithm, simplifier, comparator, testExampleLosses, false);
     SemanticParserExampleLoss.writeJsonToFile(testErrorOutputFilename, testExampleLosses);
-
-    return testLoss;
   }
 
   public static PairCountAccumulator<List<String>, LexiconEntry> trainAlignmentModel(
@@ -297,6 +301,10 @@ public class GeoqueryInduceLexicon extends AbstractCli {
     smoothing.increment(smoothingAmount);
 
     SufficientStatistics initial = pam.getNewSufficientStatistics();
+    // If running the loglinear model, create a gradient optimizer  
+    // to use in the M-step to re-estimate the loglinear model parameters.
+    // If not running the loglinear model, initialize all model
+    // parameters to the uniform distribution.
     GradientOptimizer optimizer = null;
     if (!loglinear) {
       initial.increment(1);
@@ -328,18 +336,28 @@ public class GeoqueryInduceLexicon extends AbstractCli {
       List<String> ruleEntries, CcgFeatureFactory featureFactory,
       CcgInference inferenceAlgorithm, ExpressionComparator comparator,
       int iterations, double l2Penalty) {
+    // A ParametricCcgParser represents a parametric family of CCG parsers,
+    // i.e., a function from parameter vectors to CCG parsers. This class
+    // is instantiated by providing a lexicon, additional parser rules,
+    // and a featurization. Additional options control the default combinators
+    // included in the parser.
     ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(lexiconEntryLines,
-        unknownLexiconEntryLines, ruleEntries, featureFactory, CcgExample.getPosTagVocabulary(trainingExamples),
-        true, null, true);
+        unknownLexiconEntryLines, ruleEntries, featureFactory,
+        CcgExample.getPosTagVocabulary(trainingExamples), true, null, true);
 
-    GradientOracle<CcgParser, CcgExample> oracle = new CcgLoglikelihoodOracle(family, comparator, inferenceAlgorithm);
+    // Train the parser by optimizing the loglikelihood of predicting a
+    // logical form that is correct according to comparator. 
+    GradientOracle<CcgParser, CcgExample> oracle = new CcgLoglikelihoodOracle(family, comparator,
+        inferenceAlgorithm);
 
+    // Optimize loglikelihood with stochastic gradient descent.
     int numIterations = trainingExamples.size() * iterations;
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(numIterations, 1,
         1.0, true, true, Double.MAX_VALUE, l2Penalty, new DefaultLogFunction(100, false));
     SufficientStatistics parameters = trainer.train(oracle, oracle.initializeGradient(),
         trainingExamples);
 
+    // Optionally, log the trained parameters.
     // System.out.println("final parameters:");
     // System.out.println(family.getParameterDescription(parameters));
     

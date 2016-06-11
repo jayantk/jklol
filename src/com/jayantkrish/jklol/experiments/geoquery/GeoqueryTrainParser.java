@@ -250,7 +250,8 @@ public class GeoqueryTrainParser extends AbstractCli {
         unknownLexiconEntryLines, ruleEntries, featureFactory, inferenceAlgorithm, comparator,
         parserIterations, l2Regularization);
 
-    IoUtils.serializeObjectToFile(ccgParser, parserModelOutputFilename);
+    GeoqueryModel model = new GeoqueryModel(ccgParser, featureGen);
+    IoUtils.serializeObjectToFile(model, parserModelOutputFilename);
     
     List<SemanticParserExampleLoss> trainingExampleLosses = Lists.newArrayList();    
     SemanticParserUtils.testSemanticParser(ccgTrainingExamples, ccgParser,

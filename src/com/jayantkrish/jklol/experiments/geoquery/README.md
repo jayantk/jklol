@@ -22,24 +22,23 @@ can watch training progress by running:
 
 Then type "F" to have less automatically update the file
 contents. When training finishes, the script will print training and
-test accuracy:
+test accuracy (the accuracy computation requires <a
+href="https://stedolan.github.io/jq/">jq</a> to be installed.):
 
     > Training Accuracy
     > 0.946296
     > Test Accuracy
     > 0.816667
 
-(The accuracy computation requires <a
-href="https://stedolan.github.io/jq/">jq</a> to be installed.)
 Training also populates the `experiments/geoquery/output` folder with
 several files:
 
-* entity_lexicon.txt -- lexicon of entity names provided with Geoquery
-* lexicon.fold0.ccg.txt -- learned lexicon (on folds 1-9), including the entity names from above
-* log_fold0.txt -- training logfile
-* parser.fold0.ccg.ser -- serialized CCG parsing model
-* training_error.fold0.ccg.json -- the parser's predictions on the training examples (folds 1-9)
-* test_error.fold0.ccg.json -- the parser's predictions on the test examples (fold 0)
+* `entity_lexicon.txt` -- lexicon of entity names provided with Geoquery
+* `lexicon.fold0.ccg.txt` -- learned lexicon (on folds 1-9), including the entity names from above
+* `log_fold0.txt` -- training logfile
+* `parser.fold0.ccg.ser` -- serialized CCG parsing model
+* `training_error.fold0.ccg.json` -- the parser's predictions on the training examples (folds 1-9)
+* `test_error.fold0.ccg.json` -- the parser's predictions on the test examples (fold 0)
 
 At this point, you can inspect the model's predictions via the json
 files. You can also run the parser on new questions:

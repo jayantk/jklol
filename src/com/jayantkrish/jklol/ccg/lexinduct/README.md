@@ -2,11 +2,18 @@
 
 This package implements the PAL algorithm for lexicon learning. 
 
+## Runnable Example
+
+See the <a
+href="../../experiments/geoquery/">Geoquery
+Semantic Parsing Experiment</a> for an example that runs PAL and
+trains a semantic parser with the generated lexicon.
+
 ## Usage
 
 There are three steps required to run PAL on a data set. Each step is
 illustrated with <a
-href="https://github.com/jayantk/jklol/blob/master/src/com/jayantkrish/jklol/experiments/geoquery/GeoqueryInduceLexicon.java">example
+href="../../experiments/geoquery/GeoqueryInduceLexicon.java">example
 code applying PAL to Geoquery</a>.
 
 1. Create training examples -- Training data for PAL is provided as

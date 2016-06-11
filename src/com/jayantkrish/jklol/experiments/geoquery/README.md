@@ -7,7 +7,9 @@ in the `experiments/geoquery` directory.
 
 ## Running the Experiment
 
-From the root jklol directory, run:
+First, <a href="https://github.com/jayantk/jklol">follow the
+installation and build instructions</a>. Next, from the root jklol
+directory, run:
 
     ./experiments/geoquery/scripts/run_singlefold_experiment.sh
 	

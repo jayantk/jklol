@@ -35,7 +35,7 @@ several files:
 
 * `entity_lexicon.txt` -- lexicon of entity names provided with Geoquery
 * `lexicon.fold0.ccg.txt` -- learned lexicon (on folds 1-9), including the entity names from above
-* `log_fold0.txt` -- training logfile
+* `log_fold0.txt` -- training log file
 * `parser.fold0.ccg.ser` -- serialized CCG parsing model
 * `training_error.fold0.ccg.json` -- the parser's predictions on the training examples (folds 1-9)
 * `test_error.fold0.ccg.json` -- the parser's predictions on the test examples (fold 0)

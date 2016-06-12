@@ -25,11 +25,13 @@ Get jklol by cloning the git repository:
 The preferred way to build jklol is using <a
 href="http://www.scala-sbt.org/">sbt</a>. In the root directory, run:
 
+    cd jklol
     sbt package
 
 This command will compile the source and produce
 `target/jklol-(version).jar`. If you don't have sbt, you can also build jklol using ant:
 
+    cd jklol
     ant jar
 
 This command will produce `jklol.jar` in the root directory.

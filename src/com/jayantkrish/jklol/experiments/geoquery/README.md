@@ -19,9 +19,9 @@ results and logging information to `experiments/geoquery/output/`. You
 can watch training progress by running:
 
     less -S experiments/geoquery/output/log_fold0.txt 
+    <enter "F" to have less update with file changes>
 
-Then type "F" to have less automatically update the file
-contents. When training finishes, the script will print training and
+When training finishes, the script will print training and
 test accuracy (the accuracy computation requires <a
 href="https://stedolan.github.io/jq/">jq</a> to be installed.):
 

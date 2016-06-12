@@ -29,7 +29,7 @@ relations = [
     ('area:<lo,i>', 'state', (0,1), (4,1), True),
     ('area:<lo,i>', 'lake', (0,1), (2,1), True),
     ('population:<lo,i>', 'state', (0,1), (3,1), True),
-    ('population:<lo,i>', 'city', (0,1), (3,1), True),
+    ('population:<lo,i>', 'city', (2,1), (3,1), True),
     ('elevation:<lo,i>', 'mountain', (2,1), (3,1), True),
     ('elevation:<lo,<i,t>>', 'mountain', (2,1), (3,1), False),
     ('len:<r,i>', 'river', (0,1), (1,1), True),
@@ -72,6 +72,10 @@ with open(geobase_file, 'r') as f:
         args = parts[1]
 
         arglist = [x.strip("'.)][") for x in args.split(",")]
+        
+        # Hack to fix the ids of cities
+        if pred == 'city' or pred == 'state':
+            arglist[2] = arglist[2] + "_" + arglist[1]
 
         # print >> sys.stderr, pred, arglist
 

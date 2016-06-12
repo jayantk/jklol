@@ -27,6 +27,9 @@
 (define density:<lo,<i,t>> (x y)
   (= y (density:<lo,i> x)))
 
+; TODO: this isn't quite right.
+(define size:<lo,i> (x) (population:<lo,i> x))
+
 (define select (g op l cur curval)
   (if (nil? l)
       cur

@@ -45,6 +45,7 @@ files. You can also run the parser on new questions:
 
     ./experiments/geoquery/scripts/parse.sh what is the biggest city in texas
     > logical form: (argmax:<<e,t>,<<e,i>,e>> (lambda ($0) (and:<t*,t> (city:<c,t> $0) (loc:<lo,<lo,t>> $0 texas:s))) (lambda ($0) (size:<lo,i> $0)))
+    > answer: houston_tx
 
 ## Data
 

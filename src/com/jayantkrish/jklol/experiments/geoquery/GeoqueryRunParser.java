@@ -18,6 +18,7 @@ import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.LambdaApplicationReplacementRule;
+import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule;
 import com.jayantkrish.jklol.ccg.lexicon.SpanFeatureAnnotation;
 import com.jayantkrish.jklol.ccg.lexicon.StringContext;
@@ -44,7 +45,7 @@ public class GeoqueryRunParser extends AbstractCli {
   public void initializeOptions(OptionParser parser) {
     // Required arguments.
     model = parser.accepts("model").withRequiredArg().ofType(String.class).required();
-    environment = parser.accepts("environment").withRequiredArg().ofType(String.class);
+    environment = parser.accepts("environment").withRequiredArg().ofType(String.class).withValuesSeparatedBy(',');
     wordOpt = parser.nonOptions().ofType(String.class);
   }
 
@@ -76,14 +77,19 @@ public class GeoqueryRunParser extends AbstractCli {
       Environment env = AmbEval.getDefaultEnvironment(symbolTable);
       AmbEval eval = new AmbEval(symbolTable);
       ParametricBfgBuilder fgBuilder = new ParametricBfgBuilder(true);
-      SExpression program = LispUtil.readProgram(Arrays.asList(options.valueOf(environment)), symbolTable);
-      EvalResult result = eval.eval(program, env, fgBuilder);
+      for (String environmentFile : options.valuesOf(environment)) {
+        SExpression program = LispUtil.readProgram(Arrays.asList(environmentFile), symbolTable);
+        eval.eval(program, env, fgBuilder);
+      }
 
-      SExpression expression = ExpressionParser.sExpression(symbolTable)
-          .parse(logicalForm.toString());
+      String lfString = logicalForm.toString();
+      if (StaticAnalysis.inferType(logicalForm, GeoqueryUtil.getTypeDeclaration()).isFunctional()) {
+        lfString = "(filter " + lfString + " entities)";
+      }
+      SExpression expression = ExpressionParser.sExpression(symbolTable).parse(lfString);
 
-      result = eval.eval(expression, env, fgBuilder);
-      System.out.println("denotation: " + result.getValue());
+      EvalResult result = eval.eval(expression, env, fgBuilder);
+      System.out.println("answer: " + result.getValue());
     }
   }
 

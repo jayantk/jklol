@@ -222,7 +222,8 @@ public class BuiltinFunctions {
       if (allArgumentsInteger(argumentValues)) {
         return ConstantValue.fromBoolean(((Integer) argumentValues.get(0)) < ((Integer) argumentValues.get(1)));
       } else {
-        return ConstantValue.fromBoolean(((Double) argumentValues.get(0)) < ((Double) argumentValues.get(1)));
+        return ConstantValue.fromBoolean(((Number) argumentValues.get(0)).doubleValue()
+            < ((Number) argumentValues.get(1)).doubleValue());
       }
     }
   }
@@ -234,7 +235,8 @@ public class BuiltinFunctions {
       if (allArgumentsInteger(argumentValues)) {
         return ConstantValue.fromBoolean(((Integer) argumentValues.get(0)) > ((Integer) argumentValues.get(1)));
       } else {
-        return ConstantValue.fromBoolean(((Double) argumentValues.get(0)) > ((Double) argumentValues.get(1)));
+        return ConstantValue.fromBoolean(((Number) argumentValues.get(0)).doubleValue()
+            > ((Number) argumentValues.get(1)).doubleValue());
       }
     }
   }

@@ -70,7 +70,7 @@ public class ExpressionFactories {
       } else if (internedString.matches("^-?[0-9]+$")) {
         // Integer primitive type
         primitiveValue = Integer.parseInt(internedString);
-      } else if (internedString.matches("^-?[0-9]+\\.[0-9]*$")) {
+      } else if (isDouble(internedString)) {
         primitiveValue = Double.parseDouble(internedString);
       } else if (internedString.equals("#t")) {
         primitiveValue = ConstantValue.TRUE;
@@ -83,6 +83,15 @@ public class ExpressionFactories {
 
     public SExpression createExpression(List<SExpression> subexpressions) {
       return SExpression.nested(subexpressions);
+    }
+    
+    private static boolean isDouble(String x) {
+      try {
+        Double.parseDouble(x);
+        return true;
+      } catch (NumberFormatException e) {
+        return false;
+      }
     }
   }
 

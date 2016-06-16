@@ -13,6 +13,10 @@ categories = [
     ('lake:<l,t>', 'l', 'lake', 0),
     ('river:<r,t>', 'r', 'river', 0),
     ('mountain:<m,t>', 'm', 'mountain', 2),
+    ('major:<lo,t>', 'c', 'state', 6),
+    ('major:<lo,t>', 'c', 'state', 7),
+    ('major:<lo,t>', 'c', 'state', 8),
+    ('major:<lo,t>', 'c', 'state', 9),
 ]
 
 # Relations
@@ -74,8 +78,12 @@ with open(geobase_file, 'r') as f:
         arglist = [x.strip("'.)][") for x in args.split(",")]
         
         # Hack to fix the ids of cities
-        if pred == 'city' or pred == 'state':
+        if pred == 'city':
             arglist[2] = arglist[2] + "_" + arglist[1]
+        if pred == 'state':
+            arglist[2] = arglist[2] + "_" + arglist[1]
+            for i in xrange(6,10):
+                arglist[i] = arglist[i] + "_" + arglist[1]
 
         # print >> sys.stderr, pred, arglist
 

@@ -30,6 +30,9 @@
 ; TODO: this isn't quite right.
 (define size:<lo,i> (x) (population:<lo,i> x))
 
+; TODO: no idea if this is right.
+(define town:<lo,t> (x) (and (city:<c,t> x) (not (major:<lo,t> x))))
+
 (define select (g op l cur curval)
   (if (nil? l)
       cur
@@ -71,13 +74,13 @@
 ; the:<<e,t>,e> -- untested
 ; density:<lo,i>
 ; density:<lo,<i,t>>
+; major:<lo,t>
+; town:<lo,t> -- not clear if this is right
+; size:<lo,i> -- not clear if this is right
 
 ; ???
-; town:<lo,t> ??
 ; place:<p,t>
-; major:<lo,t>
 ; in:<lo,<lo,t>>
-; size:<lo,i>
 ; named:<e,<n,t>>
 ; high_point:<e,<e,t>>
 ; high_point:<e,l>

@@ -1,6 +1,7 @@
 "column-set","<s,c>"
 "cellvalue-set","<s,c>"
 "intersect","<c,<c,c>>"
+"union","<c,<c,c>>"
 "samerow-set","<c,c>"
 "first-row","<c,c>"
 "last-row","<c,c>"
@@ -8,4 +9,5 @@
 "prev-row","<c,c>"
 "samevalue","<c,c>"
 "set-size","<c,i>"
+"-","<i,<i,i>>"
 "\".*\"","s"

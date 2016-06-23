@@ -19,12 +19,13 @@
 
     (define samerow-set (arg-set) (set-union (set-map (lambda x (get-row-cells table (get-row x))) arg-set)))
     (define intersect (s1 s2) (set-filter (lambda x (set-contains? s1 x)) s2))
+    (define union (s1 s2) (set-union s1 s2))
 
     (define first-row (values) (make-set (set-min get-row values)))
     (define last-row (values) (make-set (set-max get-row values)))
 
-    (define next-row (values) (set-union (set-map (lambda x (get-row-cells table (+ 1 (get-row x)))) values)))
-    (define prev-row (values) (set-union (set-map (lambda x (get-row-cells table (- 1 (get-row x)))) values)))
+    (define next-row (values) (set-map (lambda x (get-cell (+ (get-row x) 1) (get-col x))) values))
+    (define prev-row (values) (set-map (lambda x (get-cell (- (get-row x) 1) (get-col x))) values))
 
     (define samevalue (values) (set-filter (lambda y (not (set-contains? values y))) (set-union (set-map (lambda x (cellvalue-set (get-value table x))) values))))
 

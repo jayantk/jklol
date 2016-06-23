@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.experiments.wikitables;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
@@ -9,7 +10,7 @@ import joptsimple.OptionSpec;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jayantkrish.jklol.ccg.enumeratelf.DenotationRuleFilter;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.enumeratelf.EnumerationRuleFilter;
 import com.jayantkrish.jklol.ccg.enumeratelf.LogicalFormEnumerator;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
@@ -35,6 +36,7 @@ public class EnumerateLogicalForms extends AbstractCli {
   private OptionSpec<String> tablesDir;
   private OptionSpec<String> environment;
   private OptionSpec<String> typeDeclaration;
+  private OptionSpec<Void> verbose;
 
   public EnumerateLogicalForms() {
     super(CommonOptions.MAP_REDUCE);
@@ -46,6 +48,7 @@ public class EnumerateLogicalForms extends AbstractCli {
     tablesDir = parser.accepts("tablesDir").withRequiredArg().ofType(String.class).required();
     environment = parser.accepts("environment").withRequiredArg().ofType(String.class).withValuesSeparatedBy(',');
     typeDeclaration = parser.accepts("typeDeclaration").withRequiredArg().ofType(String.class);
+    verbose = parser.accepts("verbose");
   }
 
   @Override
@@ -78,16 +81,23 @@ public class EnumerateLogicalForms extends AbstractCli {
     ExpressionComparator comparator = new WikiTableEvaluationComparator(simplifier, evaluator);
 
     // TODO: refactor me.
+    int numCorrect = 0;
+    int numSoFar = 0;
     LogicalFormEnumerator enumerator = getLogicalFormEnumerator(simplifier, evaluator, types);
     ExpressionParser<Expression2> expParser = ExpressionParser.expression2();
     for (WikiTableExample example : examples) {
+      if (numSoFar % 100 == 0) {
+        System.out.println("Statistics so far: " + numCorrect + "/" + numSoFar);
+      }
+      numSoFar++;
+      
       WikiTable table = tables.get(tableIndexMap.get(example.getTableId()));
       WikiTableMentionAnnotation mentions = WikiTablesUtil.findMentions(example, table);
       
       List<String> mentionStrings = mentions.getMentions();
       List<String> mentionTypes = mentions.getMentionTypes();
       
-      List<Expression2> mentionExpressions = Lists.newArrayList();
+      Set<Expression2> mentionExpressions = Sets.newHashSet();
       for (int i = 0; i < mentionStrings.size(); i++) {
         if (mentionTypes.get(i).equals(WikiTableMentionAnnotation.HEADING)) {
           mentionExpressions.add(expParser.parse("(column-set " + Expression2.stringValue(mentionStrings.get(i)) + ")"));
@@ -96,38 +106,51 @@ public class EnumerateLogicalForms extends AbstractCli {
         }
       }
       
-      System.out.println(example.getQuestion() + " " + example.getAnswer());
-      List<Expression2> enumerated = enumerator.enumerate(mentionExpressions, 100);
+      List<EnumerationRuleFilter> addedFilters = Lists.newArrayList();
+      addedFilters.add(new WikiTableDenotationRuleFilter(evaluator, example.getTableId()));
+      
+      System.out.println(example.getQuestion() + " " + example.getAnswer() + " " + example.getTableId());
+      System.out.println("  " + mentionExpressions);
+      List<Expression2> enumerated = enumerator.enumerate(mentionExpressions, addedFilters, 300);
+      boolean anyCorrect = false;
       for (Expression2 e : enumerated) {
-        if (comparator.equals(e, WikiTablesUtil.getAnswerExpression(example))) {
-          Expression2 sexpression = ExpressionParser.expression2().parse(
-              "(eval-table \"" + table.getId() + "\" (quote (get-values " + e + ")))");
-          Object value = evaluator.evaluateSilentErrors(sexpression, "ERROR");
+        Expression2 sexpression = WikiTablesUtil.getQueryExpression(table.getId(), e);
+        Object value = evaluator.evaluateSilentErrors(sexpression, "ERROR");
+        boolean correct = comparator.equals(e, WikiTablesUtil.getAnswerExpression(example));
+        anyCorrect = anyCorrect || correct;
 
-          System.out.println(e + " " + e.hashCode() + " " + value);
+        if (options.has(verbose) && correct) {
+          String correctString = "  ";
+          if (correct) {
+            correctString = "* ";
+          }
+          System.out.println("  " + correctString + e + " " + value);
         }
       }
-      // System.out.println(table.toTsv());
+      if (anyCorrect) {
+        numCorrect++;
+      }
     }
   }
   
   private static LogicalFormEnumerator getLogicalFormEnumerator(ExpressionSimplifier simplifier, 
       ExpressionEvaluator eval, TypeDeclaration types) {
     String[][] unaryRules = new String[][] {
-        {"c", "(lambda $0 (first-row $0))"},
-        {"c", "(lambda $0 (last-row $0))"},
-        {"c", "(lambda $0 (set-size $0))"},
-        {"c", "(lambda $0 (next-row $0))"},
-        {"c", "(lambda $0 (prev-row $0))"},
-        {"c", "(lambda $0 (samevalue $0))"},
+        {"c", "(lambda ($0) (first-row $0))"},
+        {"c", "(lambda ($0) (last-row $0))"},
+        {"c", "(lambda ($0) (set-size $0))"},
+        {"c", "(lambda ($0) (next-row $0))"},
+        {"c", "(lambda ($0) (prev-row $0))"},
+        {"c", "(lambda ($0) (samevalue $0))"},
     };
 
     String[][] binaryRules = new String[][] {
-        {"c", "c", "(lambda $L $R (intersect $L (samerow-set $R)))"},
+        {"c", "c", "(lambda ($L $R) (intersect $L (samerow-set $R)))"},
+        {"c", "c", "(lambda ($L $R) (union $L $R))"},
+        {"i", "i", "(lambda ($L $R) (- $L $R))"},
     };
     
     List<EnumerationRuleFilter> filters = Lists.newArrayList();
-    filters.add(new DenotationRuleFilter(eval));
     return LogicalFormEnumerator.fromRuleStrings(unaryRules, binaryRules, filters, simplifier, types);
   }
   

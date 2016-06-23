@@ -82,21 +82,21 @@ public class TrainSemanticParser extends AbstractCli {
     System.out.println("# of examples: " + examples.size());
 
     List<String> lexiconLines = Arrays.asList(new String[] {
-        "first,(NP{0}|N{0}){1},(lambda f (first-row f)),0 first",
-        "last,(NP{0}|N{0}){1},(lambda f (last-row f)),0 last",
-        "how many,(INT{0}/N{0}){1},(lambda f (set-size f)),0 how_many"        
+        "first,(NP{0}|N{0}){1},(lambda (f) (first-row f)),0 first",
+        "last,(NP{0}|N{0}){1},(lambda (f) (last-row f)),0 last",
+        "how many,(INT{0}/N{0}){1},(lambda (f) (set-size f)),0 how_many"        
         });
     List<String> unknownLexiconLines = Arrays.asList(new String[] {});
     List<String> rules = Arrays.asList(
-        new String[] {"N{0} N{1} N{0},(lambda $L $R (intersect $L (samerow-set $R)))",
-        "N{0} NP{1} N{0},(lambda $L $R (intersect $L (samerow-set $R)))",
-        "NP{0} N{1} NP{0},(lambda $L $R (intersect $L (samerow-set $R)))",
-        "N{0} NP{0},(lambda $L (first-row $L))",
-        "N{0} NP{0},(lambda $L (last-row $L))",
-        "N{0} INT{0},(lambda $L (set-size $L))",
-        "N{0} NP{0},(lambda $L (next-row $L))",
-        "N{0} NP{0},(lambda $L (prev-row $L))",
-        "N{0} NP{0},(lambda $L (samevalue $L))"});
+        new String[] {"N{0} N{1} N{0},(lambda ($L $R) (intersect $L (samerow-set $R)))",
+        "N{0} NP{1} N{0},(lambda ($L $R) (intersect $L (samerow-set $R)))",
+        "NP{0} N{1} NP{0},(lambda ($L $R) (intersect $L (samerow-set $R)))",
+        "N{0} NP{0},(lambda ($L) (first-row $L))",
+        "N{0} NP{0},(lambda ($L) (last-row $L))",
+        "N{0} INT{0},(lambda ($L) (set-size $L))",
+        "N{0} NP{0},(lambda ($L) (next-row $L))",
+        "N{0} NP{0},(lambda ($L) (prev-row $L))",
+        "N{0} NP{0},(lambda ($L) (samevalue $L))"});
     
     CcgFeatureFactory factory = new WikiTablesCcgFeatureFactory(false, true);
     ParametricCcgParser family = ParametricCcgParser.parseFromLexicon(

@@ -17,6 +17,7 @@ import com.jayantkrish.jklol.lisp.LispUtil;
 public class WikiTableFunctions {
   
   private static int ROW_MULTIPLE=1000;
+  private static String BAD_CELL_VALUE = "BAD_CELL"; 
   
   public static class GetTable implements FunctionValue {
     private Map<String, Integer> tableIdMap;
@@ -98,6 +99,15 @@ public class WikiTableFunctions {
       return cells;
     }
   }
+  
+  public static class GetCell implements FunctionValue {
+    @Override
+    public Object apply(List<Object> argumentValues, EvalContext context) {
+      LispUtil.checkArgument(argumentValues.size() == 2);
+      return ((Integer) argumentValues.get(0)) * ROW_MULTIPLE
+          + ((Integer) argumentValues.get(1));
+    }
+  }
 
   public static class GetCol implements FunctionValue {
     @Override
@@ -123,8 +133,13 @@ public class WikiTableFunctions {
       Integer cell = LispUtil.cast(argumentValues.get(1), Integer.class);
       int rowId = cell / ROW_MULTIPLE;
       int colId = cell % ROW_MULTIPLE;
-      String value = table.getValue(rowId, colId);
-      return value;
+      
+      if (rowId >= 0 && rowId < table.getNumRows() &&
+          colId >= 0 && colId < table.getNumColumns()) {
+        return table.getValue(rowId, colId);
+      } else {
+        return BAD_CELL_VALUE;
+      }
     }
   }
   

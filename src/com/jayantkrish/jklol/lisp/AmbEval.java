@@ -134,7 +134,7 @@ public class AmbEval {
           LispUtil.checkArgument(subexpressions.size() == 2, "Invalid eval arguments: %s", subexpressions);
           Object value = eval(subexpressions.get(1), environment, builder, context).getValue();
           LispUtil.checkArgument(value instanceof SExpression, "Argument to eval must be an expression. Got: %s", value);
-          System.out.println(value);
+          // System.out.println(value);
           return eval((SExpression) value, environment, builder, context);
 
         case APPLY_SYMBOL_INDEX:
@@ -159,7 +159,7 @@ public class AmbEval {
       try {
         return doFunctionApplication(subexpressions, environment, builder, context);
       } catch (Exception e) {
-        System.out.println("Function: " + expression);
+        // System.out.println("Function: " + expression);
         throw e;
       }
     }

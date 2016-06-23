@@ -22,6 +22,8 @@ public class DenotationRuleFilter implements EnumerationRuleFilter {
     Object originalDenotation = eval.evaluateSilentErrors(original.getLf(), ERROR);
     Object resultDenotation = eval.evaluateSilentErrors(result.getLf(), ERROR);
 
-    return originalDenotation.equals(resultDenotation);
+    // System.out.println(original.getLf() + " " + originalDenotation + " " + result.getLf() + " " + resultDenotation);
+    
+    return !originalDenotation.equals(resultDenotation);
   }
 }

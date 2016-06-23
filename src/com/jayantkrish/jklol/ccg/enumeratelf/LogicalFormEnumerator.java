@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.enumeratelf;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -59,14 +60,16 @@ public class LogicalFormEnumerator {
     return new LogicalFormEnumerator(unaryRuleList, binaryRuleList, filters, types);
   }
   
-  public List<Expression2> enumerate(List<Expression2> startNodes, int max) {
+  public List<Expression2> enumerate(Set<Expression2> startNodes, int max) {
     return enumerate(startNodes, Collections.emptyList(), max);
   }
 
-  public List<Expression2> enumerate(List<Expression2> startNodes, List<EnumerationRuleFilter> addedFilters, int max) {
+  public List<Expression2> enumerate(Set<Expression2> startNodeSet,
+      List<EnumerationRuleFilter> addedFilters, int max) {
     List<EnumerationRuleFilter> allFilters = Lists.newArrayList(filters);
     allFilters.addAll(addedFilters);
     
+    List<Expression2> startNodes = Lists.newArrayList(startNodeSet);
     Queue<LfNode> queue = new LinkedList<LfNode>();
     for (int i = 0; i < startNodes.size(); i++) {
       Expression2 startNode = startNodes.get(i);

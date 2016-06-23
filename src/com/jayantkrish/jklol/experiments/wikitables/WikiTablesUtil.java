@@ -12,6 +12,7 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.jayantkrish.jklol.ccg.CcgExample;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
+import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.CommutativeReplacementRule;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionReplacementRule;
@@ -195,6 +196,11 @@ public class WikiTablesUtil {
     return Expression2.nested(labels);
   }
   
+  public static Expression2 getQueryExpression(String tableId, Expression2 expression) {
+    return ExpressionParser.expression2().parse("(eval-table \""
+        + tableId + "\" (quote (get-values " + expression + ")))");
+  }
+  
   public static Environment getEnvironment(IndexedList<String> symbolTable,
       Map<String, Integer> tableIdMap, List<WikiTable> tables) {
     Environment env = AmbEval.getDefaultEnvironment(symbolTable);
@@ -205,6 +211,7 @@ public class WikiTablesUtil {
     env.bindName("get-table-cells", new RaisedBuiltinFunction(new WikiTableFunctions.GetTableCells()), symbolTable);
     env.bindName("get-row-cells", new RaisedBuiltinFunction(new WikiTableFunctions.GetRowCells()), symbolTable);
     env.bindName("get-col-cells", new RaisedBuiltinFunction(new WikiTableFunctions.GetColCells()), symbolTable);
+    env.bindName("get-cell", new RaisedBuiltinFunction(new WikiTableFunctions.GetCell()), symbolTable);
     env.bindName("get-col", new RaisedBuiltinFunction(new WikiTableFunctions.GetCol()), symbolTable);
     env.bindName("get-row", new RaisedBuiltinFunction(new WikiTableFunctions.GetRow()), symbolTable);
     env.bindName("get-value", new RaisedBuiltinFunction(new WikiTableFunctions.GetValue()), symbolTable);

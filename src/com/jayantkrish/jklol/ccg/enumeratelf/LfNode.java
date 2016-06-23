@@ -14,7 +14,7 @@ public class LfNode {
   public LfNode(Expression2 lf, Type type, boolean[] usedMentions) {
     this.lf = Preconditions.checkNotNull(lf);
     this.type = Preconditions.checkNotNull(type);
-    this.usedMentions = Preconditions.checkNotNull(usedMentions);
+    this.usedMentions = Arrays.copyOf(usedMentions, usedMentions.length);
   }
 
   public Expression2 getLf() {

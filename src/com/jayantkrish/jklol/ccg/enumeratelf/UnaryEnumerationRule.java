@@ -21,6 +21,10 @@ public class UnaryEnumerationRule {
     this.simplifier = Preconditions.checkNotNull(simplifier);
     this.typeDeclaration = Preconditions.checkNotNull(typeDeclaration);
   }
+  
+  public boolean isTypeConsistent(Type t) {
+    return argType.equals(t);
+  }
 
   public boolean isApplicable(LfNode node) {
     // TODO: should be isUnifiable

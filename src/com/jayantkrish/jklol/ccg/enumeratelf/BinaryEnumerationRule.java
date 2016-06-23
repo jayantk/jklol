@@ -25,6 +25,10 @@ public class BinaryEnumerationRule {
     this.simplifier = simplifier;
     this.typeDeclaration = Preconditions.checkNotNull(typeDeclaration);
   }
+  
+  public boolean isTypeConsistent(Type t1, Type t2) {
+    return arg1Type.equals(t1) && arg2Type.equals(t2);
+  }
 
   public boolean isApplicable(LfNode arg1Node, LfNode arg2Node) {
     boolean[] arg1Mentions = arg1Node.getUsedMentions();

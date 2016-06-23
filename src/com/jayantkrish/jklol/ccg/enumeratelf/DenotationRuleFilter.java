@@ -1,15 +1,14 @@
 package com.jayantkrish.jklol.ccg.enumeratelf;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.jayantkrish.jklol.ccg.lambda2.ExpressionEvaluator;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionExecutor;
 
 public class DenotationRuleFilter implements EnumerationRuleFilter {
   
-  private final ExpressionEvaluator eval;
+  private final ExpressionExecutor eval;
   
-  private static final String ERROR = "ERROR";
-  
-  public DenotationRuleFilter(ExpressionEvaluator eval) {
+  public DenotationRuleFilter(ExpressionExecutor eval) {
     this.eval = Preconditions.checkNotNull(eval);
   }
 
@@ -19,11 +18,12 @@ public class DenotationRuleFilter implements EnumerationRuleFilter {
       return true;
     } 
 
-    Object originalDenotation = eval.evaluateSilentErrors(original.getLf(), ERROR);
-    Object resultDenotation = eval.evaluateSilentErrors(result.getLf(), ERROR);
+    Optional<Object> originalDenotation = eval.evaluateSilent(original.getLf());
+    Optional<Object> resultDenotation = eval.evaluateSilent(result.getLf());
 
     // System.out.println(original.getLf() + " " + originalDenotation + " " + result.getLf() + " " + resultDenotation);
     
-    return !originalDenotation.equals(resultDenotation);
+    return originalDenotation.isPresent() && resultDenotation.isPresent() &&
+        !originalDenotation.get().equals(resultDenotation.get());
   }
 }

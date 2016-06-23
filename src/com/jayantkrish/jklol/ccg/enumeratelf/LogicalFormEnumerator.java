@@ -1,15 +1,19 @@
 package com.jayantkrish.jklol.ccg.enumeratelf;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.Executor;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.Type;
@@ -18,6 +22,13 @@ import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 
+/**
+ * Enumerates logical forms by applying a collection of
+ * rules to an initial starting set.
+ * 
+ * @author jayantk
+ *
+ */
 public class LogicalFormEnumerator {
 
   private final List<UnaryEnumerationRule> unaryRules;
@@ -139,4 +150,119 @@ public class LogicalFormEnumerator {
       queue.add(node);
     }
   }
+  
+  /*
+  public List<Expression2> enumerateDp(Set<Expression2> startNodes,
+      List<EnumerationRuleFilter> addedFilters, Object environment, int maxSize) {
+    SetMultimap<Integer, CellKey> cellsBySize = HashMultimap.create();
+    
+    for (Expression2 startNode : startNodes) {
+      Object denotation = executor.execute(startNode, environment);
+      Type type = StaticAnalysis.inferType(startNode, typeDeclaration);
+      CellKey cell = new CellKey(type, 1, denotation);
+      cellsBySize.put(cell.getSize(), cell);
+    }
+    
+    for (int size = 1; size < maxSize; size++) {
+      for (CellKey cell : cellsBySize.get(size)) {
+        for (UnaryEnumerationRule rule : unaryRules) {
+          if (rule.isTypeConsistent(cell.type)) {
+            Executor.execute()
+            CellKey next = rule.apply(cell);
+            chart.addCellUnary(cell, next, rule);
+          }
+        }
+
+        for (int j = 1; j <= size; j++) {
+          for (CellKey otherCell : cellsBySize.get(j)) {
+            for (BinaryEnumerationRule rule : binaryRules) {
+              if (rule.isApplicable(cell, otherCell)) {
+                // Etc.
+              }
+
+              if (rule.isApplicable(otherCell, cell)) {
+                // EtC.
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    
+    // initialize a chart with (type, size, denotation)
+    // for each unary rule:
+    //   for each entry with max size:
+    //     apply the rule to create an entry of size + 1
+    // for each binary rule:
+    //   for each entry with max size:
+    //     for each entry (collapsed by denotation):
+    //       apply binary rule to create next entry
+    
+    
+  }
+  */
+  
+  private static class CellKey {
+    private final Type type;
+    private final int size;
+    private final Object denotation;
+
+    public CellKey(Type type, int size, Object denotation) {
+      this.type = type;
+      this.size = size;
+      this.denotation = denotation;
+    }
+
+    @Override
+    public int hashCode() {
+      final int prime = 31;
+      int result = 1;
+      result = prime * result + ((denotation == null) ? 0 : denotation.hashCode());
+      result = prime * result + size;
+      result = prime * result + ((type == null) ? 0 : type.hashCode());
+      return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      CellKey other = (CellKey) obj;
+      if (denotation == null) {
+        if (other.denotation != null)
+          return false;
+      } else if (!denotation.equals(other.denotation))
+        return false;
+      if (size != other.size)
+        return false;
+      if (type == null) {
+        if (other.type != null)
+          return false;
+      } else if (!type.equals(other.type))
+        return false;
+      return true;
+    }
+  }
+
+  /*
+  private static class Chart {
+    
+    private final Map<Integer, CellKey> cellsBySize;
+    
+    private final Map<Pair<CellKey, CellKey>, UnaryEnumerationRule>;
+    private final Map<Triple<CellKey, CellKey, CellKey>, BinaryEnumerationRule>;
+    
+    public Collection<CellKey> getCellsBySize(int size);
+    
+    public void addCellUnary(CellKey start, CellKey result, UnaryEnumerationRule rule);
+    
+    public void addCellBinary(CellKey startLeft, CellKey startRight,
+        CellKey result, BinaryEnumerationRule rule);
+  }
+  */
 }

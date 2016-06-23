@@ -21,7 +21,7 @@ public class LogicalFormEnumeratorTest extends TestCase {
       {"s", "(lambda ($0) (row:<s,c> $0))"},
       {"c", "(lambda ($0) (first-row:<c,c> $0))"}
   };
-    
+
   String[][] binaryRules = new String[][] {
       {"c", "c", "(lambda ($L $R) (intersect:<c,<c,c>> $L $R))"},
   };
@@ -78,7 +78,7 @@ public class LogicalFormEnumeratorTest extends TestCase {
   }
   
   private List<Expression2> enumerate(int max, String... expressions) {
-    List<Expression2> lfs = Lists.newArrayList();
+    Set<Expression2> lfs = Sets.newHashSet();
     for (int i = 0; i < expressions.length; i++) {
       lfs.add(lfParser.parse(expressions[i]));
     }

@@ -1,19 +1,17 @@
 package com.jayantkrish.jklol.experiments.wikitables;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.enumeratelf.EnumerationRuleFilter;
 import com.jayantkrish.jklol.ccg.enumeratelf.LfNode;
-import com.jayantkrish.jklol.ccg.lambda2.Expression2;
-import com.jayantkrish.jklol.ccg.lambda2.ExpressionEvaluator;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionExecutor;
 
 public class WikiTableDenotationRuleFilter implements EnumerationRuleFilter {
   
-  private final ExpressionEvaluator eval;
+  private final ExpressionExecutor eval;
   private final String tableId;
   
-  private static final String ERROR = "ERROR";
-  
-  public WikiTableDenotationRuleFilter(ExpressionEvaluator eval, String tableId) {
+  public WikiTableDenotationRuleFilter(ExpressionExecutor eval, String tableId) {
     this.eval = Preconditions.checkNotNull(eval);
     this.tableId = tableId;
   }
@@ -24,13 +22,10 @@ public class WikiTableDenotationRuleFilter implements EnumerationRuleFilter {
       return true;
     } 
 
-    Expression2 originalQuery = WikiTablesUtil.getQueryExpression(tableId, original.getLf());
-    Object originalDenotation = eval.evaluateSilentErrors(originalQuery, ERROR);
-    Expression2 resultQuery = WikiTablesUtil.getQueryExpression(tableId, result.getLf());
-    Object resultDenotation = eval.evaluateSilentErrors(resultQuery, ERROR);
+    Optional<Object> originalDenotation = eval.evaluateSilent(original.getLf(), tableId);
+    Optional<Object> resultDenotation = eval.evaluateSilent(result.getLf(), tableId);
 
-    // System.out.println(originalQuery + " " + originalDenotation + " " + resultQuery + " " + resultDenotation);
-    
-    return !originalDenotation.equals(resultDenotation);
+    return originalDenotation.isPresent() && resultDenotation.isPresent()
+        && !originalDenotation.get().equals(resultDenotation.get());
   }
 }

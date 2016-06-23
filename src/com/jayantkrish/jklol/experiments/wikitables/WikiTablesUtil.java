@@ -22,6 +22,9 @@ import com.jayantkrish.jklol.ccg.lambda2.VariableCanonicalizationReplacementRule
 import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.AmbEval.RaisedBuiltinFunction;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.lisp.LispUtil;
+import com.jayantkrish.jklol.lisp.ParametricBfgBuilder;
+import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.util.CsvParser;
 import com.jayantkrish.jklol.util.IndexedList;
@@ -225,6 +228,18 @@ public class WikiTablesUtil {
     env.bindName("make-set", new RaisedBuiltinFunction(new WikiTableFunctions.MakeSet()), symbolTable);
     env.bindName("set?", new RaisedBuiltinFunction(new WikiTableFunctions.IsSet()), symbolTable);
     return env;
+  }
+  
+  public static WikiTableExecutor getExecutor(List<WikiTable> tables, Map<String, Integer> tableIndexMap,
+      List<String> lispPaths) {
+    IndexedList<String> symbolTable = AmbEval.getInitialSymbolTable();
+    Environment env = WikiTablesUtil.getEnvironment(symbolTable, tableIndexMap, tables);
+    AmbEval eval = new AmbEval(symbolTable);
+    ParametricBfgBuilder fgBuilder = new ParametricBfgBuilder(true);
+    SExpression program = LispUtil.readProgram(lispPaths, symbolTable);
+    ExpressionParser<SExpression> sexpParser = ExpressionParser.sExpression(symbolTable);
+    eval.eval(program, env, fgBuilder);
+    return new WikiTableExecutor(sexpParser, eval, env);
   }
   
   private WikiTablesUtil() {

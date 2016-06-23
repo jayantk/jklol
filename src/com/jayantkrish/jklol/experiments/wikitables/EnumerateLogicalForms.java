@@ -8,6 +8,7 @@ import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -16,18 +17,11 @@ import com.jayantkrish.jklol.ccg.enumeratelf.LogicalFormEnumerator;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.RegexTypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
-import com.jayantkrish.jklol.ccg.lambda2.AmbEvalEvaluator;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
-import com.jayantkrish.jklol.ccg.lambda2.ExpressionEvaluator;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionExecutor;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.cli.AbstractCli;
-import com.jayantkrish.jklol.lisp.AmbEval;
-import com.jayantkrish.jklol.lisp.Environment;
-import com.jayantkrish.jklol.lisp.LispUtil;
-import com.jayantkrish.jklol.lisp.ParametricBfgBuilder;
-import com.jayantkrish.jklol.lisp.SExpression;
-import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class EnumerateLogicalForms extends AbstractCli {
@@ -53,6 +47,7 @@ public class EnumerateLogicalForms extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
+    // Read in data (tables and examples)
     List<WikiTable> tables = WikiTablesUtil.readTables(options.valueOf(tablesDir));
     List<WikiTableExample> examples = WikiTablesUtil.readTrainingExamples(
         options.valueOf(trainingData));
@@ -60,30 +55,21 @@ public class EnumerateLogicalForms extends AbstractCli {
     for (int i = 0; i < tables.size(); i++) {
       WikiTable table = tables.get(i);
       tableIndexMap.put(table.getId(), i);
-    }
-    
-    // Build environment.
-    IndexedList<String> symbolTable = AmbEval.getInitialSymbolTable();
-    Environment env = WikiTablesUtil.getEnvironment(symbolTable, tableIndexMap, tables);
-    AmbEval eval = new AmbEval(symbolTable);
-    ParametricBfgBuilder fgBuilder = new ParametricBfgBuilder(true);
-    SExpression program = LispUtil.readProgram(options.valuesOf(environment), symbolTable);
-    ExpressionParser<SExpression> sexpParser = ExpressionParser.sExpression(symbolTable);
-    eval.eval(program, env, fgBuilder);
-
+    }    
     System.out.println("# of tables: " + tables.size());
     System.out.println("# of examples: " + examples.size());
     
-    TypeDeclaration types = RegexTypeDeclaration.fromCsv(IoUtils.readLines(options.valueOf(typeDeclaration)));
-
+    TypeDeclaration types = RegexTypeDeclaration.fromCsv(IoUtils.readLines(
+        options.valueOf(typeDeclaration)));
     ExpressionSimplifier simplifier = WikiTablesUtil.getExpressionSimplifier();
-    ExpressionEvaluator evaluator = new AmbEvalEvaluator(sexpParser, eval, env);
-    ExpressionComparator comparator = new WikiTableEvaluationComparator(simplifier, evaluator);
+    ExpressionExecutor executor = WikiTablesUtil.getExecutor(tables, tableIndexMap,
+        options.valuesOf(environment));
+    ExpressionComparator comparator = new WikiTableExecutionComparator(simplifier, executor);
 
     // TODO: refactor me.
     int numCorrect = 0;
     int numSoFar = 0;
-    LogicalFormEnumerator enumerator = getLogicalFormEnumerator(simplifier, evaluator, types);
+    LogicalFormEnumerator enumerator = getLogicalFormEnumerator(simplifier, types);
     ExpressionParser<Expression2> expParser = ExpressionParser.expression2();
     for (WikiTableExample example : examples) {
       if (numSoFar % 100 == 0) {
@@ -107,24 +93,23 @@ public class EnumerateLogicalForms extends AbstractCli {
       }
       
       List<EnumerationRuleFilter> addedFilters = Lists.newArrayList();
-      addedFilters.add(new WikiTableDenotationRuleFilter(evaluator, example.getTableId()));
+      addedFilters.add(new WikiTableDenotationRuleFilter(executor, example.getTableId()));
       
       System.out.println(example.getQuestion() + " " + example.getAnswer() + " " + example.getTableId());
       System.out.println("  " + mentionExpressions);
       List<Expression2> enumerated = enumerator.enumerate(mentionExpressions, addedFilters, 300);
       boolean anyCorrect = false;
       for (Expression2 e : enumerated) {
-        Expression2 sexpression = WikiTablesUtil.getQueryExpression(table.getId(), e);
-        Object value = evaluator.evaluateSilentErrors(sexpression, "ERROR");
+        Optional<Object> value = executor.evaluateSilent(e, example.getTableId());
         boolean correct = comparator.equals(e, WikiTablesUtil.getAnswerExpression(example));
         anyCorrect = anyCorrect || correct;
 
-        if (options.has(verbose) && correct) {
+        if (options.has(verbose) || correct) {
           String correctString = "  ";
           if (correct) {
             correctString = "* ";
           }
-          System.out.println("  " + correctString + e + " " + value);
+          System.out.println("  " + correctString + e + " " + value.get());
         }
       }
       if (anyCorrect) {
@@ -134,7 +119,7 @@ public class EnumerateLogicalForms extends AbstractCli {
   }
   
   private static LogicalFormEnumerator getLogicalFormEnumerator(ExpressionSimplifier simplifier, 
-      ExpressionEvaluator eval, TypeDeclaration types) {
+      TypeDeclaration types) {
     String[][] unaryRules = new String[][] {
         {"c", "(lambda ($0) (first-row $0))"},
         {"c", "(lambda ($0) (last-row $0))"},

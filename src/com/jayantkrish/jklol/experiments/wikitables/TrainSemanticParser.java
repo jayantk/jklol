@@ -18,9 +18,9 @@ import com.jayantkrish.jklol.ccg.CcgParse;
 import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.lambda2.AmbEvalEvaluator;
+import com.jayantkrish.jklol.ccg.lambda2.AmbEvalExecutor;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
-import com.jayantkrish.jklol.ccg.lambda2.ExpressionEvaluator;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionExecutor;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.util.SemanticParserExampleLoss;
 import com.jayantkrish.jklol.ccg.util.SemanticParserUtils;
@@ -103,8 +103,8 @@ public class TrainSemanticParser extends AbstractCli {
         lexiconLines, unknownLexiconLines, rules, factory, null, false, null, true);
     
     ExpressionSimplifier simplifier = WikiTablesUtil.getExpressionSimplifier();
-    ExpressionEvaluator evaluator = new AmbEvalEvaluator(sexpParser, eval, env);
-    ExpressionComparator comparator = new WikiTableEvaluationComparator(simplifier, evaluator);
+    ExpressionExecutor evaluator = new AmbEvalExecutor(sexpParser, eval, env);
+    ExpressionComparator comparator = new WikiTableExecutionComparator(simplifier, evaluator);
     
     List<CcgExample> ccgExamples = Lists.newArrayList();
     for (WikiTableExample example : examples) {

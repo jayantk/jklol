@@ -1,26 +1,30 @@
 package com.jayantkrish.jklol.ccg.enumeratelf;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.Executor;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionExecutor;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
+import com.jayantkrish.jklol.util.IndexedList;
 
 /**
  * Enumerates logical forms by applying a collection of
@@ -151,57 +155,63 @@ public class LogicalFormEnumerator {
     }
   }
   
-  /*
-  public List<Expression2> enumerateDp(Set<Expression2> startNodes,
-      List<EnumerationRuleFilter> addedFilters, Object environment, int maxSize) {
-    SetMultimap<Integer, CellKey> cellsBySize = HashMultimap.create();
-    
+  public Chart enumerateDp(Set<Expression2> startNodes,
+      List<EnumerationRuleFilter> addedFilters, ExpressionExecutor executor,
+      Object context, int maxSize) {
+    Chart chart = new Chart();
     for (Expression2 startNode : startNodes) {
-      Object denotation = executor.execute(startNode, environment);
-      Type type = StaticAnalysis.inferType(startNode, typeDeclaration);
-      CellKey cell = new CellKey(type, 1, denotation);
-      cellsBySize.put(cell.getSize(), cell);
+      Optional<Object> denotation = executor.evaluateSilent(startNode, context);
+      if (denotation.isPresent()) {
+        Type type = StaticAnalysis.inferType(startNode, typeDeclaration);
+        CellKey cell = new CellKey(type, 1, denotation.get());
+        chart.addCellInitial(cell, startNode);
+      }
     }
-    
+
     for (int size = 1; size < maxSize; size++) {
-      for (CellKey cell : cellsBySize.get(size)) {
+      // System.out.println("cells " + size + ": "  + chart.getCellsBySize(size));
+      for (CellKey cell : chart.getCellsBySize(size)) {
+        // Try applying every unary rule.
         for (UnaryEnumerationRule rule : unaryRules) {
           if (rule.isTypeConsistent(cell.type)) {
-            Executor.execute()
-            CellKey next = rule.apply(cell);
-            chart.addCellUnary(cell, next, rule);
+            Expression2 ruleLf = rule.getLogicalForm();
+            Optional<Object> denotation = executor.applySilent(ruleLf, context,
+                Arrays.asList(cell.denotation));
+            if (denotation.isPresent()) {
+              CellKey next = new CellKey(rule.getOutputType(), cell.size + 1, denotation.get());
+              chart.addCellUnary(cell, next, rule);
+            }
           }
         }
 
+        // Try applying every binary rule with both argument permutations.
         for (int j = 1; j <= size; j++) {
-          for (CellKey otherCell : cellsBySize.get(j)) {
+          for (CellKey otherCell : chart.getCellsBySize(j)) {
             for (BinaryEnumerationRule rule : binaryRules) {
-              if (rule.isApplicable(cell, otherCell)) {
-                // Etc.
-              }
-
-              if (rule.isApplicable(otherCell, cell)) {
-                // EtC.
+              
+              List<CellKey> argIndexes = Lists.newArrayList(cell, otherCell);
+              for (int k = 0; k < 2; k++) {
+                // Generate the argument permutation.
+                CellKey arg1 = argIndexes.get(k);
+                CellKey arg2 = argIndexes.get((k + 1) % 2);
+                
+                if (rule.isTypeConsistent(arg1.type, arg2.type)) {
+                  Expression2 ruleLf = rule.getLogicalForm();
+                  Optional<Object> denotation = executor.applySilent(ruleLf, context,
+                      Arrays.asList(arg1.denotation, arg2.denotation));
+                  if (denotation.isPresent()) {
+                    CellKey next = new CellKey(rule.getOutputType(), arg1.size + arg2.size + 1, denotation.get());
+                    chart.addCellBinary(arg1, arg2, next, rule); 
+                  }
+                }
               }
             }
           }
         }
       }
     }
-    
-    
-    // initialize a chart with (type, size, denotation)
-    // for each unary rule:
-    //   for each entry with max size:
-    //     apply the rule to create an entry of size + 1
-    // for each binary rule:
-    //   for each entry with max size:
-    //     for each entry (collapsed by denotation):
-    //       apply binary rule to create next entry
-    
-    
+    return chart;
   }
-  */
   
   private static class CellKey {
     private final Type type;
@@ -212,6 +222,11 @@ public class LogicalFormEnumerator {
       this.type = type;
       this.size = size;
       this.denotation = denotation;
+    }
+    
+    @Override
+    public String toString() {
+      return "[" + type + " " + size + " " + denotation + "]";
     }
 
     @Override
@@ -249,20 +264,164 @@ public class LogicalFormEnumerator {
     }
   }
 
-  /*
-  private static class Chart {
+  public static class Chart {
+    private final IndexedList<CellKey> cells;
+    private final Multimap<Integer, Expression2> initialLfs;
+    private final Multimap<Integer, CellKey> cellsBySize;
+    private final Multimap<Integer, UnaryChartEntry> unaryBackpointers;
+    private final Multimap<Integer, BinaryChartEntry> binaryBackpointers;
+
+    public Chart() {
+      cells = IndexedList.create();
+      initialLfs = HashMultimap.create();
+      cellsBySize = HashMultimap.create();
+      unaryBackpointers = HashMultimap.create();
+      binaryBackpointers = HashMultimap.create();
+    }
     
-    private final Map<Integer, CellKey> cellsBySize;
+    private void addCell(CellKey cell) {
+      cells.add(cell);
+      cellsBySize.put(cell.size, cell);
+    }
     
-    private final Map<Pair<CellKey, CellKey>, UnaryEnumerationRule>;
-    private final Map<Triple<CellKey, CellKey, CellKey>, BinaryEnumerationRule>;
+    public Collection<CellKey> getCellsBySize(int size) {
+      return cellsBySize.get(size);
+    }
     
-    public Collection<CellKey> getCellsBySize(int size);
+    public void addCellInitial(CellKey cell, Expression2 lf) {
+      addCell(cell);
+      initialLfs.put(cells.getIndex(cell), lf);
+    }
+
+    public void addCellUnary(CellKey start, CellKey result, UnaryEnumerationRule rule) {
+      Preconditions.checkArgument(cells.contains(start));
+
+      addCell(result);
+      int index = cells.getIndex(result);
+      unaryBackpointers.put(index, new UnaryChartEntry(start, result, rule));
+    }
     
-    public void addCellUnary(CellKey start, CellKey result, UnaryEnumerationRule rule);
-    
-    public void addCellBinary(CellKey startLeft, CellKey startRight,
-        CellKey result, BinaryEnumerationRule rule);
+    public void addCellBinary(CellKey startArg1, CellKey startArg2,
+        CellKey result, BinaryEnumerationRule rule) {
+      Preconditions.checkArgument(cells.contains(startArg1));
+      Preconditions.checkArgument(cells.contains(startArg2));
+
+      addCell(result);
+      int index = cells.getIndex(result);
+      binaryBackpointers.put(index, new BinaryChartEntry(startArg1, startArg2, result, rule));
+    }
+
+    public Set<Expression2> getLogicalFormsFromDenotation(Object denotation) {
+      return getLogicalFormsFromPredicate(Predicates.equalTo(denotation));
+    }
+
+    public Set<Expression2> getLogicalFormsFromPredicate(Predicate<Object> predicate) {
+      // Identify cells whose expressions need to be computed.
+      // Expressions of cells containing the denotation need to
+      // be computed.
+      Queue<Integer> queue = new LinkedList<Integer>();
+      Set<Integer> denotationCellInds = Sets.newHashSet();
+      for (CellKey cell : cells) {
+        if (predicate.apply(cell.denotation)) {
+          int cellIndex = cells.getIndex(cell);
+          queue.add(cellIndex);
+          denotationCellInds.add(cellIndex);
+        }
+      }
+
+      // Compute expressions for all cells that lead to marked cells.
+      Set<Integer> queued = Sets.newHashSet();
+      queued.addAll(queue);
+      while (!queue.isEmpty()) {
+        int cellInd = queue.poll();
+
+        for (UnaryChartEntry entry : unaryBackpointers.get(cellInd)) {
+          int startInd = cells.getIndex(entry.start);
+          if (!queued.contains(startInd)) {
+            queue.add(startInd);
+            queued.add(startInd);
+          }
+        }
+        
+        for (BinaryChartEntry entry : binaryBackpointers.get(cellInd)) {
+          int arg1Ind = cells.getIndex(entry.startArg1);
+          if (!queued.contains(arg1Ind)) {
+            queue.add(arg1Ind);
+            queued.add(arg1Ind);
+          }
+
+          int arg2Ind = cells.getIndex(entry.startArg2);
+          if (!queued.contains(arg2Ind)) {
+            queue.add(arg2Ind);
+            queued.add(arg2Ind);
+          }
+        }
+      }
+
+      // Traverse cells in size order and generate their logical forms.
+      List<Integer> sizes = Lists.newArrayList(cellsBySize.keySet());
+      Collections.sort(sizes);
+      
+      Multimap<Integer, Expression2> cellLfs = HashMultimap.create();
+      for (Integer size : sizes) {
+        for (CellKey cell : cellsBySize.get(size)) {
+          int cellInd = cells.getIndex(cell);
+          if (queued.contains(cellInd)) {
+            cellLfs.putAll(cellInd, initialLfs.get(cellInd));
+            
+            for (UnaryChartEntry entry : unaryBackpointers.get(cellInd)) {
+              int startInd = cells.getIndex(entry.start);
+              for (Expression2 startLf : cellLfs.get(startInd)) {
+                cellLfs.put(cellInd, entry.unaryRule.apply(startLf));
+              }
+            }
+            
+            for (BinaryChartEntry entry : binaryBackpointers.get(cellInd)) {
+              int arg1Ind = cells.getIndex(entry.startArg1);
+              int arg2Ind = cells.getIndex(entry.startArg2);
+              for (Expression2 arg1Lf : cellLfs.get(arg1Ind)) {
+                for (Expression2 arg2Lf : cellLfs.get(arg2Ind)) {
+                  cellLfs.put(cellInd, entry.binaryRule.apply(arg1Lf, arg2Lf));
+                }
+              }
+            }
+          }
+        }
+      }
+      
+      Set<Expression2> expressions = Sets.newHashSet();
+      for (Integer denotationCellInd : denotationCellInds) {
+        expressions.addAll(cellLfs.get(denotationCellInd));
+      }
+      
+      return expressions;
+    }
   }
-  */
+
+  public static class UnaryChartEntry {
+    private final CellKey start;
+    private final CellKey result;
+    private final UnaryEnumerationRule unaryRule;
+
+    public UnaryChartEntry(CellKey start, CellKey result, UnaryEnumerationRule unaryRule) {
+      this.start = Preconditions.checkNotNull(start);
+      this.result = Preconditions.checkNotNull(result);
+      this.unaryRule = Preconditions.checkNotNull(unaryRule);
+    }
+  }
+  
+  public static class BinaryChartEntry {
+    private final CellKey startArg1;
+    private final CellKey startArg2;
+    private final CellKey result;
+    private final BinaryEnumerationRule binaryRule;
+    
+    public BinaryChartEntry(CellKey startArg1, CellKey startArg2, CellKey result,
+        BinaryEnumerationRule binaryRule) {
+      this.startArg1 = Preconditions.checkNotNull(startArg1);
+      this.startArg2 = Preconditions.checkNotNull(startArg2);
+      this.result = Preconditions.checkNotNull(result);
+      this.binaryRule = Preconditions.checkNotNull(binaryRule);
+    }
+  }
 }

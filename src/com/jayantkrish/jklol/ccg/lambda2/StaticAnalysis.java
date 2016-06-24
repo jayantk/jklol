@@ -217,25 +217,24 @@ public class StaticAnalysis {
   }
 
   /**
-   * Fairly hacky implementation of type inference. Expects 
-   * as an argument an expression where constants have the form
-   * constant_name:type_spec.
+   * Implementation of type inference that infers types for
+   * expressions using the basic type information in typeDeclaration.
    * 
    * @param expression
-   * @param type
-   * @param typeReplacements
+   * @param rootType
+   * @param typeDeclaration
    * @return
    */
-  public static Type inferType(Expression2 expression, Type type, TypeDeclaration typeDeclaration) {
-    Map<Integer, Type> subexpressionTypeMap = inferTypeMap(expression, type, typeDeclaration);
+  public static Type inferType(Expression2 expression, Type rootType, TypeDeclaration typeDeclaration) {
+    Map<Integer, Type> subexpressionTypeMap = inferTypeMap(expression, rootType, typeDeclaration);
     return subexpressionTypeMap.get(0);
   }
 
-  public static Map<Integer, Type> inferTypeMap(Expression2 expression, Type type,
+  public static Map<Integer, Type> inferTypeMap(Expression2 expression, Type rootType,
       TypeDeclaration typeDeclaration) {
     Map<Integer, Type> subexpressionTypeMap = Maps.newHashMap();
     initializeSubexpressionTypeMap(expression, subexpressionTypeMap);
-    updateType(0, type, subexpressionTypeMap, typeDeclaration, expression);
+    updateType(0, rootType, subexpressionTypeMap, typeDeclaration, expression);
     ScopeSet scopes = getScopes(expression);
 
     boolean updated = true;

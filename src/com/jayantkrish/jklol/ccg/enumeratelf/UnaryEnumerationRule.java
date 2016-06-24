@@ -10,6 +10,7 @@ import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 public class UnaryEnumerationRule {
 
   private final Type argType;
+  private final Type outputType;
   private final Expression2 ruleLf;
   private final ExpressionSimplifier simplifier;
   private final TypeDeclaration typeDeclaration;
@@ -20,8 +21,24 @@ public class UnaryEnumerationRule {
     this.ruleLf = Preconditions.checkNotNull(ruleLf);
     this.simplifier = Preconditions.checkNotNull(simplifier);
     this.typeDeclaration = Preconditions.checkNotNull(typeDeclaration);
+    
+    Type ruleFuncType = Type.createFunctional(argType, TypeDeclaration.TOP, false);
+    ruleFuncType = StaticAnalysis.inferType(ruleLf, ruleFuncType, typeDeclaration);
+    this.outputType = ruleFuncType.getReturnType();
   }
   
+  public Expression2 getLogicalForm() {
+    return ruleLf;
+  }
+  
+  public Type getInputType() {
+    return argType;
+  }
+  
+  public Type getOutputType() {
+    return outputType;
+  }
+
   public boolean isTypeConsistent(Type t) {
     return argType.equals(t);
   }
@@ -35,5 +52,9 @@ public class UnaryEnumerationRule {
     Expression2 result = simplifier.apply(Expression2.nested(ruleLf, node.getLf()));
     Type resultType = StaticAnalysis.inferType(result, typeDeclaration);
     return new LfNode(result, resultType, node.getUsedMentions());
+  }
+  
+  public Expression2 apply(Expression2 arg) {
+    return simplifier.apply(Expression2.nested(ruleLf, arg));
   }
 }

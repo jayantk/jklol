@@ -201,7 +201,7 @@ public class WikiTablesUtil {
   
   public static Expression2 getQueryExpression(String tableId, Expression2 expression) {
     return ExpressionParser.expression2().parse("(eval-table \""
-        + tableId + "\" (quote (get-values " + expression + ")))");
+        + tableId + "\" (quote " + expression + "))");
   }
   
   public static Environment getEnvironment(IndexedList<String> symbolTable,

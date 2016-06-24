@@ -14,6 +14,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.ccg.enumeratelf.DenotationRuleFilter;
 import com.jayantkrish.jklol.ccg.enumeratelf.EnumerationRuleFilter;
 import com.jayantkrish.jklol.ccg.enumeratelf.LogicalFormEnumerator;
 import com.jayantkrish.jklol.ccg.enumeratelf.LogicalFormEnumerator.Chart;
@@ -70,7 +71,7 @@ public class EnumerateLogicalForms extends AbstractCli {
     // TODO: refactor me.
     int numCorrect = 0;
     int numSoFar = 0;
-    LogicalFormEnumerator enumerator = getLogicalFormEnumerator(simplifier, types);
+    LogicalFormEnumerator enumerator = getLogicalFormEnumerator(simplifier, types, executor);
     ExpressionParser<Expression2> expParser = ExpressionParser.expression2();
     for (WikiTableExample example : examples) {
       if (numSoFar % 100 == 0) {
@@ -94,16 +95,16 @@ public class EnumerateLogicalForms extends AbstractCli {
       }
       
       List<EnumerationRuleFilter> addedFilters = Lists.newArrayList();
-      addedFilters.add(new WikiTableDenotationRuleFilter(executor, example.getTableId()));
+      addedFilters.add(new DenotationRuleFilter());
       
       System.out.println(example.getQuestion() + " " + example.getAnswer() + " " + example.getTableId());
       System.out.println("  " + mentionExpressions);
       // List<Expression2> enumerated = enumerator.enumerate(mentionExpressions, addedFilters, 300);
-      Chart chart = enumerator.enumerateDp(mentionExpressions, addedFilters, executor, example.getTableId(), 5);
+      Chart chart = enumerator.enumerateDp(mentionExpressions, example.getTableId(), 5);
       Expression2 answerExpression = WikiTablesUtil.getAnswerExpression(example);
       Object answer = executor.evaluate(answerExpression.getSubexpressions().get(2));
       Predicate<Object> answerPredicate = new AnswerPredicate(executor, example.getTableId(), answer); 
-      Set<Expression2> enumerated = chart.getLogicalFormsFromPredicate(answerPredicate);
+      Set<Expression2> enumerated = chart.getLogicalFormsFromPredicate(answerPredicate, addedFilters);
 
       boolean anyCorrect = false;
       for (Expression2 e : enumerated) {
@@ -128,7 +129,7 @@ public class EnumerateLogicalForms extends AbstractCli {
   }
   
   private static LogicalFormEnumerator getLogicalFormEnumerator(ExpressionSimplifier simplifier, 
-      TypeDeclaration types) {
+      TypeDeclaration types, ExpressionExecutor executor) {
     String[][] unaryRules = new String[][] {
         {"c", "(lambda ($0) (first-row $0))"},
         {"c", "(lambda ($0) (last-row $0))"},
@@ -144,7 +145,8 @@ public class EnumerateLogicalForms extends AbstractCli {
         {"i", "i", "(lambda ($L $R) (- $L $R))"},
     };
 
-    return LogicalFormEnumerator.fromRuleStrings(unaryRules, binaryRules, simplifier, types);
+    return LogicalFormEnumerator.fromRuleStrings(unaryRules, binaryRules, simplifier, types,
+        executor);
   }
 
   public static void main(String[] args) {

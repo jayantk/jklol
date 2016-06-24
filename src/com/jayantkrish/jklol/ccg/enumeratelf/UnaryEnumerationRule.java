@@ -2,10 +2,8 @@ package com.jayantkrish.jklol.ccg.enumeratelf;
 
 import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.lambda.Type;
-import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
-import com.jayantkrish.jklol.ccg.lambda2.StaticAnalysis;
 
 public class UnaryEnumerationRule {
 
@@ -35,18 +33,7 @@ public class UnaryEnumerationRule {
     return argType.equals(t);
   }
 
-  public boolean isApplicable(LfNode node) {
-    // TODO: should be isUnifiable
-    return argType.equals(node.getType());
-  }
-
-  public LfNode apply(LfNode node) {
-    Expression2 result = simplifier.apply(Expression2.nested(ruleLf, node.getLf()));
-    Type resultType = StaticAnalysis.inferType(result, typeDeclaration);
-    return new LfNode(result, resultType, node.getUsedMentions());
-  }
-  
-  public Expression2 apply(Expression2 arg) {
+  public Expression2 apply(Expression2 arg, ExpressionSimplifier simplifier) {
     return simplifier.apply(Expression2.nested(ruleLf, arg));
   }
 }

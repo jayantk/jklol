@@ -87,53 +87,56 @@ public class LogicalFormEnumerator {
     return new LogicalFormEnumerator(unaryRuleList, binaryRuleList, simplifier, types, executor);
   }
 
-  public List<Expression2> enumerate(Set<Expression2> startNodes, int max) {
-    return enumerate(startNodes, Collections.emptyList(), max);
+  public List<Expression2> enumerate(Set<Expression2> startNodes,
+      Object context, int max) {
+    return enumerate(startNodes, context, max, Collections.emptyList());
   }
 
   public List<Expression2> enumerate(Set<Expression2> startNodeSet,
-      List<EnumerationRuleFilter> addedFilters, int max) {
-    List<EnumerationRuleFilter> allFilters = addedFilters;
-    
+      Object context, int max, List<EnumerationRuleFilter> filters) {
+
     List<Expression2> startNodes = Lists.newArrayList(startNodeSet);
     Queue<LfNode> queue = new LinkedList<LfNode>();
     for (int i = 0; i < startNodes.size(); i++) {
       Expression2 startNode = startNodes.get(i);
       Type type = StaticAnalysis.inferType(startNode, typeDeclaration);
-      boolean[] usedStartNodes = new boolean[startNodes.size()];
-      usedStartNodes[i] = true;
-      queue.add(new LfNode(startNode, type, usedStartNodes));
+      int[] mentionCounts = new int[startNodes.size()];
+      mentionCounts[i] = 1;
+      Optional<Object> denotation = executor.evaluateSilent(startNode, context);
+      if (denotation.isPresent()) {
+        queue.add(new LfNode(startNode, type, mentionCounts, denotation.get()));
+      }
     }
-    
+
     Set<LfNode> queuedNodes = Sets.newHashSet(queue);
     Set<LfNode> exploredNodes = Sets.newHashSet();
     while (queue.size() > 0 && queuedNodes.size() < max) {
       LfNode node = queue.poll();
       
       for (UnaryEnumerationRule rule : unaryRules) {
-        if (rule.isApplicable(node)) {
-          LfNode result = rule.apply(node);
+        if (rule.isTypeConsistent(node.getType())) {
+          LfNode result = applyRule(rule, node, context);
           
-          if (passesFilters(result, node, allFilters)) {
+          if (passesFilters(result, node, filters)) {
             enqueue(result, queue, queuedNodes);
           }
         }
       }
-      
+
       for (BinaryEnumerationRule rule : binaryRules) {
         for (LfNode exploredNode : exploredNodes) {
-          if (rule.isApplicable(node, exploredNode)) {
-            LfNode result = rule.apply(node, exploredNode);
-          
-            if (passesFilters(result, node, allFilters) && passesFilters(result, exploredNode, allFilters)) {
+          if (rule.isTypeConsistent(node.getType(), exploredNode.getType())) {
+            LfNode result = applyRule(rule, node, exploredNode, context);
+
+            if (passesFilters(result, node, filters) && passesFilters(result, exploredNode, filters)) {
               enqueue(result, queue, queuedNodes);
             }
           }
           
-          if (rule.isApplicable(exploredNode, node)) {
-            LfNode result = rule.apply(exploredNode, node);
+          if (rule.isTypeConsistent(exploredNode.getType(), node.getType())) {
+            LfNode result = applyRule(rule, exploredNode, node, context);
 
-            if (passesFilters(result, node, allFilters) && passesFilters(result, exploredNode, allFilters)) {
+            if (passesFilters(result, node, filters) && passesFilters(result, exploredNode, filters)) {
               enqueue(result, queue, queuedNodes);
             }
           }
@@ -156,15 +159,52 @@ public class LogicalFormEnumerator {
       queue.add(node);
     }
   }
+  
+  private LfNode applyRule(UnaryEnumerationRule rule, LfNode node, Object context) {
+    Expression2 ruleLf = rule.getLogicalForm();
+    Expression2 result = simplifier.apply(Expression2.nested(ruleLf, node.getLf()));
+    Type resultType = StaticAnalysis.inferType(result, typeDeclaration);
+    Object denotation = executor.apply(ruleLf, context, Lists.newArrayList(node.getDenotation()));
+    return new LfNode(result, resultType, node.getMentionCounts(), denotation);
+  }
 
-  public Chart enumerateDp(Set<Expression2> startNodes, Object context, int maxSize) {
-    Chart chart = new Chart();
-    for (Expression2 startNode : startNodes) {
+  private LfNode applyRule(BinaryEnumerationRule rule, LfNode arg1, LfNode arg2,
+      Object context) {
+    Expression2 ruleLf = rule.getLogicalForm();
+    Expression2 result = simplifier.apply(Expression2.nested(ruleLf, arg1.getLf(), arg2.getLf()));
+    Type resultType = StaticAnalysis.inferType(result, typeDeclaration);
+    Object denotation = executor.apply(ruleLf, context,
+        Lists.newArrayList(arg1.getDenotation(), arg2.getDenotation()));
+
+    int[] mentionCounts = new int[arg1.getMentionCounts().length];
+    for (int i = 0; i < mentionCounts.length; i++) {
+      mentionCounts[i] = arg1.getMentionCounts()[i] + arg2.getMentionCounts()[i];
+    }
+
+    return new LfNode(result, resultType, mentionCounts, denotation);
+  }
+
+  private static boolean passesFilters(LfNode start, LfNode result, List<EnumerationRuleFilter> filters) {
+    for (EnumerationRuleFilter filter : filters) {
+      if (!filter.apply(start, result)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public Chart enumerateDp(Set<Expression2> startNodeSet, Object context, int maxSize) {
+    Chart chart = new Chart(simplifier);
+    List<Expression2> startNodes = Lists.newArrayList(startNodeSet);
+    for (int i = 0; i < startNodes.size(); i++) {
+      Expression2 startNode = startNodes.get(i);
       Optional<Object> denotation = executor.evaluateSilent(startNode, context);
       if (denotation.isPresent()) {
         Type type = StaticAnalysis.inferType(startNode, typeDeclaration);
         CellKey cell = new CellKey(type, 1, denotation.get());
-        chart.addCellInitial(cell, startNode);
+        int[] mentionCounts = new int[startNodes.size()];
+        mentionCounts[i] = 1;
+        chart.addCellInitial(cell, startNode, mentionCounts);
       }
     }
 
@@ -266,17 +306,21 @@ public class LogicalFormEnumerator {
 
   public static class Chart {
     private final IndexedList<CellKey> cells;
-    private final Multimap<Integer, Expression2> initialLfs;
+    private final Multimap<Integer, LfNode> initialLfs;
     private final Multimap<Integer, CellKey> cellsBySize;
     private final Multimap<Integer, UnaryChartEntry> unaryBackpointers;
     private final Multimap<Integer, BinaryChartEntry> binaryBackpointers;
 
-    public Chart() {
+    private final ExpressionSimplifier simplifier;
+    
+    public Chart(ExpressionSimplifier simplifier) {
       cells = IndexedList.create();
       initialLfs = HashMultimap.create();
       cellsBySize = HashMultimap.create();
       unaryBackpointers = HashMultimap.create();
       binaryBackpointers = HashMultimap.create();
+      
+      this.simplifier = Preconditions.checkNotNull(simplifier);
     }
     
     private void addCell(CellKey cell) {
@@ -287,10 +331,11 @@ public class LogicalFormEnumerator {
     public Collection<CellKey> getCellsBySize(int size) {
       return cellsBySize.get(size);
     }
-    
-    public void addCellInitial(CellKey cell, Expression2 lf) {
+
+    public void addCellInitial(CellKey cell, Expression2 lf, int[] mentionCounts) {
       addCell(cell);
-      initialLfs.put(cells.getIndex(cell), lf);
+      initialLfs.put(cells.getIndex(cell),
+          new LfNode(lf, cell.type, mentionCounts, cell.denotation));
     }
 
     public void addCellUnary(CellKey start, CellKey result, UnaryEnumerationRule rule) {
@@ -311,11 +356,13 @@ public class LogicalFormEnumerator {
       binaryBackpointers.put(index, new BinaryChartEntry(startArg1, startArg2, result, rule));
     }
 
-    public Set<Expression2> getLogicalFormsFromDenotation(Object denotation) {
-      return getLogicalFormsFromPredicate(Predicates.equalTo(denotation));
+    public Set<Expression2> getLogicalFormsFromDenotation(Object denotation,
+        List<EnumerationRuleFilter> filters) {
+      return getLogicalFormsFromPredicate(Predicates.equalTo(denotation), filters);
     }
 
-    public Set<Expression2> getLogicalFormsFromPredicate(Predicate<Object> predicate) {
+    public Set<Expression2> getLogicalFormsFromPredicate(Predicate<Object> predicate,
+        List<EnumerationRuleFilter> filters) {
       // Identify cells whose expressions need to be computed.
       // Expressions of cells containing the denotation need to
       // be computed.
@@ -362,7 +409,7 @@ public class LogicalFormEnumerator {
       List<Integer> sizes = Lists.newArrayList(cellsBySize.keySet());
       Collections.sort(sizes);
       
-      Multimap<Integer, Expression2> cellLfs = HashMultimap.create();
+      Multimap<Integer, LfNode> cellLfs = HashMultimap.create();
       for (Integer size : sizes) {
         for (CellKey cell : cellsBySize.get(size)) {
           int cellInd = cells.getIndex(cell);
@@ -371,29 +418,47 @@ public class LogicalFormEnumerator {
             
             for (UnaryChartEntry entry : unaryBackpointers.get(cellInd)) {
               int startInd = cells.getIndex(entry.start);
-              for (Expression2 startLf : cellLfs.get(startInd)) {
-                cellLfs.put(cellInd, entry.unaryRule.apply(startLf));
+              for (LfNode startLf : cellLfs.get(startInd)) {
+                Expression2 lf = entry.unaryRule.apply(startLf.getLf(), simplifier);
+                LfNode node = new LfNode(lf, cell.type, startLf.getMentionCounts(),
+                    cell.denotation);
+                if (passesFilters(startLf, node, filters)) {
+                  cellLfs.put(cellInd, node);
+                }
               }
             }
             
             for (BinaryChartEntry entry : binaryBackpointers.get(cellInd)) {
               int arg1Ind = cells.getIndex(entry.startArg1);
               int arg2Ind = cells.getIndex(entry.startArg2);
-              for (Expression2 arg1Lf : cellLfs.get(arg1Ind)) {
-                for (Expression2 arg2Lf : cellLfs.get(arg2Ind)) {
-                  cellLfs.put(cellInd, entry.binaryRule.apply(arg1Lf, arg2Lf));
+              for (LfNode arg1Lf : cellLfs.get(arg1Ind)) {
+                for (LfNode arg2Lf : cellLfs.get(arg2Ind)) {
+                  Expression2 lf = entry.binaryRule.apply(arg1Lf.getLf(), arg2Lf.getLf(), simplifier);
+                  
+                  int[] counts = new int[arg1Lf.getMentionCounts().length];
+                  for (int i = 0; i < counts.length; i++) {
+                    counts[i] = arg1Lf.getMentionCounts()[i] + arg2Lf.getMentionCounts()[i];
+                  }
+                  
+                  LfNode node = new LfNode(lf, cell.type, counts, cell.denotation);
+                  
+                  if (passesFilters(arg1Lf, node, filters) && passesFilters(arg2Lf, node, filters)) {
+                    cellLfs.put(cellInd, node);
+                  }
                 }
               }
             }
           }
         }
       }
-      
+
       Set<Expression2> expressions = Sets.newHashSet();
       for (Integer denotationCellInd : denotationCellInds) {
-        expressions.addAll(cellLfs.get(denotationCellInd));
+        for (LfNode node : cellLfs.get(denotationCellInd)) {
+          expressions.add(node.getLf());
+        }
       }
-      
+
       return expressions;
     }
   }

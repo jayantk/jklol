@@ -5,14 +5,18 @@ import java.util.Set;
 
 import junit.framework.TestCase;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.ExplicitTypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
-import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
+import com.jayantkrish.jklol.ccg.lambda2.AmbEvalExecutor;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.ccg.lambda2.ExpressionExecutor;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
+import com.jayantkrish.jklol.lisp.AmbEval;
+import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.lisp.SExpression;
+import com.jayantkrish.jklol.util.IndexedList;
 
 public class LogicalFormEnumeratorTest extends TestCase {
 
@@ -29,33 +33,23 @@ public class LogicalFormEnumeratorTest extends TestCase {
   LogicalFormEnumerator enumerator;
   ExpressionParser<Expression2> lfParser;
   TypeDeclaration typeDeclaration;
+  ExpressionExecutor executor;
   
   public void setUp() {
-    ExpressionParser<Type> typeParser = ExpressionParser.typeParser();
     lfParser = ExpressionParser.expression2();
     ExpressionSimplifier simplifier = ExpressionSimplifier.lambdaCalculus();
     typeDeclaration = ExplicitTypeDeclaration.getDefault();
     
-    List<UnaryEnumerationRule> unaryRuleList = Lists.newArrayList();
-    for (int i = 0; i < unaryRules.length; i++) {
-      Type type = typeParser.parse(unaryRules[i][0]);
-      Expression2 lf = lfParser.parse(unaryRules[i][1]);
-      unaryRuleList.add(new UnaryEnumerationRule(type, lf, simplifier, typeDeclaration));
-    }
-    
-    List<BinaryEnumerationRule> binaryRuleList = Lists.newArrayList();
-    for (int i = 0; i < binaryRules.length; i++) {
-      Type type1 = typeParser.parse(binaryRules[i][0]);
-      Type type2 = typeParser.parse(binaryRules[i][1]);
-      Expression2 lf = lfParser.parse(binaryRules[i][2]);
+    IndexedList<String> symbolTable = AmbEval.getInitialSymbolTable();
+    Environment env = AmbEval.getDefaultEnvironment(symbolTable);
+    ExpressionParser<SExpression> sParser = ExpressionParser.sExpression(symbolTable);
+    AmbEval eval = new AmbEval(symbolTable);
+    executor = new AmbEvalExecutor(sParser, eval, env);
 
-      binaryRuleList.add(new BinaryEnumerationRule(type1, type2, lf, simplifier, typeDeclaration));
-    }
-    
-    List<EnumerationRuleFilter> filters = Lists.newArrayList();
-    enumerator = new LogicalFormEnumerator(unaryRuleList, binaryRuleList, filters, typeDeclaration);
+    enumerator = LogicalFormEnumerator.fromRuleStrings(unaryRules, binaryRules,
+        simplifier, typeDeclaration, executor);
   }
-  
+
   public void testUnary() {
     Set<Expression2> actual = Sets.newHashSet(enumerate(5, "foo:s"));
     Set<Expression2> expected = Sets.newHashSet();
@@ -76,13 +70,13 @@ public class LogicalFormEnumeratorTest extends TestCase {
       // TODO: test case.
     }
   }
-  
+
   private List<Expression2> enumerate(int max, String... expressions) {
     Set<Expression2> lfs = Sets.newHashSet();
     for (int i = 0; i < expressions.length; i++) {
       lfs.add(lfParser.parse(expressions[i]));
     }
-    
-    return enumerator.enumerate(lfs, max);
+
+    return enumerator.enumerate(lfs, null, max);
   }
 }

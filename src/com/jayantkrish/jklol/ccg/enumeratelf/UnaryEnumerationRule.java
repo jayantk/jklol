@@ -12,33 +12,25 @@ public class UnaryEnumerationRule {
   private final Type argType;
   private final Type outputType;
   private final Expression2 ruleLf;
-  private final ExpressionSimplifier simplifier;
-  private final TypeDeclaration typeDeclaration;
   
-  public UnaryEnumerationRule(Type argType, Expression2 ruleLf, ExpressionSimplifier simplifier,
-      TypeDeclaration typeDeclaration) {
+  public UnaryEnumerationRule(Type argType, Type outputType, Expression2 ruleLf) {
     this.argType = Preconditions.checkNotNull(argType);
+    this.outputType = Preconditions.checkNotNull(outputType);
     this.ruleLf = Preconditions.checkNotNull(ruleLf);
-    this.simplifier = Preconditions.checkNotNull(simplifier);
-    this.typeDeclaration = Preconditions.checkNotNull(typeDeclaration);
-    
-    Type ruleFuncType = Type.createFunctional(argType, TypeDeclaration.TOP, false);
-    ruleFuncType = StaticAnalysis.inferType(ruleLf, ruleFuncType, typeDeclaration);
-    this.outputType = ruleFuncType.getReturnType();
+  }
+  
+  public Type getInputType() {
+    return argType;
+  }
+
+  public Type getOutputType() {
+    return outputType;
   }
   
   public Expression2 getLogicalForm() {
     return ruleLf;
   }
   
-  public Type getInputType() {
-    return argType;
-  }
-  
-  public Type getOutputType() {
-    return outputType;
-  }
-
   public boolean isTypeConsistent(Type t) {
     return argType.equals(t);
   }
@@ -47,7 +39,7 @@ public class UnaryEnumerationRule {
     // TODO: should be isUnifiable
     return argType.equals(node.getType());
   }
-  
+
   public LfNode apply(LfNode node) {
     Expression2 result = simplifier.apply(Expression2.nested(ruleLf, node.getLf()));
     Type resultType = StaticAnalysis.inferType(result, typeDeclaration);

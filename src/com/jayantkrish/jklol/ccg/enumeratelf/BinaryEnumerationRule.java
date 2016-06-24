@@ -12,26 +12,15 @@ public class BinaryEnumerationRule {
   private final Type arg1Type;
   private final Type arg2Type;
   private final Type outputType;
-
   private final Expression2 ruleLf;
-  private final ExpressionSimplifier simplifier;
-  
-  private final TypeDeclaration typeDeclaration;
-  
-  public BinaryEnumerationRule(Type arg1Type, Type arg2Type, Expression2 ruleLf,
-      ExpressionSimplifier simplifier, TypeDeclaration typeDeclaration) {
+    
+  public BinaryEnumerationRule(Type arg1Type, Type arg2Type, Type outputType, Expression2 ruleLf) {
     this.arg1Type = arg1Type;
     this.arg2Type = arg2Type;
+    this.outputType = outputType;
     this.ruleLf = ruleLf;
-    this.simplifier = simplifier;
-    this.typeDeclaration = Preconditions.checkNotNull(typeDeclaration);
-    
-    Type ruleFuncType = Type.createFunctional(arg1Type,
-        Type.createFunctional(arg2Type, TypeDeclaration.TOP, false), false);
-    ruleFuncType = StaticAnalysis.inferType(ruleLf, ruleFuncType, typeDeclaration);
-    this.outputType = ruleFuncType.getReturnType().getReturnType();
   }
-  
+
   public Expression2 getLogicalForm() {
     return ruleLf;
   }
@@ -42,18 +31,6 @@ public class BinaryEnumerationRule {
   
   public boolean isTypeConsistent(Type t1, Type t2) {
     return arg1Type.equals(t1) && arg2Type.equals(t2);
-  }
-
-  public boolean isApplicable(LfNode arg1Node, LfNode arg2Node) {
-    boolean[] arg1Mentions = arg1Node.getUsedMentions();
-    boolean[] arg2Mentions = arg2Node.getUsedMentions();
-    for (int i = 0; i < arg1Mentions.length; i++) {
-      if (arg1Mentions[i] && arg2Mentions[i]) {
-        return false;
-      }
-    }
-
-    return arg1Type.equals(arg1Node.getType()) && arg2Type.equals(arg2Node.getType());
   }
 
   public LfNode apply(LfNode arg1Node, LfNode arg2Node) {

@@ -10,11 +10,13 @@ public class LfNode {
   private final Expression2 lf;
   private final Type type;
   private final boolean[] usedMentions;
+  private final Object denotation;
   
-  public LfNode(Expression2 lf, Type type, boolean[] usedMentions) {
+  public LfNode(Expression2 lf, Type type, boolean[] usedMentions, Object denotation) {
     this.lf = Preconditions.checkNotNull(lf);
     this.type = Preconditions.checkNotNull(type);
     this.usedMentions = Arrays.copyOf(usedMentions, usedMentions.length);
+    this.denotation = denotation;
   }
 
   public Expression2 getLf() {
@@ -27,6 +29,10 @@ public class LfNode {
   
   public boolean[] getUsedMentions() {
     return usedMentions;
+  }
+  
+  public Object getDenotation() {
+    return denotation;
   }
 
   @Override

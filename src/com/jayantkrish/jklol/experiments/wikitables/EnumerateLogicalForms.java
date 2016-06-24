@@ -21,7 +21,6 @@ import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.RegexTypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
-import com.jayantkrish.jklol.ccg.lambda2.ExpressionComparator;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionExecutor;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.cli.AbstractCli;
@@ -58,7 +57,7 @@ public class EnumerateLogicalForms extends AbstractCli {
     for (int i = 0; i < tables.size(); i++) {
       WikiTable table = tables.get(i);
       tableIndexMap.put(table.getId(), i);
-    }    
+    }
     System.out.println("# of tables: " + tables.size());
     System.out.println("# of examples: " + examples.size());
     
@@ -144,11 +143,10 @@ public class EnumerateLogicalForms extends AbstractCli {
         // {"c", "c", "(lambda ($L $R) (union $L $R))"},
         {"i", "i", "(lambda ($L $R) (- $L $R))"},
     };
-    
-    List<EnumerationRuleFilter> filters = Lists.newArrayList();
-    return LogicalFormEnumerator.fromRuleStrings(unaryRules, binaryRules, filters, simplifier, types);
+
+    return LogicalFormEnumerator.fromRuleStrings(unaryRules, binaryRules, simplifier, types);
   }
-  
+
   public static void main(String[] args) {
     new EnumerateLogicalForms().run(args);
   }

@@ -37,30 +37,37 @@ public class LogicalFormEnumerator {
 
   private final List<UnaryEnumerationRule> unaryRules;
   private final List<BinaryEnumerationRule> binaryRules;
+
+  private final ExpressionSimplifier simplifier;
   private final TypeDeclaration typeDeclaration;
-  
-  private final List<EnumerationRuleFilter> filters;
+  private final ExpressionExecutor executor;
 
   public LogicalFormEnumerator(List<UnaryEnumerationRule> unaryRules,
-      List<BinaryEnumerationRule> binaryRules, List<EnumerationRuleFilter> filters,
-      TypeDeclaration typeDeclaration) {
+      List<BinaryEnumerationRule> binaryRules, ExpressionSimplifier simplifier,
+      TypeDeclaration typeDeclaration, ExpressionExecutor executor) {
     this.unaryRules = ImmutableList.copyOf(unaryRules);
     this.binaryRules = ImmutableList.copyOf(binaryRules);
-    this.filters = ImmutableList.copyOf(filters);
+    this.simplifier = Preconditions.checkNotNull(simplifier);
     this.typeDeclaration = Preconditions.checkNotNull(typeDeclaration);
+    this.executor = Preconditions.checkNotNull(executor);
   }
-  
+
   public static LogicalFormEnumerator fromRuleStrings(String[][] unaryRules,
-      String[][] binaryRules, List<EnumerationRuleFilter> filters,
-      ExpressionSimplifier simplifier, TypeDeclaration types) {
+      String[][] binaryRules, ExpressionSimplifier simplifier, TypeDeclaration types,
+      ExpressionExecutor executor) {
     ExpressionParser<Type> typeParser = ExpressionParser.typeParser();
     ExpressionParser<Expression2> lfParser = ExpressionParser.expression2();
 
     List<UnaryEnumerationRule> unaryRuleList = Lists.newArrayList();
     for (int i = 0; i < unaryRules.length; i++) {
-      Type type = typeParser.parse(unaryRules[i][0]);
+      Type inputType = typeParser.parse(unaryRules[i][0]);
       Expression2 lf = lfParser.parse(unaryRules[i][1]);
-      unaryRuleList.add(new UnaryEnumerationRule(type, lf, simplifier, types));
+      
+      Type ruleFuncType = Type.createFunctional(inputType, TypeDeclaration.TOP, false);
+      ruleFuncType = StaticAnalysis.inferType(lf, ruleFuncType, types);
+      Type outputType = ruleFuncType.getReturnType();
+
+      unaryRuleList.add(new UnaryEnumerationRule(inputType, outputType, lf));
     }
 
     List<BinaryEnumerationRule> binaryRuleList = Lists.newArrayList();
@@ -68,21 +75,25 @@ public class LogicalFormEnumerator {
       Type type1 = typeParser.parse(binaryRules[i][0]);
       Type type2 = typeParser.parse(binaryRules[i][1]);
       Expression2 lf = lfParser.parse(binaryRules[i][2]);
+      
+      Type ruleFuncType = Type.createFunctional(type1,
+          Type.createFunctional(type2, TypeDeclaration.TOP, false), false);
+      ruleFuncType = StaticAnalysis.inferType(lf, ruleFuncType, types);
+      Type outputType = ruleFuncType.getReturnType().getReturnType();
 
-      binaryRuleList.add(new BinaryEnumerationRule(type1, type2, lf, simplifier, types));
+      binaryRuleList.add(new BinaryEnumerationRule(type1, type2, outputType, lf));
     }
 
-    return new LogicalFormEnumerator(unaryRuleList, binaryRuleList, filters, types);
+    return new LogicalFormEnumerator(unaryRuleList, binaryRuleList, simplifier, types, executor);
   }
-  
+
   public List<Expression2> enumerate(Set<Expression2> startNodes, int max) {
     return enumerate(startNodes, Collections.emptyList(), max);
   }
 
   public List<Expression2> enumerate(Set<Expression2> startNodeSet,
       List<EnumerationRuleFilter> addedFilters, int max) {
-    List<EnumerationRuleFilter> allFilters = Lists.newArrayList(filters);
-    allFilters.addAll(addedFilters);
+    List<EnumerationRuleFilter> allFilters = addedFilters;
     
     List<Expression2> startNodes = Lists.newArrayList(startNodeSet);
     Queue<LfNode> queue = new LinkedList<LfNode>();
@@ -138,15 +149,6 @@ public class LogicalFormEnumerator {
     }
     return expressions;
   }
-  
-  private static boolean passesFilters(LfNode result, LfNode from, List<EnumerationRuleFilter> filters) {
-    for (EnumerationRuleFilter filter : filters) {
-      if (!filter.apply(from, result)) {
-        return false;
-      }
-    }
-    return true;
-  }
 
   private static void enqueue(LfNode node, Queue<LfNode> queue, Set<LfNode> queuedNodes) {
     if (!queuedNodes.contains(node)) {
@@ -154,10 +156,8 @@ public class LogicalFormEnumerator {
       queue.add(node);
     }
   }
-  
-  public Chart enumerateDp(Set<Expression2> startNodes,
-      List<EnumerationRuleFilter> addedFilters, ExpressionExecutor executor,
-      Object context, int maxSize) {
+
+  public Chart enumerateDp(Set<Expression2> startNodes, Object context, int maxSize) {
     Chart chart = new Chart();
     for (Expression2 startNode : startNodes) {
       Optional<Object> denotation = executor.evaluateSilent(startNode, context);

@@ -88,7 +88,7 @@ public class EnumerateLogicalForms extends AbstractCli {
       Set<Expression2> mentionExpressions = Sets.newHashSet();
       for (int i = 0; i < mentionStrings.size(); i++) {
         if (mentionTypes.get(i).equals(WikiTableMentionAnnotation.HEADING)) {
-          mentionExpressions.add(expParser.parse("(column-set " + Expression2.stringValue(mentionStrings.get(i)) + ")"));
+          mentionExpressions.add(expParser.parse("(column-id " + Expression2.stringValue(mentionStrings.get(i)) + ")"));
         } else if (mentionTypes.get(i).equals(WikiTableMentionAnnotation.VALUE)) {
           mentionExpressions.add(expParser.parse("(cellvalue-set " + Expression2.stringValue(mentionStrings.get(i)) + ")"));
         }
@@ -131,17 +131,16 @@ public class EnumerateLogicalForms extends AbstractCli {
   private static LogicalFormEnumerator getLogicalFormEnumerator(ExpressionSimplifier simplifier, 
       TypeDeclaration types, ExpressionExecutor executor) {
     String[][] unaryRules = new String[][] {
-        {"c", "(lambda ($0) (first-row $0))"},
-        {"c", "(lambda ($0) (last-row $0))"},
-        {"c", "(lambda ($0) (set-size $0))"},
-        {"c", "(lambda ($0) (next-row $0))"},
-        {"c", "(lambda ($0) (prev-row $0))"},
-        {"c", "(lambda ($0) (samevalue $0))"},
+        {"e", "(lambda ($0) (set-size $0))"},
+        {"r", "(lambda ($0) (next-row $0))"},
+        {"r", "(lambda ($0) (prev-row $0))"},
     };
 
     String[][] binaryRules = new String[][] {
-        {"c", "c", "(lambda ($L $R) (intersect $L (samerow-set $R)))"},
-        // {"c", "c", "(lambda ($L $R) (union $L $R))"},
+        {"c", "e", "(lambda ($L $R) (entities-to-rows $L $R))"},
+        {"c", "r", "(lambda ($L $R) (rows-to-entities $L $R))"},
+        // {"e", "e", "(lambda ($L $R) (intersect $L (samerow-set $R)))"},
+        // {"e", "e", "(lambda ($L $R) (union $L $R))"},
         {"i", "i", "(lambda ($L $R) (- $L $R))"},
     };
 

@@ -24,10 +24,20 @@
     (define first-row (values) (make-set (set-min get-row values)))
     (define last-row (values) (make-set (set-max get-row values)))
 
-    (define next-row (values) (set-map (lambda (x) (get-cell (+ (get-row x) 1) (get-col x))) values))
-    (define prev-row (values) (set-map (lambda (x) (get-cell (- (get-row x) 1) (get-col x))) values))
+;    (define next-row (values) (set-map (lambda (x) (get-cell (+ (get-row x) 1) (get-col x))) values))
+;    (define prev-row (values) (set-map (lambda (x) (get-cell (- (get-row x) 1) (get-col x))) values))
+
+    (define next-row (rows) (set-map (lambda (x) (+ x 1)) rows))
+    (define prev-row (rows) (set-map (lambda (x) (- x 1)) rows))
 
     (define samevalue (values) (set-filter (lambda (y) (not (set-contains? values y))) (set-union (set-map (lambda (x) (cellvalue-set (get-value table x))) values))))
+
+
+    (define column-id (colname) (get-table-col table colname))
+    (define column-to-entities (col-id) (set-filter (lambda (x) (= (get-col x) col-id)) cells))
+    (define entities-to-rows (col-id entities) (set-map get-row
+					    (set-filter (lambda (x) (= (get-col x) col-id)) entities)))
+    (define rows-to-entities (col-id rows) (set-map (lambda (x) (get-cell x col-id)) rows))
 
     (eval query)
     )

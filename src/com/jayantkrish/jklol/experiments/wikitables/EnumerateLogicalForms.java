@@ -17,9 +17,11 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.enumeratelf.DenotationRuleFilter;
 import com.jayantkrish.jklol.ccg.enumeratelf.EnumerationRuleFilter;
 import com.jayantkrish.jklol.ccg.enumeratelf.LogicalFormEnumerator;
+import com.jayantkrish.jklol.ccg.enumeratelf.LogicalFormEnumerator.CellKey;
 import com.jayantkrish.jklol.ccg.enumeratelf.LogicalFormEnumerator.Chart;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda.RegexTypeDeclaration;
+import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionExecutor;
@@ -75,7 +77,8 @@ public class EnumerateLogicalForms extends AbstractCli {
     ExpressionParser<Expression2> expParser = ExpressionParser.expression2();
     for (WikiTableExample example : examples) {
       if (numSoFar % 100 == 0) {
-        System.out.println("Statistics so far: " + numCorrect + "/" + numSoFar);
+        double pct = ((double) numCorrect) / numSoFar;
+        System.out.println("Statistics so far: " + numCorrect + "/" + numSoFar + " (" + pct + ")");
       }
       numSoFar++;
       
@@ -103,24 +106,12 @@ public class EnumerateLogicalForms extends AbstractCli {
       Chart chart = enumerator.enumerateDp(mentionExpressions, example.getTableId(), 5);
       Expression2 answerExpression = WikiTablesUtil.getAnswerExpression(example);
       Object answer = executor.evaluate(answerExpression.getSubexpressions().get(2));
-      Predicate<Object> answerPredicate = new AnswerPredicate(executor, example.getTableId(), answer); 
+      Predicate<CellKey> answerPredicate = new AnswerPredicate(executor, example.getTableId(), answer); 
       Set<Expression2> enumerated = chart.getLogicalFormsFromPredicate(answerPredicate, addedFilters);
 
-      boolean anyCorrect = false;
       for (Expression2 e : enumerated) {
         Optional<Object> value = executor.evaluateSilent(e, example.getTableId());
-        boolean correct = answerPredicate.apply(value.get());
-        anyCorrect = anyCorrect || correct;
-
-        if (options.has(verbose) || correct) {
-          String correctString = "  ";
-          if (correct) {
-            correctString = "* ";
-          }
-          System.out.println("  " + correctString + e + " " + value.get());
-        }
-      }
-      if (anyCorrect) {
+        System.out.println("  * " + e + " " + value.get());
         numCorrect++;
       }
       
@@ -152,22 +143,25 @@ public class EnumerateLogicalForms extends AbstractCli {
     new EnumerateLogicalForms().run(args);
   }
   
-  private static class AnswerPredicate implements Predicate<Object> {
+  private static class AnswerPredicate implements Predicate<CellKey> {
     private final ExpressionExecutor executor;
     private final String tableId;
     private final Object answer;
     
     public AnswerPredicate(ExpressionExecutor executor, String tableId, Object answer) {
-      super();
       this.executor = executor;
       this.tableId = tableId;
       this.answer = answer;
     }
 
     @Override
-    public boolean apply(Object o) {
+    public boolean apply(CellKey o) {
+      if (!(o.type.equals(Type.parseFrom("e")) || o.type.equals(Type.parseFrom("i")))) {
+        return false;
+      }
+
       Optional<Object> denotationOption = executor.applySilent(
-          Expression2.constant("get-values"), tableId, Arrays.asList(o));
+          Expression2.constant("get-values"), tableId, Arrays.asList(o.denotation));
 
       if (!denotationOption.isPresent()) {
         return false;

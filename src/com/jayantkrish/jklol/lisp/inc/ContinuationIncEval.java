@@ -7,7 +7,6 @@ import java.util.List;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.jayantkrish.jklol.ccg.HeadedSyntacticCategory;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.CpsTransform;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -77,7 +76,7 @@ public class ContinuationIncEval extends AbstractIncEval {
    * 
    * @return
    */
-  public Environment getEnv() {
+  public Environment getInitialEnvironment() {
     return env;
   }
   

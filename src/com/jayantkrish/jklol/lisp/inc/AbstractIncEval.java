@@ -6,6 +6,7 @@ import java.util.List;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.training.NullLogFunction;
 import com.jayantkrish.jklol.util.KbestQueue;
@@ -18,6 +19,16 @@ import com.jayantkrish.jklol.util.KbestQueue;
  */
 public abstract class AbstractIncEval implements IncEval {
   
+  /**
+   * Gets the feature vector used to initialize search states.
+   * 
+   * @param initialDiagram
+   * @return
+   */
+  protected Tensor getInitialFeatureVector(Object initialDiagram) {
+    return null;
+  }
+
   @Override
   public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue) {
     evaluateContinuation(state, resultQueue, new NullLogFunction());
@@ -50,11 +61,17 @@ public abstract class AbstractIncEval implements IncEval {
     return evaluateBeam(lf, initialDiagram, null, initialEnv,
         new NullLogFunction(), beamSize);
   }
+  
+  @Override
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      IncEvalCost cost, Environment startEnv, LogFunction log, int beamSize) {
+    return evaluateBeam(lf, initialDiagram, cost, startEnv, log, null, beamSize);
+  }
 
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
-      IncEvalCost cost, Environment startEnv,
-      LogFunction log, int beamSize) {
+      IncEvalCost cost, Environment startEnv, LogFunction log, IncEvalSearchLog searchLog,
+      int beamSize) {
     // Working heap for queuing parses to process next.
     KbestQueue<IncEvalState> heap = new KbestQueue<IncEvalState>(beamSize,
         new IncEvalState[0]);
@@ -75,9 +92,11 @@ public abstract class AbstractIncEval implements IncEval {
     // be evaluated by this class. If this is the case, this method
     // will return the initialState as the only result.
     Object continuation = lfToContinuation(lf, startEnv);
+    Tensor featureVector = getInitialFeatureVector(initialDiagram);
     IncEvalState initialState = new IncEvalState(continuation, startEnv, null,
-        initialDiagram, 1.0, null);
-    offer(heap, initialState, cost);
+        initialDiagram, 1.0, featureVector);
+
+    offer(heap, null, initialState, cost, searchLog);
 
     while (heap.size() > 0) {
       // Copy the heap to the current beam.
@@ -100,11 +119,11 @@ public abstract class AbstractIncEval implements IncEval {
           log.stopTimer("evaluate_continuation");
           
           for (IncEvalState next : resultQueue) {
-            offer(heap, next, cost);
+            offer(heap, state, next, cost, searchLog);
           }
         } else {
           // Evaluation is finished.
-          offer(finishedHeap, state, cost);
+          offer(finishedHeap, null, state, cost, null);
         }
       }
     }
@@ -117,14 +136,21 @@ public abstract class AbstractIncEval implements IncEval {
     return finalStates;
   }
 
-  private static void offer(KbestQueue<IncEvalState> heap, IncEvalState state,
-      IncEvalCost cost) {
+  private static void offer(KbestQueue<IncEvalState> heap, IncEvalState current,
+      IncEvalState next, IncEvalCost cost, IncEvalSearchLog searchLog) {
     if (cost == null) {
-      heap.offer(state, state.getProb());
+      heap.offer(next, next.getProb());
+      if (searchLog != null) {
+        searchLog.log(current, next, 0.0);
+      }
     } else {
-      double costValue = cost.apply(state);
+      double costValue = cost.apply(next);
       if (costValue != Double.NEGATIVE_INFINITY) {
-        heap.offer(state, state.getProb() * Math.exp(costValue));
+        heap.offer(next, next.getProb() * Math.exp(costValue));
+      }
+
+      if (searchLog != null) {
+        searchLog.log(current, next, costValue);
       }
     }
   }

@@ -49,3 +49,76 @@ who was the opponent in the first game of the season? [Derby County] csv/204-csv
 
 how many people stayed at least 3 years in office? [4] csv/203-csv/705.csv
 (count (> (derived-property "years") 3)
+
+== type system ==
+
+entity: e
+set of entities: s(e)
+row: r
+set of rows: s(r)
+col: c
+set of cols: s(c)
+i: integer
+
+== operations ==)
+
+Set monad: (restricted monad to types that are comparable for equality, in our case all of them)
+return: A -> s[A]
+bind: A->s[B] s[A] -> s[B]
+argmax/min: s[A] (A->i) -> A  (or error)
+the: s[A] -> A  (or error)
+count: s[A] -> i
+max/min/sum/avg: s[i] -> i
+intersection/union: s[A] s[A] -> s[A]
+
+Maps: (technically multimaps)
+identity: s[A] -> t[A,A]
+apply: B->C t[A,B] -> t[A,C]
+intersect-values: s[B] t[A,B] -> t[A,B]  (could be done with partial application of binary operations)
+argmax/min: t[A,i] -> A
+
+Table operations:
+e2r : c, e -> r  (entity to row, via a column c)
+r2e : c, r -> e  (row to entity, via a column c)
+entities-with-value: string -> s[e]
+next/prev-row: r -> s[r]  (row may not exist, hence s[])
+row-index: r -> i
+
+
+(lift1 (e2r column))
+
+(rows-to-entities (column "Year") (argmax (entities-to-rows (column "League") (cells-with-value "a-league")) row-index))
+
+(argmax (entities-to-rows (column "League") (cells-with-value "a-league")) (rows-to-entities (column "Year")))
+
+
+maps:
+to-map: s[X] -> s[(X,X)]
+map-apply: X->Y s[(X,X)] -> s[(X,Y)]
+
+State whose smallest city has the largest population
+
+state -> to-map -> (state, state) -> loc -> (state, loc.state) -> to-map
+-> (state, (loc.state, loc.state)) -> population -> (state, (loc.state, population.loc.state))
+-> argmin -> (state, (argmin loc.state, population.loc.state)) -> argmax 
+
+1. state -- table of states
+2. (state, state) -- identity map on states
+   Representation for LF: (state, \lambda x.x)
+3. (state, loc.state) -- map from states to the set of cities contained in them
+   Representation for LF: (state, \lambda x. loc.x)
+4. (state, (loc.state, loc.state)) -- map from each state to an identity map on the cities in that state
+   Representation for LF: (state, \lambda x. (loc.x, \lambda y.y))
+5. (state, (loc.state, population.loc.state)) -- map from each state s to a map m(s). m(s) maps the
+   cities in s to their populations
+   Representation for LF: (state, \lambda x. (loc.x, \lambda y. population.y))
+6. (state, (argmin loc.state, population.loc.state)) -- map from each state to its minimum population city
+   Representation for LF: (state, \lambda x. (argmin loc.x, \lambda y. population.y))
+   Type is (state, city)
+7. (state, population.(argmin loc.state, population.loc.state))
+8. arg
+
+Biggest city in the smallest state
+city -> to-map -> (city, city) -> loc -> (city, loc.city) -> to-map 
+-> (city, (loc.city, loc.city)) -> population -> (city, (loc.city, pop.loc.city))
+-> argmin -> (city, (argmin loc.city pop.loc.city))

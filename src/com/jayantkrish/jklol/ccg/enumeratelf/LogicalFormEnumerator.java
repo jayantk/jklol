@@ -11,7 +11,6 @@ import java.util.Set;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -49,7 +48,7 @@ public class LogicalFormEnumerator {
     this.binaryRules = ImmutableList.copyOf(binaryRules);
     this.simplifier = Preconditions.checkNotNull(simplifier);
     this.typeDeclaration = Preconditions.checkNotNull(typeDeclaration);
-    this.executor = Preconditions.checkNotNull(executor);
+    this.executor = executor;
   }
 
   public static LogicalFormEnumerator fromRuleStrings(String[][] unaryRules,
@@ -102,9 +101,14 @@ public class LogicalFormEnumerator {
       Type type = StaticAnalysis.inferType(startNode, typeDeclaration);
       int[] mentionCounts = new int[startNodes.size()];
       mentionCounts[i] = 1;
-      Optional<Object> denotation = executor.evaluateSilent(startNode, context);
-      if (denotation.isPresent()) {
-        queue.add(new LfNode(startNode, type, mentionCounts, denotation.get()));
+      
+      if (executor != null) {
+        Optional<Object> denotation = executor.evaluateSilent(startNode, context);
+        if (denotation.isPresent()) {
+          queue.add(new LfNode(startNode, type, mentionCounts, denotation.get()));
+        }
+      } else {
+        queue.add(new LfNode(startNode, type, mentionCounts, null));
       }
     }
 
@@ -164,7 +168,11 @@ public class LogicalFormEnumerator {
     Expression2 ruleLf = rule.getLogicalForm();
     Expression2 result = simplifier.apply(Expression2.nested(ruleLf, node.getLf()));
     Type resultType = StaticAnalysis.inferType(result, typeDeclaration);
-    Object denotation = executor.apply(ruleLf, context, Lists.newArrayList(node.getDenotation()));
+    
+    Object denotation = null;
+    if (executor != null) {
+      denotation = executor.apply(ruleLf, context, Lists.newArrayList(node.getDenotation()));
+    }
     return new LfNode(result, resultType, node.getMentionCounts(), denotation);
   }
 
@@ -173,8 +181,12 @@ public class LogicalFormEnumerator {
     Expression2 ruleLf = rule.getLogicalForm();
     Expression2 result = simplifier.apply(Expression2.nested(ruleLf, arg1.getLf(), arg2.getLf()));
     Type resultType = StaticAnalysis.inferType(result, typeDeclaration);
-    Object denotation = executor.apply(ruleLf, context,
-        Lists.newArrayList(arg1.getDenotation(), arg2.getDenotation()));
+    
+    Object denotation = null;
+    if (executor != null) {
+      denotation = executor.apply(ruleLf, context,
+          Lists.newArrayList(arg1.getDenotation(), arg2.getDenotation()));
+    }
 
     int[] mentionCounts = new int[arg1.getMentionCounts().length];
     for (int i = 0; i < mentionCounts.length; i++) {
@@ -253,10 +265,10 @@ public class LogicalFormEnumerator {
     return chart;
   }
   
-  private static class CellKey {
-    private final Type type;
-    private final int size;
-    private final Object denotation;
+  public static class CellKey {
+    public final Type type;
+    public final int size;
+    public final Object denotation;
 
     public CellKey(Type type, int size, Object denotation) {
       this.type = type;
@@ -358,10 +370,15 @@ public class LogicalFormEnumerator {
 
     public Set<Expression2> getLogicalFormsFromDenotation(Object denotation,
         List<EnumerationRuleFilter> filters) {
-      return getLogicalFormsFromPredicate(Predicates.equalTo(denotation), filters);
+      return getLogicalFormsFromPredicate(new Predicate<CellKey>() {
+        @Override
+        public boolean apply(CellKey cell) {
+          return cell.denotation.equals(denotation);
+        }
+      }, filters);
     }
 
-    public Set<Expression2> getLogicalFormsFromPredicate(Predicate<Object> predicate,
+    public Set<Expression2> getLogicalFormsFromPredicate(Predicate<CellKey> predicate,
         List<EnumerationRuleFilter> filters) {
       // Identify cells whose expressions need to be computed.
       // Expressions of cells containing the denotation need to
@@ -369,7 +386,7 @@ public class LogicalFormEnumerator {
       Queue<Integer> queue = new LinkedList<Integer>();
       Set<Integer> denotationCellInds = Sets.newHashSet();
       for (CellKey cell : cells) {
-        if (predicate.apply(cell.denotation)) {
+        if (predicate.apply(cell)) {
           int cellIndex = cells.getIndex(cell);
           queue.add(cellIndex);
           denotationCellInds.add(cellIndex);

@@ -84,6 +84,9 @@ public interface IncEval {
       IncEvalCost cost, LogFunction log, int beamSize);
 
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      IncEvalCost cost, Environment initialEnv, LogFunction log, int beamSize);
+  
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       IncEvalCost cost, Environment initialEnv, LogFunction log,
-      int beamSize);
+      IncEvalSearchLog searchLog, int beamSize);
 }

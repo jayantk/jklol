@@ -103,6 +103,7 @@ public class AmbEval {
         // Variable name
         // context.getLog().startTimer("amb_eval/environment_get_value");
         Object value = environment.getValue(expression.getConstantIndex(), symbolTable);
+
         // context.getLog().stopTimer("amb_eval/environment_get_value");
         return new EvalResult(value);
       }

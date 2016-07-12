@@ -50,6 +50,6 @@ public class IncEvalState {
 
   @Override
   public String toString() {
-    return continuation + " " + denotation + " " + diagram + " " + prob;
+    return "[IncEvalState " + continuation + " " + denotation + " " + diagram + " " + prob + "]";
   }
 }

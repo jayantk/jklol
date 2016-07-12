@@ -3,6 +3,7 @@ package com.jayantkrish.jklol.lisp.inc;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
@@ -72,6 +73,8 @@ public abstract class AbstractIncEval implements IncEval {
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       IncEvalCost cost, Environment startEnv, LogFunction log, IncEvalSearchLog searchLog,
       int beamSize) {
+    Preconditions.checkArgument(initialDiagram != null);
+
     // Working heap for queuing parses to process next.
     KbestQueue<IncEvalState> heap = new KbestQueue<IncEvalState>(beamSize,
         new IncEvalState[0]);

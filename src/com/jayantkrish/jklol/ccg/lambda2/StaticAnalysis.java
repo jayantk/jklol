@@ -183,13 +183,18 @@ public class StaticAnalysis {
   public static List<String> getLambdaArguments(Expression2 expression, int index) {
     Preconditions.checkArgument(isLambda(expression, index));
 
-    // index + 2 is the nested expression containing argument names.
-    int[] children = expression.getChildIndexes(index + 2);
+    int[] children = getLambdaArgumentIndexes(expression, index);
     List<String> args = Lists.newArrayList();
     for (int i = 0; i < children.length; i++) {
       args.add(expression.getSubexpression(children[i]).getConstant());
     }
     return args;
+  }
+  
+  public static int[] getLambdaArgumentIndexes(Expression2 expression, int index) {
+    Preconditions.checkArgument(isLambda(expression, index));
+    // index + 2 is the nested expression containing argument names.
+    return expression.getChildIndexes(index + 2);
   }
 
   public static Expression2 getLambdaBody(Expression2 expression) {
@@ -197,8 +202,13 @@ public class StaticAnalysis {
   }
 
   public static Expression2 getLambdaBody(Expression2 expression, int index) {
+    return expression.getSubexpression(getLambdaBodyIndex(expression, index));
+  }
+  
+  public static int getLambdaBodyIndex(Expression2 expression, int index) {
+    Preconditions.checkArgument(isLambda(expression, index));
     int[] children = expression.getChildIndexes(index);
-    return expression.getSubexpression(children[children.length - 1]);
+    return children[children.length - 1];
   }
   
   public static boolean isPartOfSpecialForm(Expression2 expression, Scope scope, int index) {

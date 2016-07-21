@@ -3,7 +3,7 @@
 
 
 (define exists:<<e,t>,t> (continuation f-c)
-n  (lambda (world)
+  (lambda (world)
     ((filter-c (lambda (x) (continuation (not (nil? x)))) f-c (get-entities world)) world)))
 
 (define get-denotation (continuation f-c expr)

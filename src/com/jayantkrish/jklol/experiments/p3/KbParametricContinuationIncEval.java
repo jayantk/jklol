@@ -148,6 +148,12 @@ public class KbParametricContinuationIncEval implements ParametricIncEval {
       for (int i = 0; i < predicates.size(); i++) {
         int index = predicateNames.getIndex(predicates.get(i));
         Tensor classifier = classifiers.get(index);
+
+        /*
+        System.out.println(predicates.get(i));
+        System.out.println(Arrays.toString(classifier.getDimensionSizes()));
+        System.out.println(Arrays.toString(predicateFeatures.get(i).getDimensionSizes()));
+        */
         
         Tensor featureVector = predicateFeatures.get(i).relabelDimensions(
             classifier.getDimensionNumbers());

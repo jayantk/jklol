@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.experiments.p3;
 
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Preconditions;
@@ -43,7 +44,7 @@ public class P3Functions {
     public Object apply2(List<Object> argumentValues, EvalContext context) {
       Preconditions.checkArgument(argumentValues.size() == 1);
       KbState state = (KbState) argumentValues.get(0);
-      return ConsValue.listToConsList(state.getEnvironment().getEntities().items());
+      return ConsValue.listToConsList(state.getTypeVar(P3Utils.ENTITY_TYPE_NAME).getValues());
     }
   }
   
@@ -58,13 +59,14 @@ public class P3Functions {
       String predicate = (String) argumentValues.get(1);
       Object entity = argumentValues.get(2);
       
+      
       if (entity instanceof ConsValue) {
         Object arg1 = ((ConsValue) entity).getCar();
         Object arg2 = ((ConsValue) entity).getCdr();
-        
-        return state.getRelationValue(predicate, arg1, arg2);
+
+        return state.getFunctionValue(predicate, Arrays.asList(arg1, arg2));
       } else {
-        return state.getCategoryValue(predicate, entity);
+        return state.getFunctionValue(predicate, Arrays.asList(entity));
       }
     }
   }
@@ -85,9 +87,9 @@ public class P3Functions {
         Object arg1 = ((ConsValue) entity).getCar();
         Object arg2 = ((ConsValue) entity).getCdr();
 
-        return state.setRelationValue(predicate, arg1, arg2, value);
+        return state.putFunctionValue(predicate, Arrays.asList(arg1, arg2), value);
       } else {
-        return state.setCategoryValue(predicate, entity, value);
+        return state.putFunctionValue(predicate, Arrays.asList(entity), value);
       }
     }
   }

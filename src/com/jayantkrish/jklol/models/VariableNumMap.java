@@ -831,6 +831,11 @@ public class VariableNumMap implements Serializable {
     return value;
   }
 
+  public int[] outcomeToIntArray(List<Object> outcome) {
+    // TODO: more efficient implementation.
+    return assignmentToIntArray(outcomeToAssignment(outcome));
+  }
+
   /**
    * Converts the passed {@code int[]} of variable value indices into
    * an {@code Assignment} by mapping it through the

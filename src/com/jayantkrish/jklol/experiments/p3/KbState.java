@@ -1,166 +1,63 @@
 package com.jayantkrish.jklol.experiments.p3;
 
-import java.util.Arrays;
+import java.util.List;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.lisp.ConstantValue;
+import com.jayantkrish.jklol.models.DiscreteVariable;
+import com.jayantkrish.jklol.p3.FunctionAssignment;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class KbState {
-  private final KbEnvironment env;
   
-  private final IndexedList<String> categoryNames;
-  private final IndexedList<String> relationNames;
-  
-  private final int[][] categories;
-  private final int[][] relations;
-  
-  public static final int UNASSIGNED_INT = 0;
-  public static final int TRUE_INT = 1;
-  public static final int FALSE_INT = 2;
+  private final IndexedList<String> typeNames;
+  private final List<DiscreteVariable> typeVars;
 
-  private KbState(KbEnvironment env, IndexedList<String> categoryNames,
-      IndexedList<String> relationNames, int[][] categories, int[][] relations) {
-    this.env = Preconditions.checkNotNull(env);
-    
-    this.categoryNames = Preconditions.checkNotNull(categoryNames);
-    this.relationNames = Preconditions.checkNotNull(relationNames);
+  private final IndexedList<String> functionNames;
+  private final List<FunctionAssignment> functionAssignments;
 
-    Preconditions.checkState(categories.length == categoryNames.size());
-    Preconditions.checkState(relations.length == relationNames.size());
-    this.categories = categories;
-    this.relations = relations;
-  }
-  
-  public static KbState unassigned(KbEnvironment env, IndexedList<String> categoryNames,
-      IndexedList<String> relationNames) {
-    int[][] categories = new int[categoryNames.size()][];
-    int[][] relations = new int[relationNames.size()][];
-    return new KbState(env, categoryNames, relationNames, categories, relations);
+  public KbState(IndexedList<String> typeNames, List<DiscreteVariable> typeVars,
+      IndexedList<String> functionNames, List<FunctionAssignment> functionAssignments) {
+    this.typeNames = Preconditions.checkNotNull(typeNames);
+    this.typeVars = Preconditions.checkNotNull(typeVars);
+    this.functionNames = Preconditions.checkNotNull(functionNames);
+    this.functionAssignments = Preconditions.checkNotNull(functionAssignments);
+    Preconditions.checkArgument(functionNames.size() == functionAssignments.size());
   }
 
-  public KbEnvironment getEnvironment() {
-    return env;
-  }
-
-  public Object getCategoryValue(String predicate, Object entity) {
-    int index = categoryNames.getIndex(predicate);
-    if (categories[index] == null) {
+  public Object getFunctionValue(String functionName, List<Object> args) {
+    int index = functionNames.getIndex(functionName);
+    if (functionAssignments.get(index) == null) {
+      // TODO: figure out how to handle the unassigned case more generally.
       return ConstantValue.NIL;
-    }
-    int entityIndex = env.getEntities().getIndex(entity);
-    
-    int val = categories[index][entityIndex];
-    
-    switch (val) {
-    case UNASSIGNED_INT:
-      return ConstantValue.NIL;
-    case TRUE_INT:
-      return ConstantValue.TRUE;
-    case FALSE_INT:
-      return ConstantValue.FALSE;
-    }
-    
-    throw new IllegalStateException("Assignment had an illegal value"
-        + Arrays.toString(categories[index]));
-  }
-  
-  public Object getRelationValue(String predicate, Object entity1, Object entity2) {
-    int index = relationNames.getIndex(predicate);
-    if (relations[index] == null) {
-      return ConstantValue.NIL;
-    }
-    
-    int val = relations[index][getEntityPairIndex(entity1, entity2)];
-    
-    switch (val) {
-    case UNASSIGNED_INT:
-      return ConstantValue.NIL;
-    case TRUE_INT:
-      return ConstantValue.TRUE;
-    case FALSE_INT:
-      return ConstantValue.FALSE;
-    }
-    
-    throw new IllegalStateException("Assignment had an illegal value"
-        + Arrays.toString(relations[index]));
-  }
-
-  public KbState setCategoryValue(String predicate, Object entity, Object value) {
-    Preconditions.checkState(ConstantValue.isBooleanConstant(value), "Illegal value: %s", value);
-    
-    int[][] newCategories = new int[categories.length][];
-    for (int i = 0; i < categories.length; i++) {
-      newCategories[i] = categories[i];
-    }
-
-    int predicateIndex = categoryNames.getIndex(predicate);
-    int[] predicateAssignment = newCategories[predicateIndex];
-    if (predicateAssignment == null) {
-      predicateAssignment = new int[env.getEntities().size()];
     } else {
-      predicateAssignment = Arrays.copyOf(predicateAssignment, predicateAssignment.length);
+      return functionAssignments.get(index).getValue(args);
     }
+  }
 
-    int entityIndex = env.getEntities().getIndex(entity);
-    int valueInt = -1;
-    if (value.equals(ConstantValue.TRUE)) {
-      valueInt = TRUE_INT;
-    } else {
-      valueInt = FALSE_INT;
-    }
-
-    predicateAssignment[entityIndex] = valueInt;
-    newCategories[predicateIndex] = predicateAssignment;
+  public KbState putFunctionValue(String functionName, List<Object> args, Object value) {
+    int index = functionNames.getIndex(functionName);
     
-    return new KbState(env, categoryNames, relationNames, newCategories, relations);
-  }
-  
-  public KbState setRelationValue(String predicate, Object entity1, Object entity2,
-      Object value) {
-    Preconditions.checkState(ConstantValue.isBooleanConstant(value), "Illegal value: %s", value);
+    FunctionAssignment current = functionAssignments.get(index);
+    FunctionAssignment next = current.putValue(args, value);
     
-    int[][] newRelations = new int[relations.length][];
-    for (int i = 0; i < relations.length; i++) {
-      newRelations[i] = relations[i];
-    }
-
-    int predicateIndex = relationNames.getIndex(predicate);
-    int[] predicateAssignment = newRelations[predicateIndex];
-    if (predicateAssignment == null) {
-      predicateAssignment = new int[env.getEntities().size() * env.getEntities().size()];
-    } else {
-      predicateAssignment = Arrays.copyOf(predicateAssignment, predicateAssignment.length);
-    }
-
-    int entityIndex = getEntityPairIndex(entity1, entity2);
-    int valueInt = -1;
-    if (value.equals(ConstantValue.TRUE)) {
-      valueInt = TRUE_INT;
-    } else {
-      valueInt = FALSE_INT;
-    }
-
-    predicateAssignment[entityIndex] = valueInt;
-    newRelations[predicateIndex] = predicateAssignment;
+    List<FunctionAssignment> nextAssignment = Lists.newArrayList(functionAssignments);
+    nextAssignment.set(index, next);
     
-    return new KbState(env, categoryNames, relationNames, categories, newRelations);
+    return new KbState(typeNames, typeVars, functionNames, nextAssignment);
+  }
+
+  public IndexedList<String> getFunctions() {
+    return functionNames;
   }
   
-  public IndexedList<String> getCategories() {
-    return categoryNames;
+  public List<FunctionAssignment> getAssignments() {
+    return functionAssignments;
   }
-  
-  public int[][] getCategoryAssignment() {
-    return categories;
-  }
-  
-  public IndexedList<String> getRelations() {
-    return relationNames;
-  }
-  
-  public int[][] getRelationAssignment() {
-    return relations;
+
+  public DiscreteVariable getTypeVar(String typeName) {
+    return typeVars.get(typeNames.getIndex(typeName));
   }
 
   /**
@@ -173,48 +70,25 @@ public class KbState {
    * @return
    */
   public boolean isConsistentWith(KbState other) {
-    // Both states need to have the same categories and relation
-    // names in the same order.
-    Preconditions.checkArgument(other.categories.length == categories.length);
-    Preconditions.checkArgument(other.relations.length == relations.length);
+    // Both states need to have the same functions in the same order.
+    // Don't check the names specifically though, because it's expensive.
+    Preconditions.checkArgument(other.functionNames.size() == functionNames.size());
     
-    int[][] otherCategories = other.categories;
-    for (int i = 0; i < categories.length; i++) {
-      int[] c1 = categories[i];
-      int[] c2 = otherCategories[i];
-      if (c1 != null && c2 != null) {
-        for (int j = 0; j < c1.length; j++) {
-          if (c1[j] != c2[j] && c1[j] != UNASSIGNED_INT && c2[j] != UNASSIGNED_INT) {
-            return false;
-          }
+    List<FunctionAssignment> otherAssignments = other.getAssignments();
+    for (int i = 0; i < functionAssignments.size(); i++) {
+      FunctionAssignment a1 = functionAssignments.get(i);
+      FunctionAssignment a2 = otherAssignments.get(i);
+      if (a1 != null && a2 != null) {
+        if (!a1.isConsistentWith(a2)) {
+          return false;
         }
       }
     }
-
-    int[][] otherRelations = other.relations;
-    for (int i = 0; i < relations.length; i++) {
-      int[] r1 = relations[i];
-      int[] r2 = otherRelations[i];
-      if (r1 != null && r2 != null) {
-        for (int j = 0; j < r1.length; j++) {
-          if (r1[j] != r2[j] && r1[j] != UNASSIGNED_INT && r2[j] != UNASSIGNED_INT) {
-            return false;
-          }
-        }
-      }
-    }
-
     return true;
   }
 
   @Override
   public String toString() {
-    return categories.toString() + " " + relations.toString();
-  }
-  
-  private final int getEntityPairIndex(Object entity1, Object entity2) {
-    int entity1Index = env.getEntities().getIndex(entity1);
-    int entity2Index = env.getEntities().getIndex(entity2);
-    return entity1Index * env.getEntities().size() + entity2Index;
+    return functionNames.toString();
   }
 }

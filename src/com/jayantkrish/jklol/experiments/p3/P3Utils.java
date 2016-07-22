@@ -35,12 +35,19 @@ import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.p3.FunctionAssignment;
+import com.jayantkrish.jklol.p3.IndexableFunctionAssignment;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
+import com.jayantkrish.jklol.tensor.SparseTensor;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 
 public class P3Utils {
+
+  public static String ENTITY_TYPE_NAME="entity";
+  public static String TRUTH_VAL_TYPE_NAME="truth";
 
   public static List<P3KbExample> readTrainingData(String path,
       DiscreteVariable categoryFeatureNames, DiscreteVariable relationFeatureNames,
@@ -79,15 +86,23 @@ public class P3Utils {
         truthVar.outcomeArrayToAssignment("T")).getWeights());
     DenseTensor relationFeatureTensor = DenseTensor.copyOf(relationFeatures.conditional(
         truthVar.outcomeArrayToAssignment("T")).getWeights());
-
-    KbEnvironment env = new KbEnvironment(id, IndexedList.create(entities),
-        categoryFeatureTensor.toMatrix(new int[] {0}, new int[] {3}),
-        relationFeatureTensor.toMatrix(new int[] {0, 1}, new int[] {3}));
-    KbState state = KbState.unassigned(env, categories, relations);
     
+    DiscreteVariable lispTruthVar = new DiscreteVariable("lispTruthVar",
+        Arrays.asList(ConstantValue.FALSE, ConstantValue.TRUE, ConstantValue.NIL));
+
+    Tensor trueIndicator = SparseTensor.singleElement(new int[] {2},
+        new int[] {lispTruthVar.numValues()}, new int[] {2}, 1.0);
+    Tensor categoryFeatureTensorLisp = categoryFeatureTensor.outerProduct(trueIndicator);
+    Tensor relationFeatureTensorLisp = relationFeatureTensor.outerProduct(trueIndicator);
+
+    KbState state = createKbState(entityVar.getDiscreteVariables().get(0),
+        lispTruthVar, categories, entityVar, categoryFeatureTensorLisp,
+        relations, entityVar1.union(entityVar2), relationFeatureTensorLisp);
+
     KbState stateLabel = null;
     if (worldFilePath != null) {
       stateLabel = state;
+      Set<String> assignedPredicates = Sets.newHashSet();
       for (String predicateString : IoUtils.readLines(path + "/" + worldFilePath)) {
         if (!predicateString.startsWith("*")) {
           continue;
@@ -98,6 +113,7 @@ public class P3Utils {
         String[] assignmentParts = predicateParts[1].split(",");
         if (predicateName.endsWith("-rel")) {
           String typedPredicateName = predicateName + ":<e,<e,t>>";
+          assignedPredicates.add(typedPredicateName);
           Multimap<String, String> relationMap = HashMultimap.create();
           for (int i = 0; i < assignmentParts.length; i++) {
             String[] entityParts = assignmentParts[i].split("#");
@@ -107,41 +123,48 @@ public class P3Utils {
           for (Object arg1 : entities) {
             for (Object arg2 : entities) {
               if (relationMap.containsEntry(arg1, arg2)) {
-                stateLabel = stateLabel.setRelationValue(typedPredicateName, arg1, arg2, ConstantValue.TRUE);
+                stateLabel = stateLabel.putFunctionValue(typedPredicateName,
+                    Arrays.asList(arg1, arg2), ConstantValue.TRUE);
               } else {
-                stateLabel = stateLabel.setRelationValue(typedPredicateName, arg1, arg2, ConstantValue.FALSE);
+                stateLabel = stateLabel.putFunctionValue(typedPredicateName,
+                    Arrays.asList(arg1, arg2), ConstantValue.FALSE);
               }
             }
           }
         } else {
           String typedPredicateName = predicateName + ":<e,t>";
+          assignedPredicates.add(typedPredicateName);
           Set<String> trueEntities = Sets.newHashSet(assignmentParts);
-          Set<Object> falseEntities = Sets.newHashSet(env.getEntities());
+          Set<Object> falseEntities = Sets.newHashSet(entities);
           falseEntities.removeAll(trueEntities);
           
           for (Object trueEntity : trueEntities) {
-            stateLabel = stateLabel.setCategoryValue(typedPredicateName, trueEntity, ConstantValue.TRUE);
+            stateLabel = stateLabel.putFunctionValue(typedPredicateName,
+                Arrays.asList(trueEntity), ConstantValue.TRUE);
           }
           
           for (Object falseEntity : falseEntities) {
-            stateLabel = stateLabel.setCategoryValue(typedPredicateName, falseEntity, ConstantValue.FALSE);
+            stateLabel = stateLabel.putFunctionValue(typedPredicateName,
+                Arrays.asList(falseEntity), ConstantValue.FALSE);
           }
         }
       }
       
       for (String category : categories) {
-        if (!stateLabel.getCategories().contains(category)) {
-          for (Object entity : env.getEntities()) {
-            stateLabel = stateLabel.setCategoryValue(category, entity, ConstantValue.FALSE);
+        if (!assignedPredicates.contains(category)) {
+          for (Object entity : entities) {
+            stateLabel = stateLabel.putFunctionValue(category, Arrays.asList(entity),
+                ConstantValue.FALSE);
           }
         }
       }
       
       for (String relation : relations) {
-        if (!stateLabel.getRelations().contains(relation)) {
-          for (Object arg1 : env.getEntities()) {
-            for (Object arg2 : env.getEntities()) {
-              stateLabel = stateLabel.setRelationValue(relation, arg1, arg2, ConstantValue.FALSE);
+        if (!assignedPredicates.contains(relation)) {
+          for (Object arg1 : entities) {
+            for (Object arg2 : entities) {
+              stateLabel = stateLabel.putFunctionValue(relation,
+                  Arrays.asList(arg1, arg2), ConstantValue.FALSE);
             }
           }
         }
@@ -176,6 +199,33 @@ public class P3Utils {
     }
 
     return examples;
+  }
+
+  public static KbState createKbState(DiscreteVariable entityVar, DiscreteVariable truthValueVar,
+      IndexedList<String> categories, VariableNumMap catVars, Tensor catFeatures,
+      IndexedList<String> relations, VariableNumMap relVars, Tensor relFeatures) {
+    IndexedList<String> functionNames = IndexedList.create();
+    List<FunctionAssignment> functionAssignments = Lists.newArrayList();
+    for (String category : categories) {
+      functionNames.add(category);
+
+      FunctionAssignment a = IndexableFunctionAssignment.unassignedDense(catVars, truthValueVar,
+          ConstantValue.NIL, catFeatures);
+      functionAssignments.add(a);
+    }
+    
+    for (String relation : relations) {
+      functionNames.add(relation);
+
+      FunctionAssignment a = IndexableFunctionAssignment.unassignedDense(relVars, truthValueVar,
+          ConstantValue.NIL, relFeatures);
+      functionAssignments.add(a);
+    }
+
+    IndexedList<String> typeNames = IndexedList.create(
+        Arrays.asList(ENTITY_TYPE_NAME, TRUTH_VAL_TYPE_NAME));
+    List<DiscreteVariable> typeVars = Arrays.asList(entityVar, truthValueVar);
+    return new KbState(typeNames, typeVars, functionNames, functionAssignments);
   }
   
   public static Environment getEnvironment(IndexedList<String> symbolTable) {

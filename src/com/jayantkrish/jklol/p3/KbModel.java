@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.experiments.p3;
+package com.jayantkrish.jklol.p3;
 
 import java.io.Serializable;
 import java.util.List;

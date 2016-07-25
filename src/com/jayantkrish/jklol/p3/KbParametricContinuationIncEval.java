@@ -1,4 +1,4 @@
-package com.jayantkrish.jklol.experiments.p3;
+package com.jayantkrish.jklol.p3;
 
 import java.util.Arrays;
 import java.util.List;
@@ -17,7 +17,6 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
-import com.jayantkrish.jklol.p3.FunctionAssignment;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.LogFunction;

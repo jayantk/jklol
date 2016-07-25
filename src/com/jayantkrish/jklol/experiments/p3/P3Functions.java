@@ -8,6 +8,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.lisp.ConsValue;
 import com.jayantkrish.jklol.lisp.EvalContext;
 import com.jayantkrish.jklol.lisp.FunctionValue;
+import com.jayantkrish.jklol.p3.KbState;
 
 public class P3Functions {
   

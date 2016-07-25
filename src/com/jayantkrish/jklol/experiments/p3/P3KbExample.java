@@ -6,6 +6,7 @@ import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
 import com.jayantkrish.jklol.lisp.inc.IncEvalState;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
+import com.jayantkrish.jklol.p3.KbState;
 import com.jayantkrish.jklol.p3.P3Example;
 
 public class P3KbExample implements P3Example {

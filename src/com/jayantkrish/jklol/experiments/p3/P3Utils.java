@@ -37,6 +37,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.p3.FunctionAssignment;
 import com.jayantkrish.jklol.p3.IndexableFunctionAssignment;
+import com.jayantkrish.jklol.p3.KbState;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;

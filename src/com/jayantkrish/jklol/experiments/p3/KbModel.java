@@ -8,33 +8,32 @@ import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class KbModel implements Serializable {
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 2L;
 
   // Classifier weights for features that factorize
   // per predicate instance. Global features may
   // be included by creating a special "predicate"
   // to contain them.
   private final IndexedList<String> predicateNames;
-  private final List<Tensor> classifiers;
+  private final List<Tensor> eltClassifiers;
+  private final List<Tensor> predClassifiers;
   
-  private final KbFeatureGenerator featureGenerator;
-  
-  public KbModel(IndexedList<String> predicateNames, List<Tensor> classifiers,
-      KbFeatureGenerator featureGenerator) {
+  public KbModel(IndexedList<String> predicateNames, List<Tensor> eltClassifiers,
+      List<Tensor> predClassifiers) {
     this.predicateNames = Preconditions.checkNotNull(predicateNames);
-    this.classifiers = Preconditions.checkNotNull(classifiers);
-    this.featureGenerator = featureGenerator;
+    this.eltClassifiers = Preconditions.checkNotNull(eltClassifiers);
+    this.predClassifiers = Preconditions.checkNotNull(predClassifiers);
   }
-  
+
   public IndexedList<String> getPredicateNames() {
     return predicateNames;
   }
-  
+
   public List<Tensor> getClassifiers() {
-    return classifiers;
+    return eltClassifiers;
   }
-  
-  public KbFeatureGenerator getFeatureGenerator() {
-    return featureGenerator;
+
+  public List<Tensor> getPredicateClassifiers() {
+    return predClassifiers;
   }
 }

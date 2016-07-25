@@ -50,6 +50,7 @@ public class P3BeamInference extends AbstractGroundedParserInference {
       Object initialDiagram, ChartCost chartFilter, IncEvalCost cost,
       LogFunction log) {
 
+    log.startTimer("p3_beam/ccg_parse");
     List<CcgParse> ccgParses = ccgInference.beamSearch(parser.getCcgParser(),
         sentence, chartFilter, log);
     double parsePartitionFunction = 1.0;
@@ -59,17 +60,21 @@ public class P3BeamInference extends AbstractGroundedParserInference {
         parsePartitionFunction += p.getSubtreeProbability();
       }
     }
+    log.stopTimer("p3_beam/ccg_parse");
 
     IncEval eval = parser.getEval();
     
+    log.startTimer("p3_beam/aggregate_lf");
     Multimap<Expression2, CcgParse> lfMap = HashMultimap.create();
     CountAccumulator<Expression2> lfProbs = CountAccumulator.create();
     aggregateParsesByLogicalForm(ccgParses, lfMap, lfProbs, simplifier);
     
     List<Expression2> sortedLfs = lfProbs.getSortedKeys();
+    log.stopTimer("p3_beam/aggregate_lf");
 
     int numEvaluated = 0;
     List<P3Parse> parses = Lists.newArrayList();
+    log.startTimer("p3_beam/eval");
     for (Expression2 lf : sortedLfs) {
       if (numEvaluated == numLogicalForms) {
         break;
@@ -107,8 +112,11 @@ public class P3BeamInference extends AbstractGroundedParserInference {
         }
       }
     }
+    log.stopTimer("p3_beam/eval");
     
+    log.startTimer("p3_beam/sort");
     parses.sort(parseOrdering.reverse());
+    log.stopTimer("p3_beam/sort");
     return parses;
   }
   

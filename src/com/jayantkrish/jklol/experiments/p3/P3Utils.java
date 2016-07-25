@@ -37,6 +37,7 @@ import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.nlpannotation.AnnotatedSentence;
 import com.jayantkrish.jklol.p3.FunctionAssignment;
 import com.jayantkrish.jklol.p3.IndexableFunctionAssignment;
+import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
 import com.jayantkrish.jklol.tensor.SparseTensor;
@@ -51,6 +52,9 @@ public class P3Utils {
 
   public static List<P3KbExample> readTrainingData(String path,
       DiscreteVariable categoryFeatureNames, DiscreteVariable relationFeatureNames,
+      FeatureVectorGenerator<FunctionAssignment> catPredicateFeatureGen,
+      FeatureVectorGenerator<FunctionAssignment> relPredicateFeatureGen,
+      DiscreteVariable lispTruthVar, 
       String categoryFilePath, String relationFilePath, String trainingFilePath,
       String worldFilePath, IndexedList<String> categories, IndexedList<String> relations) {
     DiscreteFactor categoryFeatures = TableFactor.fromDelimitedFile(
@@ -87,17 +91,15 @@ public class P3Utils {
     DenseTensor relationFeatureTensor = DenseTensor.copyOf(relationFeatures.conditional(
         truthVar.outcomeArrayToAssignment("T")).getWeights());
     
-    DiscreteVariable lispTruthVar = new DiscreteVariable("lispTruthVar",
-        Arrays.asList(ConstantValue.FALSE, ConstantValue.TRUE, ConstantValue.NIL));
-
     Tensor trueIndicator = SparseTensor.singleElement(new int[] {2},
-        new int[] {lispTruthVar.numValues()}, new int[] {2}, 1.0);
+        new int[] {lispTruthVar.numValues()}, new int[] {lispTruthVar.getValueIndex(ConstantValue.TRUE)}, 1.0);
+    
     Tensor categoryFeatureTensorLisp = categoryFeatureTensor.outerProduct(trueIndicator);
     Tensor relationFeatureTensorLisp = relationFeatureTensor.outerProduct(trueIndicator);
 
     KbState state = createKbState(entityVar.getDiscreteVariables().get(0),
-        lispTruthVar, categories, entityVar, categoryFeatureTensorLisp,
-        relations, entityVar1.union(entityVar2), relationFeatureTensorLisp);
+        lispTruthVar, categories, entityVar, categoryFeatureTensorLisp, catPredicateFeatureGen,
+        relations, entityVar1.union(entityVar2), relationFeatureTensorLisp, relPredicateFeatureGen);
 
     KbState stateLabel = null;
     if (worldFilePath != null) {
@@ -203,15 +205,20 @@ public class P3Utils {
 
   public static KbState createKbState(DiscreteVariable entityVar, DiscreteVariable truthValueVar,
       IndexedList<String> categories, VariableNumMap catVars, Tensor catFeatures,
-      IndexedList<String> relations, VariableNumMap relVars, Tensor relFeatures) {
+      FeatureVectorGenerator<FunctionAssignment> catPredGen,
+      IndexedList<String> relations, VariableNumMap relVars, Tensor relFeatures,
+      FeatureVectorGenerator<FunctionAssignment> relPredGen) {
     IndexedList<String> functionNames = IndexedList.create();
     List<FunctionAssignment> functionAssignments = Lists.newArrayList();
+    List<FeatureVectorGenerator<FunctionAssignment>> predicateFeatureGens = Lists.newArrayList();
+
     for (String category : categories) {
       functionNames.add(category);
 
       FunctionAssignment a = IndexableFunctionAssignment.unassignedDense(catVars, truthValueVar,
           ConstantValue.NIL, catFeatures);
       functionAssignments.add(a);
+      predicateFeatureGens.add(catPredGen);
     }
     
     for (String relation : relations) {
@@ -220,12 +227,14 @@ public class P3Utils {
       FunctionAssignment a = IndexableFunctionAssignment.unassignedDense(relVars, truthValueVar,
           ConstantValue.NIL, relFeatures);
       functionAssignments.add(a);
+      predicateFeatureGens.add(relPredGen);
     }
 
     IndexedList<String> typeNames = IndexedList.create(
         Arrays.asList(ENTITY_TYPE_NAME, TRUTH_VAL_TYPE_NAME));
     List<DiscreteVariable> typeVars = Arrays.asList(entityVar, truthValueVar);
-    return new KbState(typeNames, typeVars, functionNames, functionAssignments);
+    return new KbState(typeNames, typeVars, functionNames, functionAssignments, predicateFeatureGens,
+        Collections.nCopies(functionNames.size(), null), Sets.newHashSet());
   }
   
   public static Environment getEnvironment(IndexedList<String> symbolTable) {

@@ -6,7 +6,6 @@ import java.util.List;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.chart.ChartCost;
-import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.ccg.lambda2.ExpressionSimplifier;
 import com.jayantkrish.jklol.inference.MarginalCalculator.ZeroProbabilityError;
 import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
@@ -59,17 +58,23 @@ public class P3LoglikelihoodOracle implements
         model, sentence, diagram, chartFilter, labelCost, log);
     
     List<P3Parse> conditionalParses = Lists.newArrayList();
+    log.startTimer("update_gradient/output_marginal/filter");
     for (P3Parse parse : conditionalParsesInit) {
-      Expression2 lf = parse.getLogicalForm();
-      if (lf != null) {
-        lf = simplifier.apply(lf);
-      }
-
-      if (example.isCorrect(lf, parse.getDenotation(), parse.getDiagram())) {
+      if (example.isCorrect(parse.getLogicalForm(), parse.getDenotation(), parse.getDiagram())) {
         conditionalParses.add(parse);
-        // System.out.println(parse.getSubtreeProbability() + " " + lf + " " + parse.getSyntacticParse());
+        
+        /*
+        System.out.println(parse.getSubtreeProbability() + " " + parse.getDenotation() + " "
+            + parse.getLogicalForm() + " " + parse.getSyntacticParse());
+        KbState state = ((KbState) parse.getDiagram());
+        for (int i : state.getUpdatedFunctionIndexes()) {
+          System.out.println(state.getFunctions().get(i) + " " + state.getAssignments().get(i).getFeatureVector().toString());
+          System.out.println("   " + state.getPredicateFeatures().get(i).toString());
+        }
+        */
       }
     }
+    log.stopTimer("update_gradient/output_marginal/filter");
     
     if (conditionalParses.size() == 0) {
       System.out.println("Search error (Correct): " + sentence);

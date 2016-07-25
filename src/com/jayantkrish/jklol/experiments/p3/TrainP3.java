@@ -15,20 +15,18 @@ import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.experiments.p3.KbParametricContinuationIncEval.KbContinuationIncEval;
+import com.jayantkrish.jklol.lisp.ConstantValue;
 import com.jayantkrish.jklol.lisp.inc.ParametricIncEval;
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.ObjectVariable;
-import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.loglinear.ParametricLinearClassifierFactor;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.p3.P3Model;
+import com.jayantkrish.jklol.p3.FunctionAssignment;
+import com.jayantkrish.jklol.p3.P3BeamInference;
 import com.jayantkrish.jklol.p3.P3Inference;
 import com.jayantkrish.jklol.p3.P3LoglikelihoodOracle;
-import com.jayantkrish.jklol.p3.P3BeamInference;
+import com.jayantkrish.jklol.p3.P3Model;
 import com.jayantkrish.jklol.p3.ParametricP3Model;
-import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.training.GradientOptimizer;
-import com.jayantkrish.jklol.util.Assignment;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
 import com.jayantkrish.jklol.util.Pseudorandom;
@@ -95,19 +93,28 @@ public class TrainP3 extends AbstractCli {
     DiscreteVariable relationFeatureNames = new DiscreteVariable("relationFeatures",
         IoUtils.readLines(options.valueOf(relationFeatures)));
     
+    DiscreteVariable lispTruthVar = new DiscreteVariable("lispTruthVar",
+        Arrays.asList(ConstantValue.FALSE, ConstantValue.TRUE, ConstantValue.NIL));
+    FeatureVectorGenerator<FunctionAssignment> catPredicateFeatureGen = new PredicateSizeFeatureVectorGenerator(
+        4, lispTruthVar.getValueIndex(ConstantValue.TRUE));
+    FeatureVectorGenerator<FunctionAssignment> relPredicateFeatureGen = new PredicateSizeFeatureVectorGenerator(
+        4, lispTruthVar.getValueIndex(ConstantValue.TRUE));
+    
     List<P3KbExample> examples = Lists.newArrayList();
     for (String trainingDataEnv : options.valuesOf(trainingData)) {
       examples.addAll(P3Utils.readTrainingData(trainingDataEnv, categoryFeatureNames,
-          relationFeatureNames, options.valueOf(categoryFilename), options.valueOf(relationFilename),
+          relationFeatureNames, catPredicateFeatureGen, relPredicateFeatureGen, lispTruthVar,
+          options.valueOf(categoryFilename), options.valueOf(relationFilename),
           options.valueOf(exampleFilename), options.valueOf(worldFilename), categoryList, relationList));
     }
-    
+
     Collections.shuffle(examples, Pseudorandom.get());
     
     List<String> lexiconLines = IoUtils.readLines(options.valueOf(lexicon));
     ParametricCcgParser ccgFamily  = getCcgParser(lexiconLines);
     ParametricIncEval evalFamily = getEval(lexiconLines, options.valuesOf(defs),
-        categoryFeatureNames, relationFeatureNames, categoryList.items(), relationList.items());
+        categoryFeatureNames, relationFeatureNames, catPredicateFeatureGen.getFeatureDictionary(),
+        relPredicateFeatureGen.getFeatureDictionary(), categoryList.items(), relationList.items());
     ParametricP3Model family = new ParametricP3Model(ccgFamily, evalFamily);
 
     P3Inference inf = new P3BeamInference(
@@ -151,51 +158,26 @@ public class TrainP3 extends AbstractCli {
 
   private static ParametricIncEval getEval(List<String> lexiconLines,
       List<String> defFilenames, DiscreteVariable categoryFeatureNames,
-      DiscreteVariable relationFeatureNames, List<String> categories,
+      DiscreteVariable relationFeatureNames, DiscreteVariable categoryPredicateFeatureNames,
+      DiscreteVariable relationPredicateFeatureNames, List<String> categories,
       List<String> relations) {
     
     // Set up the per-predicate classifiers
-    ObjectVariable tensorVar = new ObjectVariable(Tensor.class);
-    DiscreteVariable outputVar = new DiscreteVariable("true", Arrays.asList(true));
-    VariableNumMap input = VariableNumMap.singleton(0, "input", tensorVar);
-    VariableNumMap output = VariableNumMap.singleton(1, "output", outputVar);
-    Assignment labelAssignment = output.outcomeArrayToAssignment(true);
-    ParametricLinearClassifierFactor categoryFamily = new ParametricLinearClassifierFactor(
-        input, output, VariableNumMap.EMPTY, categoryFeatureNames, null, false);
-    ParametricLinearClassifierFactor relationFamily = new ParametricLinearClassifierFactor(
-        input, output, VariableNumMap.EMPTY, relationFeatureNames, null, false);
     
     IndexedList<String> predicateNames = IndexedList.create();
-    List<ParametricLinearClassifierFactor> families = Lists.newArrayList();
-    List<VariableNumMap> featureVars = Lists.newArrayList();
-    List<Assignment> labelAssignments = Lists.newArrayList();
-    for (String cat : categories) {
-      predicateNames.add(cat);
-      families.add(categoryFamily);
-      featureVars.add(input);
-      labelAssignments.add(labelAssignment);
-    }    
-    for (String rel : relations) {
-      predicateNames.add(rel);
-      families.add(relationFamily);
-      featureVars.add(input);
-      labelAssignments.add(labelAssignment);
-    }
-
-    String globalFeaturePredicateName = "**global**";
-    KbFeatureGenerator featureGen = new KbFeatureGenerator(true, globalFeaturePredicateName, 4);
-    List<String> globalFeatureNames = featureGen.getGlobalPredicateFeatureNames(categories);
-    DiscreteVariable globalFeatureVar = new DiscreteVariable("globalFeatures", globalFeatureNames);
-    ParametricLinearClassifierFactor globalFamily = new ParametricLinearClassifierFactor(
-        input, output, VariableNumMap.EMPTY, globalFeatureVar, null, false);
-
-    predicateNames.add(globalFeaturePredicateName);
-    families.add(globalFamily);
-    featureVars.add(input);
-    labelAssignments.add(labelAssignment);
+    List<DiscreteVariable> eltFeatureVars = Lists.newArrayList();
+    List<DiscreteVariable> predFeatureVars = Lists.newArrayList();
     
-    return new KbParametricContinuationIncEval(predicateNames, families, featureVars,
-        labelAssignments, featureGen, P3Utils.getIncEval(defFilenames));
+    predicateNames.addAll(categories);
+    eltFeatureVars.addAll(Collections.nCopies(categories.size(), categoryFeatureNames));
+    predFeatureVars.addAll(Collections.nCopies(categories.size(), categoryPredicateFeatureNames));
+    
+    predicateNames.addAll(relations);
+    eltFeatureVars.addAll(Collections.nCopies(relations.size(), relationFeatureNames));
+    predFeatureVars.addAll(Collections.nCopies(relations.size(), relationPredicateFeatureNames));
+    
+    return new KbParametricContinuationIncEval(predicateNames, eltFeatureVars, predFeatureVars,
+        P3Utils.getIncEval(defFilenames));
   }
 
   public static void main(String[] args) {

@@ -1,12 +1,16 @@
 package com.jayantkrish.jklol.experiments.p3;
 
 import java.util.List;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.lisp.ConstantValue;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.p3.FunctionAssignment;
+import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
+import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class KbState {
@@ -16,14 +20,25 @@ public class KbState {
 
   private final IndexedList<String> functionNames;
   private final List<FunctionAssignment> functionAssignments;
+  private final List<FeatureVectorGenerator<FunctionAssignment>> featureGens;
+  private final List<Tensor> featureVectors;
+  
+  private final Set<Integer> updated;
 
   public KbState(IndexedList<String> typeNames, List<DiscreteVariable> typeVars,
-      IndexedList<String> functionNames, List<FunctionAssignment> functionAssignments) {
+      IndexedList<String> functionNames, List<FunctionAssignment> functionAssignments,
+      List<FeatureVectorGenerator<FunctionAssignment>> featureGens, List<Tensor> featureVectors,
+      Set<Integer> updated) {
     this.typeNames = Preconditions.checkNotNull(typeNames);
     this.typeVars = Preconditions.checkNotNull(typeVars);
     this.functionNames = Preconditions.checkNotNull(functionNames);
     this.functionAssignments = Preconditions.checkNotNull(functionAssignments);
     Preconditions.checkArgument(functionNames.size() == functionAssignments.size());
+    
+    this.featureGens = Preconditions.checkNotNull(featureGens);
+    this.featureVectors = Preconditions.checkNotNull(featureVectors);
+
+    this.updated = Preconditions.checkNotNull(updated);
   }
 
   public Object getFunctionValue(String functionName, List<Object> args) {
@@ -45,7 +60,19 @@ public class KbState {
     List<FunctionAssignment> nextAssignment = Lists.newArrayList(functionAssignments);
     nextAssignment.set(index, next);
     
-    return new KbState(typeNames, typeVars, functionNames, nextAssignment);
+    List<Tensor> nextFeatures = null;
+    if (featureGens.get(index) != null) {
+      nextFeatures = Lists.newArrayList(featureVectors);
+      nextFeatures.set(index, featureGens.get(index).apply(next));
+    } else {
+      nextFeatures = featureVectors;
+    }
+
+    Set<Integer> nextUpdated = Sets.newHashSet(updated);
+    nextUpdated.add(index);
+
+    return new KbState(typeNames, typeVars, functionNames, nextAssignment,
+        featureGens, nextFeatures, nextUpdated);
   }
 
   public IndexedList<String> getFunctions() {
@@ -54,6 +81,14 @@ public class KbState {
   
   public List<FunctionAssignment> getAssignments() {
     return functionAssignments;
+  }
+
+  public List<Tensor> getPredicateFeatures() {
+    return featureVectors;
+  }
+
+  public Set<Integer> getUpdatedFunctionIndexes() {
+    return updated;
   }
 
   public DiscreteVariable getTypeVar(String typeName) {

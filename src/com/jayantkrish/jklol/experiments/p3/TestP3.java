@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.experiments.p3;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -14,11 +15,14 @@ import com.jayantkrish.jklol.ccg.CcgParser;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.experiments.p3.KbParametricContinuationIncEval.KbContinuationIncEval;
+import com.jayantkrish.jklol.lisp.ConstantValue;
 import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.p3.P3Parse;
-import com.jayantkrish.jklol.p3.P3Model;
-import com.jayantkrish.jklol.p3.P3Inference;
+import com.jayantkrish.jklol.p3.FunctionAssignment;
 import com.jayantkrish.jklol.p3.P3BeamInference;
+import com.jayantkrish.jklol.p3.P3Inference;
+import com.jayantkrish.jklol.p3.P3Model;
+import com.jayantkrish.jklol.p3.P3Parse;
+import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.util.CountAccumulator;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -77,14 +81,22 @@ public class TestP3 extends AbstractCli {
         IoUtils.readLines(options.valueOf(categoryFeatures)));
     DiscreteVariable relationFeatureNames = new DiscreteVariable("relationFeatures",
         IoUtils.readLines(options.valueOf(relationFeatures)));
-    
+
+    DiscreteVariable lispTruthVar = new DiscreteVariable("lispTruthVar",
+        Arrays.asList(ConstantValue.FALSE, ConstantValue.TRUE, ConstantValue.NIL));
+    FeatureVectorGenerator<FunctionAssignment> catPredicateFeatureGen = new PredicateSizeFeatureVectorGenerator(
+        4, lispTruthVar.getValueIndex(ConstantValue.TRUE));
+    FeatureVectorGenerator<FunctionAssignment> relPredicateFeatureGen = new PredicateSizeFeatureVectorGenerator(
+        4, lispTruthVar.getValueIndex(ConstantValue.TRUE));
+
     List<P3KbExample> examples = Lists.newArrayList();
     for (String trainingDataEnv : options.valuesOf(testData)) {
       examples.addAll(P3Utils.readTrainingData(trainingDataEnv, categoryFeatureNames,
-          relationFeatureNames, options.valueOf(categoryFilename), options.valueOf(relationFilename),
+          relationFeatureNames, catPredicateFeatureGen, relPredicateFeatureGen, lispTruthVar,
+          options.valueOf(categoryFilename), options.valueOf(relationFilename),
           options.valueOf(exampleFilename), null, categoryList, relationList));
     }
-    
+
     CcgParser ccgParser = IoUtils.readSerializedObject(options.valueOf(parserOpt), CcgParser.class);
     KbModel kbModel = IoUtils.readSerializedObject(options.valueOf(kbModelOpt), KbModel.class);
     KbContinuationIncEval eval = new KbContinuationIncEval(

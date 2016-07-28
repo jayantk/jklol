@@ -15,18 +15,21 @@ import com.jayantkrish.jklol.ccg.LexiconEntry;
 import com.jayantkrish.jklol.ccg.ParametricCcgParser;
 import com.jayantkrish.jklol.cli.AbstractCli;
 import com.jayantkrish.jklol.lisp.ConstantValue;
+import com.jayantkrish.jklol.lisp.inc.ParametricContinuationIncEval.StateFeatures;
 import com.jayantkrish.jklol.lisp.inc.ParametricIncEval;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
 import com.jayantkrish.jklol.p3.FunctionAssignment;
 import com.jayantkrish.jklol.p3.KbParametricContinuationIncEval;
+import com.jayantkrish.jklol.p3.KbParametricContinuationIncEval.KbContinuationIncEval;
 import com.jayantkrish.jklol.p3.P3BeamInference;
 import com.jayantkrish.jklol.p3.P3Inference;
 import com.jayantkrish.jklol.p3.P3LoglikelihoodOracle;
 import com.jayantkrish.jklol.p3.P3Model;
+import com.jayantkrish.jklol.p3.ParametricKbModel;
 import com.jayantkrish.jklol.p3.ParametricP3Model;
-import com.jayantkrish.jklol.p3.KbParametricContinuationIncEval.KbContinuationIncEval;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
+import com.jayantkrish.jklol.preprocessing.NullFeatureVectorGenerator;
 import com.jayantkrish.jklol.training.GradientOptimizer;
 import com.jayantkrish.jklol.util.IndexedList;
 import com.jayantkrish.jklol.util.IoUtils;
@@ -177,8 +180,10 @@ public class TrainP3 extends AbstractCli {
     eltFeatureVars.addAll(Collections.nCopies(relations.size(), relationFeatureNames));
     predFeatureVars.addAll(Collections.nCopies(relations.size(), relationPredicateFeatureNames));
     
-    return new KbParametricContinuationIncEval(predicateNames, eltFeatureVars, predFeatureVars,
-        P3Utils.getIncEval(defFilenames));
+    ParametricKbModel family = new ParametricKbModel(predicateNames, eltFeatureVars,
+        predFeatureVars, new NullFeatureVectorGenerator<StateFeatures>());
+    
+    return new KbParametricContinuationIncEval(family, P3Utils.getIncEval(defFilenames));
   }
 
   public static void main(String[] args) {

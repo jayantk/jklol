@@ -6,11 +6,13 @@ import com.jayantkrish.jklol.tensor.Tensor;
 
 public interface FunctionAssignment {
 
-  public Object getValue(List<Object> args);
+  public Object getValue(List<?> args);
   
-  public IndexableFunctionAssignment putValue(List<Object> args, Object value);
-  
+  public IndexableFunctionAssignment putValue(List<?> args, Object value);
+
   public boolean isConsistentWith(FunctionAssignment other);
+
+  public boolean isEqualTo(FunctionAssignment other);
 
   /**
    * Gets a feature vector representing the current assignment

@@ -98,9 +98,9 @@ public class P3Utils {
     Tensor categoryFeatureTensorLisp = categoryFeatureTensor.outerProduct(trueIndicator);
     Tensor relationFeatureTensorLisp = relationFeatureTensor.outerProduct(trueIndicator);
 
-    KbState state = createKbState(entityVar.getDiscreteVariables().get(0),
-        lispTruthVar, categories, entityVar, categoryFeatureTensorLisp, catPredicateFeatureGen,
-        relations, entityVar1.union(entityVar2), relationFeatureTensorLisp, relPredicateFeatureGen);
+    KbState state = createKbState(entityVar.getDiscreteVariables().get(0), lispTruthVar,
+        categories, entityVar, categoryFeatureNames, categoryFeatureTensorLisp, catPredicateFeatureGen,
+        relations, entityVar1.union(entityVar2), relationFeatureNames, relationFeatureTensorLisp, relPredicateFeatureGen);
 
     KbState stateLabel = null;
     if (worldFilePath != null) {
@@ -205,9 +205,9 @@ public class P3Utils {
   }
 
   public static KbState createKbState(DiscreteVariable entityVar, DiscreteVariable truthValueVar,
-      IndexedList<String> categories, VariableNumMap catVars, Tensor catFeatures,
+      IndexedList<String> categories, VariableNumMap catVars, DiscreteVariable catFeatureVar, Tensor catFeatures,
       FeatureVectorGenerator<FunctionAssignment> catPredGen,
-      IndexedList<String> relations, VariableNumMap relVars, Tensor relFeatures,
+      IndexedList<String> relations, VariableNumMap relVars, DiscreteVariable relFeatureVar, Tensor relFeatures,
       FeatureVectorGenerator<FunctionAssignment> relPredGen) {
     IndexedList<String> functionNames = IndexedList.create();
     List<FunctionAssignment> functionAssignments = Lists.newArrayList();
@@ -217,7 +217,7 @@ public class P3Utils {
       functionNames.add(category);
 
       FunctionAssignment a = IndexableFunctionAssignment.unassignedDense(catVars, truthValueVar,
-          ConstantValue.NIL, catFeatures);
+          ConstantValue.NIL, catFeatureVar, catFeatures);
       functionAssignments.add(a);
       predicateFeatureGens.add(catPredGen);
     }
@@ -226,7 +226,7 @@ public class P3Utils {
       functionNames.add(relation);
 
       FunctionAssignment a = IndexableFunctionAssignment.unassignedDense(relVars, truthValueVar,
-          ConstantValue.NIL, relFeatures);
+          ConstantValue.NIL, relFeatureVar, relFeatures);
       functionAssignments.add(a);
       predicateFeatureGens.add(relPredGen);
     }

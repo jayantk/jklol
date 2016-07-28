@@ -11,6 +11,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 
 /**
  * Helper class for counting the number of times pairs of objects occur.
@@ -68,6 +69,21 @@ public class PairCountAccumulator<A, B> implements Serializable {
     for (A key : outcomes.keySet()) {
       for (B value : outcomes.get(key)) {
         incrementOutcome(key, value, amount);
+      }
+    }
+  }
+
+  /**
+   * Adds the counts of outcomes in {@code other} to the
+   * counts in {@code this}.
+   * 
+   * @param other
+   */
+  public void increment(PairCountAccumulator<A,B> other) {
+    for (A key1 : other.counts.keySet()) {
+      for (B key2 : other.counts.get(key1).keySet()) {
+        double value = other.getCount(key1, key2);
+        incrementOutcome(key1, key2, value);
       }
     }
   }
@@ -196,5 +212,39 @@ public class PairCountAccumulator<A, B> implements Serializable {
   @Override
   public String toString() {
     return counts.toString();
+  }
+  
+  /**
+   * Generates a 2D table displaying the contents of
+   * this accumulator.
+   * 
+   * @return
+   */
+  public String toTableString() {
+    Set<B> key2s = Sets.newHashSet();
+    for (A key : counts.keySet()) {
+      key2s.addAll(counts.get(key).keySet());
+    }
+    
+    List<B> key2List = Lists.newArrayList(key2s);
+    StringBuilder sb = new StringBuilder();
+    sb.append("\t");
+    for (B key2 : key2List) {
+      sb.append(key2);
+      sb.append("\t");
+    }
+    sb.append("\n");
+    
+    for (A key1 : counts.keySet()) {
+      sb.append(key1);
+      sb.append("\t");
+      
+      for (B key2 : key2List) {
+        sb.append(getCount(key1, key2));
+        sb.append("\t");
+      }
+      sb.append("\n");
+    }
+    return sb.toString();
   }
 }

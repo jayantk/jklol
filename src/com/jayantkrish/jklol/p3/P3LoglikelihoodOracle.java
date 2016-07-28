@@ -53,12 +53,12 @@ public class P3LoglikelihoodOracle implements
     log.startTimer("update_gradient/output_marginal");
     IncEvalCost labelCost = example.getLabelCost();
     ChartCost chartFilter = example.getChartFilter();
-    System.out.println("conditional evaluations:");
     List<P3Parse> conditionalParsesInit = inference.beamSearch(
         model, sentence, diagram, chartFilter, labelCost, log);
     
     List<P3Parse> conditionalParses = Lists.newArrayList();
     log.startTimer("update_gradient/output_marginal/filter");
+    // System.out.println("conditional evaluations:");
     for (P3Parse parse : conditionalParsesInit) {
       if (example.isCorrect(parse.getLogicalForm(), parse.getDenotation(), parse.getDiagram())) {
         conditionalParses.add(parse);
@@ -81,11 +81,11 @@ public class P3LoglikelihoodOracle implements
       throw new ZeroProbabilityError();
     }
     log.stopTimer("update_gradient/output_marginal");
-    
+
     // Get a distribution over unconditional executions.
     log.startTimer("update_gradient/input_marginal");
     IncEvalCost marginCost = example.getMarginCost();
-    System.out.println("unconditional evaluations:");
+    // System.out.println("unconditional evaluations:");
     List<P3Parse> unconditionalParses = null;
     if (marginCost == null && chartFilter == null && labelCost == null) {
       unconditionalParses = conditionalParsesInit;

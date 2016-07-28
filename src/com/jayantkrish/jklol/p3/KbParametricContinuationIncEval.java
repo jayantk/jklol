@@ -1,179 +1,114 @@
 package com.jayantkrish.jklol.p3;
 
-import java.util.Arrays;
 import java.util.List;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
+import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval;
 import com.jayantkrish.jklol.lisp.inc.IncEval;
 import com.jayantkrish.jklol.lisp.inc.IncEvalState;
+import com.jayantkrish.jklol.lisp.inc.ParametricContinuationIncEval.StateFeatures;
 import com.jayantkrish.jklol.lisp.inc.ParametricIncEval;
-import com.jayantkrish.jklol.models.DiscreteVariable;
-import com.jayantkrish.jklol.models.TableFactor;
-import com.jayantkrish.jklol.models.VariableNumMap;
-import com.jayantkrish.jklol.models.parametric.ListSufficientStatistics;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
-import com.jayantkrish.jklol.models.parametric.TensorSufficientStatistics;
-import com.jayantkrish.jklol.tensor.DenseTensorBuilder;
+import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.LogFunction;
 import com.jayantkrish.jklol.util.IndexedList;
 
 public class KbParametricContinuationIncEval implements ParametricIncEval {
-  private static final long serialVersionUID = 1L;
+  private static final long serialVersionUID = 2L;
   
-  private final IndexedList<String> predicateNames;
-  private final List<DiscreteVariable> eltFeatureVars;
-  private final List<DiscreteVariable> predFeatureVars;
+  private final ParametricKbModel family;
     
   private final ContinuationIncEval eval;  
   
-  public KbParametricContinuationIncEval(IndexedList<String> predicateNames,
-      List<DiscreteVariable> eltFeatureVars, List<DiscreteVariable> predFeatureVars,
+  public KbParametricContinuationIncEval(ParametricKbModel family,
       ContinuationIncEval eval) {
-    this.predicateNames = Preconditions.checkNotNull(predicateNames);
-    this.eltFeatureVars = Preconditions.checkNotNull(eltFeatureVars);
-    this.predFeatureVars = Preconditions.checkNotNull(predFeatureVars);
-
-    Preconditions.checkArgument(predicateNames.size() == eltFeatureVars.size());
-    Preconditions.checkArgument(predicateNames.size() == predFeatureVars.size());
-
+    this.family = Preconditions.checkNotNull(family);
     this.eval = Preconditions.checkNotNull(eval);
   }
 
   @Override
   public SufficientStatistics getNewSufficientStatistics() {
-    List<SufficientStatistics> statistics = Lists.newArrayList();
-    for (int i = 0; i < predicateNames.size(); i++) {
-      DiscreteVariable featureVar = eltFeatureVars.get(i);
-      statistics.add(TensorSufficientStatistics.createDense(
-          VariableNumMap.singleton(0, featureVar.getName(), featureVar),
-          new DenseTensorBuilder(new int[] {0}, new int[] {featureVar.numValues()})));
-    }
-
-    List<SufficientStatistics> predStatistics = Lists.newArrayList();
-    for (int i = 0; i < predicateNames.size(); i++) {
-      DiscreteVariable featureVar = predFeatureVars.get(i);
-      predStatistics.add(TensorSufficientStatistics.createDense(
-          VariableNumMap.singleton(0, featureVar.getName(), featureVar),
-          new DenseTensorBuilder(new int[] {0}, new int[] {featureVar.numValues()})));
-    }
-
-    return new ListSufficientStatistics(Arrays.asList("element", "predicate"),
-        Arrays.asList(new ListSufficientStatistics(predicateNames, statistics),
-            new ListSufficientStatistics(predicateNames, predStatistics)));
-  }
-  
-  private static List<SufficientStatistics> getElementParams(SufficientStatistics params) {
-    List<SufficientStatistics> paramList = params.coerceToList().getStatistics();
-    return paramList.get(0).coerceToList().getStatistics();
-  }
-
-  private static List<SufficientStatistics> getPredicateParams(SufficientStatistics params) {
-    List<SufficientStatistics> paramList = params.coerceToList().getStatistics();
-    return paramList.get(1).coerceToList().getStatistics();
+    return family.getNewSufficientStatistics();
   }
 
   @Override
   public IncEval getModelFromParameters(SufficientStatistics parameters) {
-    List<SufficientStatistics> eltParameterList = getElementParams(parameters);
-    List<SufficientStatistics> predParameterList = getPredicateParams(parameters);
-
-    List<Tensor> classifiers = Lists.newArrayList();
-    for (int i = 0; i < predicateNames.size(); i++) {
-      classifiers.add(((TensorSufficientStatistics) eltParameterList.get(i)).get());
-    }
-    
-    List<Tensor> predClassifiers = Lists.newArrayList();
-    for (int i = 0; i < predicateNames.size(); i++) {
-      predClassifiers.add(((TensorSufficientStatistics) predParameterList.get(i)).get());
-    }
-
-    KbModel kbModel = new KbModel(predicateNames, classifiers, predClassifiers);
-    return new KbContinuationIncEval(eval, kbModel);
+    return new KbContinuationIncEval(eval.getEval(), eval.getInitialEnvironment(),
+        eval.getCpsTransform(), eval.getDefs(), family.getModelFromParameters(parameters));
   }
 
   @Override
   public void incrementSufficientStatistics(SufficientStatistics gradient,
       SufficientStatistics currentParameters, Expression2 lf, IncEvalState state, double count) {
     KbState kbState = (KbState) state.getDiagram();
+    family.incrementStateSufficientStatistics(gradient, currentParameters, kbState, count);
     
-    List<SufficientStatistics> eltGradientList = getElementParams(gradient);
-    List<SufficientStatistics> predGradientList = getPredicateParams(gradient);
-
-    IndexedList<String> stateFunctionNames = kbState.getFunctions();
-    List<FunctionAssignment> assignments = kbState.getAssignments();
-    List<Tensor> predicateFeatures = kbState.getPredicateFeatures();
-    for (int i : kbState.getUpdatedFunctionIndexes()) {
-      int index = predicateNames.getIndex(stateFunctionNames.get(i));
-      
-      TensorSufficientStatistics eltGradient = (TensorSufficientStatistics) eltGradientList.get(index);
-      eltGradient.increment(assignments.get(i).getFeatureVector(), count);
-      
-      TensorSufficientStatistics predGradient = (TensorSufficientStatistics) predGradientList.get(index);
-      predGradient.increment(predicateFeatures.get(i), count);
-    }
+    // XXX: currently this increment assumes that the model is linear
+    Tensor actionFeatures = state.getFeatures(); 
+    family.incrementActionSufficientStatistics(gradient, currentParameters, actionFeatures, count);
   }
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters) {
-    return getParameterDescription(parameters, -1);
+    return family.getParameterDescription(parameters, -1);
   }
 
   @Override
   public String getParameterDescription(SufficientStatistics parameters, int numFeatures) {
-    List<SufficientStatistics> eltParams = getElementParams(parameters);
-    List<SufficientStatistics> predParams = getPredicateParams(parameters);
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < predicateNames.size(); i++) {
-      sb.append(predicateNames.get(i));
-      sb.append("\n");
-      
-      TableFactor f = new TableFactor(
-          VariableNumMap.singleton(0, eltFeatureVars.get(i).getName(), eltFeatureVars.get(i)),
-          ((TensorSufficientStatistics) eltParams.get(i)).get());
-      sb.append(f.describeAssignments(f.getMostLikelyAssignments(numFeatures)));
-      
-      f = new TableFactor(
-          VariableNumMap.singleton(0, predFeatureVars.get(i).getName(), predFeatureVars.get(i)),
-          ((TensorSufficientStatistics) predParams.get(i)).get());
-      sb.append(f.describeAssignments(f.getMostLikelyAssignments(numFeatures)));
-    }
-    return sb.toString();
+    return family.getParameterDescription(parameters, numFeatures);
   }
 
   public static class KbContinuationIncEval extends ContinuationIncEval {
     private final KbModel kbModel;
 
-    public KbContinuationIncEval(ContinuationIncEval eval,
-        KbModel kbModel) {
+    public KbContinuationIncEval(AmbEval eval, Environment env,
+        Function<Expression2, Expression2> cpsTransform, SExpression defs, KbModel kbModel) {
+      super(eval, env, cpsTransform, defs);
+      this.kbModel = kbModel;
+    }
+    
+    public KbContinuationIncEval(ContinuationIncEval eval, KbModel kbModel) {
       super(eval.getEval(), eval.getInitialEnvironment(), eval.getCpsTransform(), eval.getDefs());
-      this.kbModel = Preconditions.checkNotNull(kbModel);
+      this.kbModel = kbModel;
     }
 
     public KbModel getKbModel() {
       return kbModel;
     }
+    
+    @Override
+    public Tensor getInitialFeatureVector(Object initialDiagram) {
+      if (kbModel == null) {
+        return null;
+      } else {
+        return SparseTensor.empty(new int[] {0},
+            new int[] {kbModel.getActionFeatureGenerator().getNumberOfFeatures()});
+      }
+    }
 
     @Override
     protected IncEvalState nextState(IncEvalState prev, Object continuation, Environment env,
         Object denotation, Object diagram, Object otherArg, LogFunction log) {
-      
-      KbState state = (KbState) diagram;
-      
+      if (kbModel == null) {
+        // Allow kbModel to be null to enable evaluation of programs 
+        // without scoring them using the same code.
+        return new IncEvalState(continuation, env, denotation, diagram, 1.0, prev.getFeatures());
+      }
+
       log.startTimer("evaluate_continuation/queue/model");
+      KbState state = (KbState) diagram;
       double prob = 1.0;
       IndexedList<String> predicateNames = kbModel.getPredicateNames();
       List<Tensor> classifiers = kbModel.getClassifiers();
       List<Tensor> predClassifiers = kbModel.getPredicateClassifiers();
-      /*
-      System.out.println(state.getCategories());
-      System.out.println(state.getRelations());
-      System.out.println(predicateNames);
-      */
+
+      // Score the current kb state.
       IndexedList<String> stateFunctionNames = state.getFunctions();
       List<FunctionAssignment> assignments = state.getAssignments();
       List<Tensor> predicateFeatures = state.getPredicateFeatures();
@@ -183,17 +118,27 @@ public class KbParametricContinuationIncEval implements ParametricIncEval {
 
         Tensor featureVector = assignments.get(i).getFeatureVector().relabelDimensions(
             classifier.getDimensionNumbers());
-        prob *= Math.exp(classifier.innerProduct(featureVector).getByDimKey(new int[0]));
+        prob *= Math.exp(classifier.innerProduct(featureVector).getByDimKey());
         
         Tensor predClassifier = predClassifiers.get(index);
         Tensor predFeatureVector = predicateFeatures.get(i).relabelDimensions(
             classifier.getDimensionNumbers());
-        prob *= Math.exp(predClassifier.innerProduct(predFeatureVector).getByDimKey(new int[0]));
+        prob *= Math.exp(predClassifier.innerProduct(predFeatureVector).getByDimKey());
       }
+
+      // Score actions.
+      // XXX: this code assumes that the action scoring model is linear. 
+      Tensor actionFeaturesSum = prev.getFeatures();
+      if (otherArg != null) {
+        Tensor actionFeatures = kbModel.generateActionFeatures(new StateFeatures(
+            prev, continuation, env, denotation, diagram, otherArg));
+        actionFeaturesSum = actionFeaturesSum.elementwiseAddition(actionFeatures);
+      }
+      prob *= Math.exp(kbModel.getActionClassifier().innerProduct(actionFeaturesSum).getByDimKey());
 
       log.stopTimer("evaluate_continuation/queue/model");
 
-      return new IncEvalState(continuation, env, denotation, diagram, prob, null);
+      return new IncEvalState(continuation, env, denotation, diagram, prob, actionFeaturesSum);
     }
   }
 }

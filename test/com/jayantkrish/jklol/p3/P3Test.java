@@ -76,7 +76,7 @@ public abstract class P3Test extends TestCase {
   public List<P3Parse> beamSearch(P3Model parser, List<String> words) {
     AnnotatedSentence sentence = new AnnotatedSentence(words,
         Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG));
-    Object initialDiagram = null;
+    Object initialDiagram = new Object();
     // GroundedParserInference inf = new GroundedParserBeamSearchInference(10, -1);
     // GroundedParserInference inf = new GroundedParserPipelinedInference(
     // CcgCkyInference.getDefault(100), 10, 100);

@@ -200,7 +200,7 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     }
     return -1;
   }
-  
+
   @Override
   public Object getValue(List<?> args) {
     int index = argsToIndex(args);

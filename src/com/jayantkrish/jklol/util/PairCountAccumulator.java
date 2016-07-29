@@ -218,14 +218,18 @@ public class PairCountAccumulator<A, B> implements Serializable {
    * Generates a 2D table displaying the contents of
    * this accumulator.
    * 
+   * @param showProb if {@code true} print the joint
+   * probability of each pair. Otherwise print the
+   * raw count.
+   * 
    * @return
    */
-  public String toTableString() {
+  public String toTableString(boolean probs) {
     Set<B> key2s = Sets.newHashSet();
     for (A key : counts.keySet()) {
       key2s.addAll(counts.get(key).keySet());
     }
-    
+
     List<B> key2List = Lists.newArrayList(key2s);
     StringBuilder sb = new StringBuilder();
     sb.append("\t");
@@ -238,9 +242,13 @@ public class PairCountAccumulator<A, B> implements Serializable {
     for (A key1 : counts.keySet()) {
       sb.append(key1);
       sb.append("\t");
-      
+
       for (B key2 : key2List) {
-        sb.append(getCount(key1, key2));
+        if (probs) {
+          sb.append(String.format(".3f", getProbability(key1, key2)));
+        } else {
+          sb.append(getCount(key1, key2));
+        }
         sb.append("\t");
       }
       sb.append("\n");

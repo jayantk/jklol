@@ -245,7 +245,7 @@ public class PairCountAccumulator<A, B> implements Serializable {
 
       for (B key2 : key2List) {
         if (probs) {
-          sb.append(String.format(".3f", getProbability(key1, key2)));
+          sb.append(String.format("%.3f", getProbability(key1, key2)));
         } else {
           sb.append(getCount(key1, key2));
         }

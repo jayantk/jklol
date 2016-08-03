@@ -2,16 +2,17 @@ package com.jayantkrish.jklol.lisp.inc;
 
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.tensor.Tensor;
+import com.jayantkrish.jklol.util.Copyable;
 
-public class IncEvalState {
-  private final Object continuation;
-  private final Environment environment;
+public class IncEvalState implements Copyable<IncEvalState> {
+  private Object continuation;
+  private Environment environment;
 
-  private final Object denotation;
-  private final Object diagram;
-  private final double prob;
+  private Object denotation;
+  private Object diagram;
+  private double prob;
   
-  private final Tensor features;
+  private Tensor features;
 
   public IncEvalState(Object continuation, Environment environment,
       Object denotation, Object diagram, double prob, Tensor features) {
@@ -20,7 +21,6 @@ public class IncEvalState {
     this.denotation = denotation;
     this.diagram = diagram;
     this.prob = prob;
-    
     this.features = features;
   }
 
@@ -46,6 +46,33 @@ public class IncEvalState {
 
   public final Tensor getFeatures() {
     return features;
+  }
+  
+  public final void set(Object continuation, Environment environment,
+      Object denotation, Object diagram, double prob, Tensor features) {
+    this.continuation = continuation;
+    this.environment = environment;
+    this.denotation = denotation;
+    this.diagram = diagram;
+    this.prob = prob;
+    this.features = features;
+  }
+
+  @Override
+  public void copyTo(IncEvalState item) {
+    item.continuation = continuation;
+    item.environment = environment;
+    item.denotation = denotation;
+    item.diagram = diagram;
+    item.prob = prob;
+    item.features = features;
+  }
+
+  @Override
+  public IncEvalState copy() {
+    IncEvalState s = new IncEvalState(null, null, null, null, 0.0, null);
+    copyTo(s);
+    return s;
   }
 
   @Override

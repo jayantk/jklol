@@ -154,8 +154,8 @@ public class ParametricContinuationIncEval implements ParametricIncEval {
     }
 
     @Override
-    protected IncEvalState nextState(IncEvalState prev, Object continuation, Environment env,
-        Object denotation, Object diagram, Object otherArg, LogFunction log) {
+    protected void nextState(IncEvalState prev, IncEvalState next, Object continuation,
+        Environment env, Object denotation, Object diagram, Object otherArg, LogFunction log) {
       log.startTimer("evaluate_continuation/queue/model");
       Tensor featureVector = featureGen.apply(new StateFeatures(
           prev, continuation, env,denotation, diagram, otherArg));
@@ -168,8 +168,8 @@ public class ParametricContinuationIncEval implements ParametricIncEval {
         aggregateFeatureVector = prev.getFeatures().elementwiseAddition(featureVector);
       }
       log.stopTimer("evaluate_continuation/queue/model");
-      
-      return new IncEvalState(continuation, env, denotation, diagram,
+
+      next.set(continuation, env, denotation, diagram,
           prev.getProb() * localProb, aggregateFeatureVector);
     }
   }

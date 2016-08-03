@@ -93,12 +93,13 @@ public class KbParametricContinuationIncEval implements ParametricIncEval {
     }
 
     @Override
-    protected IncEvalState nextState(IncEvalState prev, Object continuation, Environment env,
-        Object denotation, Object diagram, Object otherArg, LogFunction log) {
+    protected void nextState(IncEvalState prev, IncEvalState next, Object continuation,
+        Environment env, Object denotation, Object diagram, Object otherArg, LogFunction log) {
       if (kbModel == null) {
         // Allow kbModel to be null to enable evaluation of programs 
         // without scoring them using the same code.
-        return new IncEvalState(continuation, env, denotation, diagram, 1.0, prev.getFeatures());
+        next.set(continuation, env, denotation, diagram, 1.0, prev.getFeatures());
+        return;
       }
 
       log.startTimer("evaluate_continuation/queue/model");
@@ -138,7 +139,7 @@ public class KbParametricContinuationIncEval implements ParametricIncEval {
 
       log.stopTimer("evaluate_continuation/queue/model");
 
-      return new IncEvalState(continuation, env, denotation, diagram, prob, actionFeaturesSum);
+      next.set(continuation, env, denotation, diagram, prob, actionFeaturesSum);
     }
   }
 }

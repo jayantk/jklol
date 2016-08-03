@@ -31,11 +31,6 @@ public abstract class AbstractIncEval implements IncEval {
   }
 
   @Override
-  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue) {
-    evaluateContinuation(state, resultQueue, new NullLogFunction());
-  }
-
-  @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       int beamSize) {
     return evaluateBeam(lf, initialDiagram, null, getEnvironment(),
@@ -75,63 +70,54 @@ public abstract class AbstractIncEval implements IncEval {
       int beamSize) {
     Preconditions.checkArgument(initialDiagram != null);
 
-    // Working heap for queuing parses to process next.
-    KbestQueue<IncEvalState> heap = new KbestQueue<IncEvalState>(beamSize,
-        new IncEvalState[0]);
-    
-    // Heap for finished parses.
-    KbestQueue<IncEvalState> finishedHeap = new KbestQueue<IncEvalState>(beamSize,
-        new IncEvalState[0]);
-
-    // Array of elements in the current beam.
-    IncEvalState[] currentBeam = new IncEvalState[beamSize + 1];
-    int currentBeamSize = 0;
-
-    // Accumulator for storing future continuations.
-    List<IncEvalState> resultQueue = Lists.newArrayList();
-
     // Construct and queue the start state. 
     // Note that continuation may be null, meaning that lf cannot
     // be evaluated by this class. If this is the case, this method
     // will return the initialState as the only result.
     Object continuation = lfToContinuation(lf, startEnv);
     Tensor featureVector = getInitialFeatureVector(initialDiagram);
-    IncEvalState initialState = new IncEvalState(continuation, startEnv, null,
+    IncEvalState sizingState = new IncEvalState(continuation, startEnv, null,
         initialDiagram, 1.0, featureVector);
 
-    offer(heap, null, initialState, cost, searchLog);
+    IncEvalChart chart = new IncEvalChart(beamSize, sizingState, cost, searchLog);
+    IncEvalState initialState = chart.alloc();
+    chart.offer(null, initialState);
+    
+    // Array of elements in the current beam.
+    IncEvalState[] currentBeam = new IncEvalState[beamSize + 1];
+    for (int i = 0; i < currentBeam.length; i++) {
+      currentBeam[i] = initialState.copy();
+    }
+    int currentBeamSize = 0;
 
-    while (heap.size() > 0) {
+    while (chart.size() > 0) {
       // Copy the heap to the current beam.
-      IncEvalState[] keys = heap.getItems();
-      for (int i = 0; i < heap.size(); i++) {
-        currentBeam[i] = keys[i];
+      currentBeamSize = chart.size();
+      IncEvalState[] keys = chart.getItems();
+      for (int i = 0; i < currentBeamSize; i++) {
+        keys[i].copyTo(currentBeam[i]);
       }
 
       // Empty the heap.
-      currentBeamSize = heap.size();
-      heap.clear();
+      chart.clear();
 
       for (int i = 0; i < currentBeamSize; i++) {
         IncEvalState state = currentBeam[i];
         
         if (state.getContinuation() != null) {
-          resultQueue.clear();
           log.startTimer("evaluate_continuation");
-          evaluateContinuation(state, resultQueue, log);
+          evaluateContinuation(state, chart, log);
           log.stopTimer("evaluate_continuation");
-          
-          for (IncEvalState next : resultQueue) {
-            offer(heap, state, next, cost, searchLog);
-          }
         } else {
           // Evaluation is finished.
-          offer(finishedHeap, null, state, cost, null);
+          // TODO: why isn't this checked above?
+          chart.offerFinished(null, state);
         }
       }
     }
-    
+
     List<IncEvalState> finalStates = Lists.newArrayList();
+    KbestQueue<IncEvalState> finishedHeap = chart.getFinishedHeap();
     while (finishedHeap.size() > 0) {
       finalStates.add(finishedHeap.removeMin());
     }
@@ -139,22 +125,104 @@ public abstract class AbstractIncEval implements IncEval {
     return finalStates;
   }
 
-  private static void offer(KbestQueue<IncEvalState> heap, IncEvalState current,
-      IncEvalState next, IncEvalCost cost, IncEvalSearchLog searchLog) {
-    if (cost == null) {
-      heap.offer(next, next.getProb());
-      if (searchLog != null) {
-        searchLog.log(current, next, 0.0);
+  public static class IncEvalChart {
+    private final IncEvalState[] free;
+    private int numFree;
+
+    // Working heap for queuing parses to process next.
+    private final KbestQueue<IncEvalState> heap;
+
+    // Heap for finished parses.
+    private final KbestQueue<IncEvalState> finishedHeap;
+
+    private final IncEvalCost cost;
+    private final IncEvalSearchLog searchLog;
+
+    public IncEvalChart(int beamSize, IncEvalState itemSize, IncEvalCost cost,
+        IncEvalSearchLog searchLog) {
+      // TODO: verify the calculation of number of necessary states.
+      free = new IncEvalState[2 * (beamSize + 1)];
+
+      heap = new KbestQueue<IncEvalState>(beamSize, new IncEvalState[0]);
+      finishedHeap = new KbestQueue<IncEvalState>(beamSize, new IncEvalState[0]);
+      
+      this.cost = cost;
+      this.searchLog = searchLog;
+
+      // Allocate states
+      for (int i = 0; i < free.length; i++) {
+        free[i] = itemSize.copy();
       }
-    } else {
-      double costValue = cost.apply(next);
-      if (costValue != Double.NEGATIVE_INFINITY) {
-        heap.offer(next, next.getProb() * Math.exp(costValue));
+      numFree = free.length;
+    }
+    
+    public IncEvalState alloc() {
+      Preconditions.checkState(numFree > 0);
+      IncEvalState state = free[numFree - 1];
+      numFree--;
+      return state;
+    }
+
+    private void dealloc(IncEvalState state) {
+      free[numFree] = state;
+      numFree++;
+    }
+
+    public void offer(IncEvalState current, IncEvalState next) {
+      offer(heap, current, next, searchLog);
+    }
+
+    public int size() {
+      return heap.size();
+    }
+    
+    public IncEvalState[] getItems() {
+      return heap.getItems();
+    }
+
+    public void clear() {
+      int heapSize = heap.size();
+      IncEvalState[] items = heap.getItems();
+      for (int i = 0; i < heapSize; i++) {
+        dealloc(items[i]);
       }
 
-      if (searchLog != null) {
-        searchLog.log(current, next, costValue);
+      heap.clear();
+    }
+
+    public KbestQueue<IncEvalState> getFinishedHeap() {
+      return finishedHeap;
+    }
+
+    public void offerFinished(IncEvalState current, IncEvalState next) {
+      offer(finishedHeap, current, next, null);
+    }
+
+    private void offer(KbestQueue<IncEvalState> heap, IncEvalState current,
+        IncEvalState next, IncEvalSearchLog searchLog) {
+      if (cost == null) {
+        IncEvalState removed = heap.offer(next, next.getProb());
+        if (removed != null) {
+          dealloc(removed);
+        }
+
+        if (searchLog != null) {
+          searchLog.log(current, next, 0.0);
+        }
+      } else {
+        double costValue = cost.apply(next);
+        if (costValue != Double.NEGATIVE_INFINITY) {
+          IncEvalState removed = heap.offer(next, next.getProb() * Math.exp(costValue));
+          if (removed != null) {
+            dealloc(removed);
+          }
+        }
+
+        if (searchLog != null) {
+          searchLog.log(current, next, costValue);
+        }
       }
     }
+
   }
 }

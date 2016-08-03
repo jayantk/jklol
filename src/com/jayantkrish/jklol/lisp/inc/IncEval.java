@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
+import com.jayantkrish.jklol.lisp.inc.AbstractIncEval.IncEvalChart;
 import com.jayantkrish.jklol.training.LogFunction;
 
 /**
@@ -14,26 +15,8 @@ import com.jayantkrish.jklol.training.LogFunction;
  */
 public interface IncEval {
 
-  /**
-   * Evaluates the continuation in {@code state}, producing zero or
-   * more future continuations that are stored in {@code resultQueue}.
-   * 
-   * @param state
-   * @param resultQueue
-   */
-  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue);
-  
-  /**
-   * Evaluates the continuation in {@code state}, producing zero or
-   * more future continuations that are stored in {@code resultQueue}.
-   * 
-   * @param state
-   * @param resultQueue
-   * @param log
-   */
-  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue,
-      LogFunction log);
-  
+  public void evaluateContinuation(IncEvalState state, IncEvalChart chart, LogFunction log);
+
   /**
    * Gets the environment in which logical forms are evaluated.
    * The returned environment may be mutated by the calling code.

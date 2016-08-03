@@ -89,32 +89,31 @@ public class ContinuationIncEval extends AbstractIncEval {
   }
 
   @Override
-  public void evaluateContinuation(IncEvalState state, List<IncEvalState> resultQueue,
-      LogFunction log) {
+  public void evaluateContinuation(IncEvalState state, IncEvalChart chart, LogFunction log) {
     Environment env = state.getEnvironment();
     ContinuationHolder holder = (ContinuationHolder) env.getValue(
         continuationHolderIndex, eval.getSymbolTable());
     FinalContinuation finalContinuation = holder.finalContinuation;
     QueueContinuations queueContinuations = holder.queueContinuations;
     AmbFunctionValue currentContinuation = (AmbFunctionValue) state.getContinuation();
-    
+
     // System.out.println("evaluating: " + state.getContinuation());
     // System.out.println("diagram: " + state.getDiagram());
-    
+
     // log.startTimer("evaluate_continuation/apply");
     int finalNumValues = finalContinuation.denotations.size();
     int queueNumValues = queueContinuations.getContinuations().size();
     currentContinuation.apply(Arrays.asList(state.getDiagram()),
         new EvalContext(log), null);
     // log.stopTimer("evaluate_continuation/apply");
-    
+
     // log.startTimer("evaluate_continuation/queue");
     for (int i = finalNumValues; i < finalContinuation.denotations.size(); i++) {
       Object denotation = finalContinuation.denotations.get(i);
       Object diagram = finalContinuation.diagrams.get(i);
-      IncEvalState next = nextState(state, null, Environment.extend(env),
-          denotation, diagram, null, log);
-      resultQueue.add(next);
+      IncEvalState next = chart.alloc();
+      nextState(state, next, null, Environment.extend(env), denotation, diagram, null, log);
+      chart.offer(state, next);
     }
 
     List<Object> continuations = queueContinuations.getContinuations();
@@ -126,9 +125,11 @@ public class ContinuationIncEval extends AbstractIncEval {
       Object denotation = denotations.get(i);
       Object diagram = diagrams.get(i);
       Object otherArg = otherArgs.get(i);
-      IncEvalState next = nextState(state, continuation, Environment.extend(env),
+
+      IncEvalState next = chart.alloc();
+      nextState(state, next, continuation, Environment.extend(env),
           denotation, diagram, otherArg, log);
-      resultQueue.add(next);
+      chart.offer(state, next);
     }
     // log.stopTimer("evaluate_continuation/queue");
   }
@@ -139,9 +140,9 @@ public class ContinuationIncEval extends AbstractIncEval {
    * 
    * @return
    */
-  protected IncEvalState nextState(IncEvalState prev, Object continuation, Environment env,
-      Object denotation, Object diagram, Object otherArgs, LogFunction log) {
-    return new IncEvalState(continuation, env, denotation, diagram, 1.0 * prev.getProb(), null);
+  protected void nextState(IncEvalState prev, IncEvalState next, Object continuation,
+      Environment env, Object denotation, Object diagram, Object otherArgs, LogFunction log) {
+    next.set(continuation, env, denotation, diagram, prev.getProb(), null);
   }
 
   @Override

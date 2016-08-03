@@ -201,6 +201,14 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     return -1;
   }
 
+  public int getValueIndex(int argIndex) {
+    if (argIndex == -1) {
+      return sparsityValueIndex;
+    } else {
+      return values[argIndex];
+    }
+  }
+
   @Override
   public Object getValue(List<?> args) {
     int index = argsToIndex(args);
@@ -219,27 +227,9 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     int keyIndex = argsToIndex(args);
     Preconditions.checkArgument(keyIndex != -1,
         "Putting value for args \"%s\" not permitted by this FunctionAssignment.", args);
-    
     int newValueIndex = outputVar.getValueIndex(value);
-    
-    int[] newValues = Arrays.copyOf(values, values.length);
-    int oldValueIndex = newValues[keyIndex];
-    newValues[keyIndex] = newValueIndex;
-    
-    double[] newFeatureVector = Arrays.copyOf(cachedFeatureVector, cachedFeatureVector.length);
-    int[] dimKey = sparsity.keyNumToDimKey(sparsity.indexToKeyNum(keyIndex));
-    updateFeatures(dimKey, oldValueIndex, elementFeatures, inputVars.size(), newFeatureVector, -1.0);
-    updateFeatures(dimKey, newValueIndex, elementFeatures, inputVars.size(), newFeatureVector, 1.0);
-    
-    int nextUnassignedIndex = firstUnassignedIndex;
-    while (nextUnassignedIndex < newValues.length &&
-        newValues[nextUnassignedIndex] != outputVarUnassigned) {
-      nextUnassignedIndex++;
-    }
 
-    return new IndexableFunctionAssignment(inputVars, outputVar, outputVarUnassigned,
-        sparsity, sparsityValueIndex, newValues, nextUnassignedIndex, featureVar,
-        elementFeatures, newFeatureVector);
+    return put(keyIndex, newValueIndex);
   }
   
   public IndexableFunctionAssignment putAll(Tensor t, Object value) {
@@ -266,6 +256,54 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
       nextUnassignedIndex++;
     }
     
+    return new IndexableFunctionAssignment(inputVars, outputVar, outputVarUnassigned,
+        sparsity, sparsityValueIndex, newValues, nextUnassignedIndex, featureVar,
+        elementFeatures, newFeatureVector);
+  }
+  
+  public IndexableFunctionAssignment put(int keyIndex, int newValueIndex) {
+    Preconditions.checkArgument(keyIndex != -1);
+
+    int[] newValues = Arrays.copyOf(values, values.length);
+    int oldValueIndex = newValues[keyIndex];
+    newValues[keyIndex] = newValueIndex;
+    
+    double[] newFeatureVector = Arrays.copyOf(cachedFeatureVector, cachedFeatureVector.length);
+    int[] dimKey = sparsity.keyNumToDimKey(sparsity.indexToKeyNum(keyIndex));
+    updateFeatures(dimKey, oldValueIndex, elementFeatures, inputVars.size(), newFeatureVector, -1.0);
+    updateFeatures(dimKey, newValueIndex, elementFeatures, inputVars.size(), newFeatureVector, 1.0);
+    
+    int nextUnassignedIndex = firstUnassignedIndex;
+    while (nextUnassignedIndex < newValues.length &&
+        newValues[nextUnassignedIndex] != outputVarUnassigned) {
+      nextUnassignedIndex++;
+    }
+
+    return new IndexableFunctionAssignment(inputVars, outputVar, outputVarUnassigned,
+        sparsity, sparsityValueIndex, newValues, nextUnassignedIndex, featureVar,
+        elementFeatures, newFeatureVector);
+  }
+  
+  public IndexableFunctionAssignment putAll(int[] keyIndexes, int[] newValueIndexes) {
+    int[] newValues = Arrays.copyOf(values, values.length);
+    double[] newFeatureVector = Arrays.copyOf(cachedFeatureVector, cachedFeatureVector.length);
+    for (int i = 0; i < keyIndexes.length; i++) {
+      int keyIndex = keyIndexes[i];
+      int newValueIndex = newValueIndexes[i];
+      int oldValueIndex = newValues[keyIndex];
+      newValues[keyIndex] = newValueIndex;
+    
+      int[] dimKey = sparsity.keyNumToDimKey(sparsity.indexToKeyNum(keyIndex));
+      updateFeatures(dimKey, oldValueIndex, elementFeatures, inputVars.size(), newFeatureVector, -1.0);
+      updateFeatures(dimKey, newValueIndex, elementFeatures, inputVars.size(), newFeatureVector, 1.0);
+    }
+
+    int nextUnassignedIndex = firstUnassignedIndex;
+    while (nextUnassignedIndex < newValues.length &&
+        newValues[nextUnassignedIndex] != outputVarUnassigned) {
+      nextUnassignedIndex++;
+    }
+
     return new IndexableFunctionAssignment(inputVars, outputVar, outputVarUnassigned,
         sparsity, sparsityValueIndex, newValues, nextUnassignedIndex, featureVar,
         elementFeatures, newFeatureVector);

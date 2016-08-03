@@ -151,6 +151,13 @@ public class ParametricKbModel implements ParametricFamily<KbModel> {
           ((TensorSufficientStatistics) predParams.get(i)).get());
       sb.append(f.describeAssignments(f.getMostLikelyAssignments(numFeatures)));
     }
+    
+    sb.append("action parameters:\n");
+    TableFactor f = new TableFactor(
+        VariableNumMap.singleton(0, actionFeatureVar.getName(), actionFeatureVar),
+        getActionParams(parameters).get());
+    sb.append(f.describeAssignments(f.getMostLikelyAssignments(numFeatures)));
+
     return sb.toString();
   }
 }

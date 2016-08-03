@@ -64,23 +64,30 @@ public class KbState {
   public FunctionAssignment getAssignment(String functionName) {
     return functionAssignments.get(functionNames.getIndex(functionName));
   }
-  
+
+  public FunctionAssignment getAssignment(int functionIndex) {
+    return functionAssignments.get(functionIndex);
+  }
+
   public KbState putAssignment(String functionName, FunctionAssignment assignment) {
     int index = functionNames.getIndex(functionName);
+    return putAssignment(index, assignment);
+  }
 
+  public KbState putAssignment(int functionIndex, FunctionAssignment assignment) {
     List<FunctionAssignment> nextAssignments = Lists.newArrayList(functionAssignments);
-    nextAssignments.set(index, assignment);
+    nextAssignments.set(functionIndex, assignment);
     
     List<Tensor> nextFeatures = null;
-    if (featureGens.get(index) != null) {
+    if (featureGens.get(functionIndex) != null) {
       nextFeatures = Lists.newArrayList(featureVectors);
-      nextFeatures.set(index, featureGens.get(index).apply(assignment));
+      nextFeatures.set(functionIndex, featureGens.get(functionIndex).apply(assignment));
     } else {
       nextFeatures = featureVectors;
     }
 
     Set<Integer> nextUpdated = Sets.newHashSet(updated);
-    nextUpdated.add(index);
+    nextUpdated.add(functionIndex);
 
     return new KbState(typeNames, typeVars, functionNames, nextAssignments,
         featureGens, nextFeatures, nextUpdated);

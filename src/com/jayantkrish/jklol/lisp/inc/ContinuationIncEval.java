@@ -237,7 +237,7 @@ public class ContinuationIncEval extends AbstractIncEval {
           IncEvalState next = chart.alloc();
           nextState(current, next, null, Environment.extend(current.getEnvironment()),
               denotation, diagram, null, log);
-          chart.offer(current, next);
+          chart.offerFinished(current, next);
           
           return ConstantValue.NIL;
         }

@@ -81,16 +81,24 @@ public abstract class AbstractIncEval implements IncEval {
 
     IncEvalChart chart = new IncEvalChart(beamSize, sizingState, cost, searchLog);
     IncEvalState initialState = chart.alloc();
+    sizingState.copyTo(initialState);
     chart.offer(null, initialState);
     
     // Array of elements in the current beam.
     IncEvalState[] currentBeam = new IncEvalState[beamSize + 1];
     for (int i = 0; i < currentBeam.length; i++) {
-      currentBeam[i] = initialState.copy();
+      currentBeam[i] = sizingState.copy();
     }
     int currentBeamSize = 0;
 
     while (chart.size() > 0) {
+      /*
+      System.out.println("====");
+      System.out.println("chart size: " + chart.size());
+      System.out.println("finished size: " + chart.getFinishedHeap().size());
+      System.out.println("num free: " + chart.getNumFree());
+      */      
+
       // Copy the heap to the current beam.
       currentBeamSize = chart.size();
       IncEvalState[] keys = chart.getItems();
@@ -103,16 +111,10 @@ public abstract class AbstractIncEval implements IncEval {
 
       for (int i = 0; i < currentBeamSize; i++) {
         IncEvalState state = currentBeam[i];
-        
-        if (state.getContinuation() != null) {
-          log.startTimer("evaluate_continuation");
-          evaluateContinuation(state, chart, log);
-          log.stopTimer("evaluate_continuation");
-        } else {
-          // Evaluation is finished.
-          // TODO: why isn't this checked above?
-          chart.offerFinished(null, state);
-        }
+        Preconditions.checkState(state.getContinuation() != null);
+        log.startTimer("evaluate_continuation");
+        evaluateContinuation(state, chart, log);
+        log.stopTimer("evaluate_continuation");
       }
     }
 
@@ -141,7 +143,7 @@ public abstract class AbstractIncEval implements IncEval {
     public IncEvalChart(int beamSize, IncEvalState itemSize, IncEvalCost cost,
         IncEvalSearchLog searchLog) {
       // TODO: verify the calculation of number of necessary states.
-      free = new IncEvalState[2 * (beamSize + 1)];
+      free = new IncEvalState[2 * (beamSize + 2)];
 
       heap = new KbestQueue<IncEvalState>(beamSize, new IncEvalState[0]);
       finishedHeap = new KbestQueue<IncEvalState>(beamSize, new IncEvalState[0]);
@@ -155,7 +157,11 @@ public abstract class AbstractIncEval implements IncEval {
       }
       numFree = free.length;
     }
-    
+
+    public int getNumFree() {
+      return numFree;
+    }
+
     public IncEvalState alloc() {
       Preconditions.checkState(numFree > 0);
       IncEvalState state = free[numFree - 1];
@@ -216,6 +222,8 @@ public abstract class AbstractIncEval implements IncEval {
           if (removed != null) {
             dealloc(removed);
           }
+        } else {
+          dealloc(next);
         }
 
         if (searchLog != null) {
@@ -223,6 +231,5 @@ public abstract class AbstractIncEval implements IncEval {
         }
       }
     }
-
   }
 }

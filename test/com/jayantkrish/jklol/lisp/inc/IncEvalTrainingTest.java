@@ -20,6 +20,8 @@ import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval.SimplifierCpsTransform;
 import com.jayantkrish.jklol.lisp.inc.ParametricContinuationIncEval.StateFeatures;
 import com.jayantkrish.jklol.models.parametric.SufficientStatistics;
+import com.jayantkrish.jklol.parallel.LocalMapReduceExecutor;
+import com.jayantkrish.jklol.parallel.MapReduceConfiguration;
 import com.jayantkrish.jklol.preprocessing.FeatureGenerator;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.preprocessing.HashingFeatureVectorGenerator;
@@ -66,10 +68,9 @@ public class IncEvalTrainingTest extends TestCase {
     "(resolve-k \"x\")",
     "(resolve-k \"x\")",
     "(resolve-k \"x\")",
-    // This last example adds no information because each value of x
+    // This example adds no information because each value of x
     // has one correct execution.
     "(+-k (amb-k (list-k 0 1)) (resolve-k \"x\"))",
-    
     // Examples for testing denotation scoring
     "(score-k (+-k (amb-k (list-k 0 1)) (resolve-k \"x\")) \"foo\")",
   };
@@ -114,7 +115,7 @@ public class IncEvalTrainingTest extends TestCase {
     GradientOptimizer trainer = StochasticGradientTrainer.createWithL2Regularization(1000,
         1, 1, true, true, 0.0, new DefaultLogFunction());
      */
-    
+    MapReduceConfiguration.setMapReduceExecutor(new LocalMapReduceExecutor(1, 1));
     GradientOptimizer trainer = new Lbfgs(100, 10, 0.0, new DefaultLogFunction());
 
     SufficientStatistics initialParameters = oracle.initializeGradient();

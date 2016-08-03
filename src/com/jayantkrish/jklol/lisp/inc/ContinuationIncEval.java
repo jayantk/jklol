@@ -6,7 +6,6 @@ import java.util.List;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.CpsTransform;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -94,44 +93,16 @@ public class ContinuationIncEval extends AbstractIncEval {
     ContinuationHolder holder = (ContinuationHolder) env.getValue(
         continuationHolderIndex, eval.getSymbolTable());
     FinalContinuation finalContinuation = holder.finalContinuation;
+    finalContinuation.setChart(chart, state, log);
     QueueContinuations queueContinuations = holder.queueContinuations;
+    queueContinuations.setChart(chart, state, log);
     AmbFunctionValue currentContinuation = (AmbFunctionValue) state.getContinuation();
 
     // System.out.println("evaluating: " + state.getContinuation());
     // System.out.println("diagram: " + state.getDiagram());
 
-    // log.startTimer("evaluate_continuation/apply");
-    int finalNumValues = finalContinuation.denotations.size();
-    int queueNumValues = queueContinuations.getContinuations().size();
     currentContinuation.apply(Arrays.asList(state.getDiagram()),
         new EvalContext(log), null);
-    // log.stopTimer("evaluate_continuation/apply");
-
-    // log.startTimer("evaluate_continuation/queue");
-    for (int i = finalNumValues; i < finalContinuation.denotations.size(); i++) {
-      Object denotation = finalContinuation.denotations.get(i);
-      Object diagram = finalContinuation.diagrams.get(i);
-      IncEvalState next = chart.alloc();
-      nextState(state, next, null, Environment.extend(env), denotation, diagram, null, log);
-      chart.offer(state, next);
-    }
-
-    List<Object> continuations = queueContinuations.getContinuations();
-    List<Object> denotations = queueContinuations.getDenotations();
-    List<Object> diagrams = queueContinuations.getDiagrams();
-    List<Object> otherArgs = queueContinuations.getOtherArgs();
-    for (int i = queueNumValues; i < continuations.size(); i++) {
-      Object continuation = continuations.get(i);
-      Object denotation = denotations.get(i);
-      Object diagram = diagrams.get(i);
-      Object otherArg = otherArgs.get(i);
-
-      IncEvalState next = chart.alloc();
-      nextState(state, next, continuation, Environment.extend(env),
-          denotation, diagram, otherArg, log);
-      chart.offer(state, next);
-    }
-    // log.stopTimer("evaluate_continuation/queue");
   }
 
   /**
@@ -177,17 +148,17 @@ public class ContinuationIncEval extends AbstractIncEval {
     return (AmbFunctionValue) evalResult.getValue();
   }
   
-  public static class QueueContinuations implements FunctionValue {
-    private final List<Object> continuations;
-    private final List<Object> denotations;
-    private final List<Object> diagrams;
-    private final List<Object> otherArgs;
+  public class QueueContinuations implements FunctionValue {
+    private IncEvalChart chart;
+    private IncEvalState current;
+    private LogFunction log;
 
-    public QueueContinuations() {
-      this.continuations = Lists.newArrayList();
-      this.denotations = Lists.newArrayList();
-      this.diagrams = Lists.newArrayList();
-      this.otherArgs = Lists.newArrayList();
+    public QueueContinuations() {}
+    
+    public void setChart(IncEvalChart chart, IncEvalState current, LogFunction log) {
+      this.chart = chart;
+      this.current = current;
+      this.log = log;
     }
 
     @Override
@@ -222,65 +193,51 @@ public class ContinuationIncEval extends AbstractIncEval {
           for (int i = 0; i < nextDiagrams.size(); i++) {
             Object denotation = myNextDenotations.get(i);
             Object diagram = nextDiagrams.get(i);
-            // System.out.println("queue: " + continuation + " " + denotation + " " + diagram);
-          
-            continuations.add(continuation.apply(Arrays.asList(denotation), context, null));
-            denotations.add(denotation);
-            diagrams.add(diagram);
-
-            // TODO: technically this should also be resized up if necessary.
+            Object otherArg = null;
             if (nextOtherArgs != null) {
-              otherArgs.add(nextOtherArgs.get(i));
-            } else {
-              otherArgs.add(null);
+              otherArg = nextOtherArgs.get(i);
             }
+
+            IncEvalState next = chart.alloc();
+            Object nextCont = continuation.apply(Arrays.asList(denotation), context2, null);
+            nextState(current, next, nextCont, Environment.extend(current.getEnvironment()),
+                denotation, diagram, otherArg, log);
+            chart.offer(current, next);
           }
+          
           return ConstantValue.NIL;
         }
       });
     }
-
-    public List<Object> getContinuations() {
-      return continuations;
-    }
-
-    public List<Object> getDenotations() {
-      return denotations;
-    }
-
-    public List<Object> getDiagrams() {
-      return diagrams;
-    }
-    
-    public List<Object> getOtherArgs() {
-      return otherArgs;
-    }
   }
 
-  public static class FinalContinuation implements FunctionValue {
-    public final List<Object> denotations;
-    public final List<Object> diagrams;
+  public class FinalContinuation implements FunctionValue {
+    private IncEvalChart chart;
+    private IncEvalState current;
+    private LogFunction log;
     
     public FinalContinuation() {
-      this.denotations = Lists.newArrayList();
-      this.diagrams = Lists.newArrayList();
+    }
+
+    public void setChart(IncEvalChart chart, IncEvalState current, LogFunction log) {
+      this.chart = chart;
+      this.current = current;
+      this.log = log;
     }
 
     public Object apply(List<Object> args1, EvalContext context1) {
       LispUtil.checkArgument(args1.size() == 1);
       Object denotation = args1.get(0);
-      
-      // System.out.println("final denotation: " + denotation);
 
       return new WrappedBuiltinFunction(new FunctionValue() {
         public Object apply(List<Object> args2, EvalContext context2) {
           LispUtil.checkArgument(args2.size() == 1);
           Object diagram = args2.get(0);
           
-          denotations.add(denotation);
-          diagrams.add(diagram);
-
-          // System.out.println("final diagram: " + diagram);
+          IncEvalState next = chart.alloc();
+          nextState(current, next, null, Environment.extend(current.getEnvironment()),
+              denotation, diagram, null, log);
+          chart.offer(current, next);
           
           return ConstantValue.NIL;
         }

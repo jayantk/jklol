@@ -38,6 +38,17 @@ public class RegexTypeDeclaration extends AbstractTypeDeclaration {
     }
     return new RegexTypeDeclaration(patterns, types);
   }
+  
+  public static RegexTypeDeclaration fromStringArrays(String[][] lines) {
+    ExpressionParser<Type> typeParser = ExpressionParser.typeParser();
+    List<Pattern> patterns = Lists.newArrayList();
+    List<Type> types = Lists.newArrayList();
+    for (String[] parts : lines) {
+      patterns.add(Pattern.compile(parts[0]));
+      types.add(typeParser.parse(parts[1]));
+    }
+    return new RegexTypeDeclaration(patterns, types);
+  }
 
   @Override
   public Type getType(String constant) {

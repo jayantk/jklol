@@ -69,7 +69,7 @@ public class GeoqueryUtil {
 
     List<Expression2> lfTemplateElts = Lists.newArrayList();
     lfTemplateElts.add(Expression2.constant(StaticAnalysis.LAMBDA));
-    lfTemplateElts.addAll(Expression2.constants(newVarNames));
+    lfTemplateElts.add(Expression2.nested(Expression2.constants(newVarNames)));
     lfTemplateElts.add(lfTemplateBody);
     Expression2 lfTemplate = simplifier.apply(Expression2.nested(lfTemplateElts));
 

@@ -253,13 +253,15 @@ public class StaticAnalysis {
       for (int index : subexpressionTypeMap.keySet()) {
         Expression2 subexpression = expression.getSubexpression(index);
         if (subexpression.isConstant()) {
-          // Get the type of this constant if it is declared. 
-          Type newType = typeDeclaration.getType(subexpression.getConstant());
-          updated = updateType(index, newType, subexpressionTypeMap, typeDeclaration, expression) || updated;
-
+          
           Scope scope = scopes.getScope(index);
           int bindingIndex = scope.getBindingIndex(subexpression.getConstant());
-          if (bindingIndex != -1) {
+          if (bindingIndex == -1) {
+            // Get the type of this constant if it is declared
+            // and it's not a lambda variable.
+            Type newType = typeDeclaration.getType(subexpression.getConstant());
+            updated = updateType(index, newType, subexpressionTypeMap, typeDeclaration, expression) || updated;
+          } else {
             // Propagate type information between occurrences of the same variable.
             Type myType = subexpressionTypeMap.get(index);
             Type bindingType = subexpressionTypeMap.get(bindingIndex);

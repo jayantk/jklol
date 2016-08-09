@@ -109,7 +109,6 @@ public class ParametricKbModel implements ParametricFamily<KbModel> {
 
     IndexedList<String> stateFunctionNames = kbState.getFunctions();
     List<FunctionAssignment> assignments = kbState.getAssignments();
-    List<Tensor> predicateFeatures = kbState.getPredicateFeatures();
     for (int i : kbState.getUpdatedFunctionIndexes()) {
       int index = predicateNames.getIndex(stateFunctionNames.get(i));
 
@@ -117,7 +116,7 @@ public class ParametricKbModel implements ParametricFamily<KbModel> {
       eltGradient.increment(assignments.get(i).getFeatureVector(), count);
 
       TensorSufficientStatistics predGradient = (TensorSufficientStatistics) predGradientList.get(index);
-      predGradient.increment(predicateFeatures.get(i), count);
+      predGradient.increment(assignments.get(i).getPredicateFeatureVector(), count);
     }
   }
 

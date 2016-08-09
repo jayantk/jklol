@@ -11,6 +11,7 @@ import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
+import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.DenseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 
@@ -35,7 +36,7 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
   private final int[] values;
   // Index of the first element in values whose value is 
   // unassigned.
-  private final int firstUnassignedIndex;
+  private int firstUnassignedIndex;
 
   // A feature vector per input -> output mapping.
   private final DiscreteVariable featureVar;
@@ -44,10 +45,14 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
   // The current feature vector of this assignment.
   private final double[] cachedFeatureVector;
 
+  private final FeatureVectorGenerator<FunctionAssignment> predicateFeatureGen;
+  private Tensor predicateFeatures;
+
   protected IndexableFunctionAssignment(VariableNumMap inputVars, DiscreteVariable outputVar,
       int outputVarUnassigned, Tensor sparsity, int sparsityValueIndex, int[] values,
       int firstUnassignedIndex, DiscreteVariable featureVar, Tensor elementFeatures, 
-      double[] cachedFeatureVector) {
+      double[] cachedFeatureVector, FeatureVectorGenerator<FunctionAssignment> predicateFeatureGen,
+      Tensor predicateFeatures) {
     this.inputVars = Preconditions.checkNotNull(inputVars);
     this.outputVar = Preconditions.checkNotNull(outputVar);
     this.outputVarUnassigned = outputVarUnassigned;
@@ -58,11 +63,13 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     this.featureVar = featureVar;
     this.elementFeatures = elementFeatures;
     this.cachedFeatureVector = cachedFeatureVector;
+    this.predicateFeatureGen = predicateFeatureGen;
+    this.predicateFeatures = predicateFeatures;
   }
 
   public static IndexableFunctionAssignment unassignedDense(VariableNumMap inputVars,
       DiscreteVariable outputVar, Object unassignedValue, DiscreteVariable featureVar,
-      Tensor features) {
+      Tensor features, FeatureVectorGenerator<FunctionAssignment> predicateFeatureGen) {
     int[] featureDims = features.getDimensionSizes();
     Preconditions.checkArgument(featureDims.length == inputVars.size() + 2,
         "Incorrect number of feature dimensions");
@@ -84,12 +91,13 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
 
     return new IndexableFunctionAssignment(inputVars, outputVar,
         unassignedValueIndex, sparsity, -1, values, 0, featureVar,
-        features, cachedFeatureVector);  
+        features, cachedFeatureVector, predicateFeatureGen, null);
   }
 
   public static IndexableFunctionAssignment unassignedSparse(VariableNumMap inputVars,
       DiscreteVariable outputVar, Object unassignedValue, Tensor sparsity,
-      Object sparsityValue, DiscreteVariable featureVar, Tensor features) {
+      Object sparsityValue, DiscreteVariable featureVar, Tensor features,
+      FeatureVectorGenerator<FunctionAssignment> predicateFeatureGen) {
     int[] featureDims = features.getDimensionSizes();
     Preconditions.checkArgument(featureDims.length == inputVars.size() + 2,
         "Incorrect number of feature dimensions");
@@ -112,7 +120,7 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
 
     return new IndexableFunctionAssignment(inputVars, outputVar,
         unassignedValueIndex, sparsity, sparsityValueIndex, values, 0, featureVar,
-        features, cachedFeatureVector);
+        features, cachedFeatureVector, predicateFeatureGen, null);
   }
   
   public VariableNumMap getInputVars() {
@@ -223,15 +231,16 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
   }
 
   @Override
-  public IndexableFunctionAssignment putValue(List<?> args, Object value) {
+  public void putValue(List<?> args, Object value) {
     int keyIndex = argsToIndex(args);
     Preconditions.checkArgument(keyIndex != -1,
         "Putting value for args \"%s\" not permitted by this FunctionAssignment.", args);
     int newValueIndex = outputVar.getValueIndex(value);
 
-    return put(keyIndex, newValueIndex);
+    put(keyIndex, newValueIndex);
   }
   
+  /*
   public IndexableFunctionAssignment putAll(Tensor t, Object value) {
     Preconditions.checkArgument(Arrays.equals(t.getDimensionSizes(), sparsity.getDimensionSizes())); 
     
@@ -258,32 +267,28 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     
     return new IndexableFunctionAssignment(inputVars, outputVar, outputVarUnassigned,
         sparsity, sparsityValueIndex, newValues, nextUnassignedIndex, featureVar,
-        elementFeatures, newFeatureVector);
+        elementFeatures, newFeatureVector, predicateFeatureGen, predicateFeatures);
   }
+  */
   
-  public IndexableFunctionAssignment put(int keyIndex, int newValueIndex) {
+  public void put(int keyIndex, int newValueIndex) {
     Preconditions.checkArgument(keyIndex != -1);
-
-    int[] newValues = Arrays.copyOf(values, values.length);
-    int oldValueIndex = newValues[keyIndex];
-    newValues[keyIndex] = newValueIndex;
+    int oldValueIndex = values[keyIndex];
+    values[keyIndex] = newValueIndex;
     
-    double[] newFeatureVector = Arrays.copyOf(cachedFeatureVector, cachedFeatureVector.length);
     int[] dimKey = sparsity.keyNumToDimKey(sparsity.indexToKeyNum(keyIndex));
-    updateFeatures(dimKey, oldValueIndex, elementFeatures, inputVars.size(), newFeatureVector, -1.0);
-    updateFeatures(dimKey, newValueIndex, elementFeatures, inputVars.size(), newFeatureVector, 1.0);
+    updateFeatures(dimKey, oldValueIndex, elementFeatures, inputVars.size(), cachedFeatureVector, -1.0);
+    updateFeatures(dimKey, newValueIndex, elementFeatures, inputVars.size(), cachedFeatureVector, 1.0);
     
-    int nextUnassignedIndex = firstUnassignedIndex;
-    while (nextUnassignedIndex < newValues.length &&
-        newValues[nextUnassignedIndex] != outputVarUnassigned) {
-      nextUnassignedIndex++;
+    while (firstUnassignedIndex < values.length &&
+        values[firstUnassignedIndex] != outputVarUnassigned) {
+      firstUnassignedIndex++;
     }
 
-    return new IndexableFunctionAssignment(inputVars, outputVar, outputVarUnassigned,
-        sparsity, sparsityValueIndex, newValues, nextUnassignedIndex, featureVar,
-        elementFeatures, newFeatureVector);
+    this.predicateFeatures = predicateFeatureGen.apply(this);
   }
   
+  /*
   public IndexableFunctionAssignment putAll(int[] keyIndexes, int[] newValueIndexes) {
     int[] newValues = Arrays.copyOf(values, values.length);
     double[] newFeatureVector = Arrays.copyOf(cachedFeatureVector, cachedFeatureVector.length);
@@ -306,8 +311,9 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
 
     return new IndexableFunctionAssignment(inputVars, outputVar, outputVarUnassigned,
         sparsity, sparsityValueIndex, newValues, nextUnassignedIndex, featureVar,
-        elementFeatures, newFeatureVector);
+        elementFeatures, newFeatureVector, predicateFeatureGen, predicateFeatures);
   }
+  */
 
   @Override
   public boolean isConsistentWith(FunctionAssignment other) {
@@ -338,6 +344,38 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
   @Override
   public Tensor getFeatureVector() {
     return new DenseTensor(new int[] {0}, new int[] {cachedFeatureVector.length}, cachedFeatureVector);
+  }
+
+  @Override
+  public Tensor getPredicateFeatureVector() {
+    return predicateFeatures;
+  }
+
+  @Override
+  public IndexableFunctionAssignment copy() {
+    int[] newValues = Arrays.copyOf(values, values.length);
+    double[] newFeatureVector = Arrays.copyOf(cachedFeatureVector, cachedFeatureVector.length);
+
+    return new IndexableFunctionAssignment(inputVars, outputVar, outputVarUnassigned,
+        sparsity, sparsityValueIndex, newValues, firstUnassignedIndex, featureVar,
+        elementFeatures, newFeatureVector, predicateFeatureGen, predicateFeatures);
+  }
+
+  @Override
+  public void copyTo(FunctionAssignment assignment) {
+    IndexableFunctionAssignment a = (IndexableFunctionAssignment) assignment;
+    
+    Preconditions.checkArgument(a.values.length == values.length);
+    for (int i = 0; i < values.length; i++) {
+      a.values[i] = values[i];
+    }
+    
+    Preconditions.checkArgument(a.cachedFeatureVector.length == cachedFeatureVector.length);
+    for (int i = 0; i < cachedFeatureVector.length; i++) {
+      a.cachedFeatureVector[i] = cachedFeatureVector[i];
+    }
+
+    a.predicateFeatures = predicateFeatures;
   }
 
   private static void updateFeatures(int[] inputKey, int value, Tensor elementFeatures,

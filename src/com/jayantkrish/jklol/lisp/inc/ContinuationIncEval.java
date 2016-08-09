@@ -6,6 +6,8 @@ import java.util.List;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.ccg.lambda.ExpressionParser;
 import com.jayantkrish.jklol.ccg.lambda2.CpsTransform;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
@@ -41,14 +43,13 @@ public class ContinuationIncEval extends AbstractIncEval {
   
   protected final ExpressionParser<SExpression> sexpParser;
   protected final SExpression defs;
-  
-  protected final int finalContinuationIndex;
-  protected final int queueContinuationsIndex;
-  protected final int continuationHolderIndex;
+
+  protected final List<String> functionNames;
+  protected final List<ContinuationFunctionValue> functions;
+  protected final int[] functionIndexes;
 
   public static final String FINAL_CONTINUATION = "final-continuation";
   public static final String QUEUE_CONTINUATIONS = "queue-k";
-  public static final String CONTINUATION_HOLDER = "continuation-inc-eval:continuation-holder";
   
   public ContinuationIncEval(AmbEval eval, Environment env,
       Function<Expression2, Expression2> cpsTransform, SExpression defs) {
@@ -59,9 +60,30 @@ public class ContinuationIncEval extends AbstractIncEval {
     this.sexpParser = ExpressionParser.sExpression(eval.getSymbolTable());
     this.defs = defs;
     
-    this.finalContinuationIndex = this.eval.getSymbolTable().add(FINAL_CONTINUATION);
-    this.queueContinuationsIndex = this.eval.getSymbolTable().add(QUEUE_CONTINUATIONS);
-    this.continuationHolderIndex = this.eval.getSymbolTable().add(CONTINUATION_HOLDER);
+    this.functionNames = Lists.newArrayList(FINAL_CONTINUATION, QUEUE_CONTINUATIONS);
+    this.functions = Lists.newArrayList(new FinalContinuation(), new QueueContinuations());
+    this.functionIndexes = new int[functionNames.size()];
+    for (int i = 0; i < functionNames.size(); i++) {
+      functionIndexes[i] = this.eval.getSymbolTable().add(functionNames.get(i));
+    }
+  }
+
+  public ContinuationIncEval(AmbEval eval, Environment env,
+      Function<Expression2, Expression2> cpsTransform, SExpression defs,
+      List<String> functionNames, List<ContinuationFunctionValue> functions) {
+    this.eval = Preconditions.checkNotNull(eval);
+    this.env = Preconditions.checkNotNull(env);
+    this.cpsTransform = Preconditions.checkNotNull(cpsTransform);
+
+    this.sexpParser = ExpressionParser.sExpression(eval.getSymbolTable());
+    this.defs = defs;
+    
+    this.functionNames = ImmutableList.copyOf(functionNames);
+    this.functions = ImmutableList.copyOf(functions);
+    this.functionIndexes = new int[functionNames.size()];
+    for (int i = 0; i < functionNames.size(); i++) {
+      functionIndexes[i] = this.eval.getSymbolTable().add(functionNames.get(i));
+    }
   }
   
   public AmbEval getEval() {
@@ -90,12 +112,12 @@ public class ContinuationIncEval extends AbstractIncEval {
   @Override
   public void evaluateContinuation(IncEvalState state, IncEvalChart chart, LogFunction log) {
     Environment env = state.getEnvironment();
-    ContinuationHolder holder = (ContinuationHolder) env.getValue(
-        continuationHolderIndex, eval.getSymbolTable());
-    FinalContinuation finalContinuation = holder.finalContinuation;
-    finalContinuation.setChart(chart, state, log);
-    QueueContinuations queueContinuations = holder.queueContinuations;
-    queueContinuations.setChart(chart, state, log);
+    for (int i = 0; i < functionIndexes.length; i++) {
+      ContinuationFunctionValue f = (ContinuationFunctionValue) ((WrappedBuiltinFunction)
+          env.getValue(functionIndexes[i], eval.getSymbolTable())).getBaseFunction();
+      f.setChart(chart, state, this, log);
+    }
+
     AmbFunctionValue currentContinuation = (AmbFunctionValue) state.getContinuation();
 
     // System.out.println("evaluating: " + state.getContinuation());
@@ -111,7 +133,7 @@ public class ContinuationIncEval extends AbstractIncEval {
    * 
    * @return
    */
-  protected void nextState(IncEvalState prev, IncEvalState next, Object continuation,
+  public void nextState(IncEvalState prev, IncEvalState next, Object continuation,
       Environment env, Object denotation, Object diagram, Object otherArgs, LogFunction log) {
     next.set(continuation, env, denotation, diagram, prev.getProb(), null);
   }
@@ -119,12 +141,10 @@ public class ContinuationIncEval extends AbstractIncEval {
   @Override
   public Environment getEnvironment() {
     Environment continuationEnv = Environment.extend(env);
-    FinalContinuation finalContinuation = new FinalContinuation();
-    QueueContinuations queueContinuations = new QueueContinuations();
-    ContinuationHolder holder = new ContinuationHolder(finalContinuation, queueContinuations);
-    continuationEnv.bindName(finalContinuationIndex, new WrappedBuiltinFunction(finalContinuation));
-    continuationEnv.bindName(queueContinuationsIndex, new WrappedBuiltinFunction(queueContinuations));
-    continuationEnv.bindName(continuationHolderIndex, holder);
+    for (int i = 0; i < functionIndexes.length; i++) {
+      continuationEnv.bindName(functionIndexes[i],
+          new WrappedBuiltinFunction(functions.get(i).copy()));
+    }
 
     if (defs != null) {
       eval.eval(defs, continuationEnv, null);
@@ -148,17 +168,13 @@ public class ContinuationIncEval extends AbstractIncEval {
     return (AmbFunctionValue) evalResult.getValue();
   }
   
-  public class QueueContinuations implements FunctionValue {
-    private IncEvalChart chart;
-    private IncEvalState current;
-    private LogFunction log;
+  public static class QueueContinuations extends ContinuationFunctionValue {
 
-    public QueueContinuations() {}
+    public QueueContinuations() {super();}
     
-    public void setChart(IncEvalChart chart, IncEvalState current, LogFunction log) {
-      this.chart = chart;
-      this.current = current;
-      this.log = log;
+    @Override
+    public QueueContinuations copy() {
+      return new QueueContinuations();
     }
 
     @Override
@@ -178,7 +194,7 @@ public class ContinuationIncEval extends AbstractIncEval {
           LispUtil.checkArgument(args2.size() == 1 || args2.size() == 2,
               "Expected 1 or 2 arguments, got: %s", args2);
           List<Object> nextDiagrams = ConsValue.consListToList(args2.get(0));
-          
+
           if (nextDiagrams.size() == 1 && nextDenotations.size() > 1) {
             nextDiagrams = Collections.nCopies(nextDenotations.size(), nextDiagrams.get(0));
           }
@@ -200,7 +216,7 @@ public class ContinuationIncEval extends AbstractIncEval {
 
             IncEvalState next = chart.alloc();
             Object nextCont = continuation.apply(Arrays.asList(denotation), context2, null);
-            nextState(current, next, nextCont, Environment.extend(current.getEnvironment()),
+            eval.nextState(current, next, nextCont, Environment.extend(current.getEnvironment()),
                 denotation, diagram, otherArg, log);
             chart.offer(current, next);
           }
@@ -211,18 +227,14 @@ public class ContinuationIncEval extends AbstractIncEval {
     }
   }
 
-  public class FinalContinuation implements FunctionValue {
-    private IncEvalChart chart;
-    private IncEvalState current;
-    private LogFunction log;
-    
+  public static class FinalContinuation extends ContinuationFunctionValue {
     public FinalContinuation() {
+      super();
     }
-
-    public void setChart(IncEvalChart chart, IncEvalState current, LogFunction log) {
-      this.chart = chart;
-      this.current = current;
-      this.log = log;
+    
+    @Override
+    public FinalContinuation copy() {
+      return new FinalContinuation();
     }
 
     public Object apply(List<Object> args1, EvalContext context1) {
@@ -235,7 +247,7 @@ public class ContinuationIncEval extends AbstractIncEval {
           Object diagram = args2.get(0);
           
           IncEvalState next = chart.alloc();
-          nextState(current, next, null, Environment.extend(current.getEnvironment()),
+          eval.nextState(current, next, null, Environment.extend(current.getEnvironment()),
               denotation, diagram, null, log);
           chart.offerFinished(current, next);
           
@@ -244,18 +256,7 @@ public class ContinuationIncEval extends AbstractIncEval {
       });
     }
   }
-  
-  private static class ContinuationHolder {
-    public final FinalContinuation finalContinuation;
-    public final QueueContinuations queueContinuations;
 
-    public ContinuationHolder(FinalContinuation finalContinuation,
-        QueueContinuations queueContinuations) {
-      this.finalContinuation = finalContinuation;
-      this.queueContinuations = queueContinuations;
-    }
-  }
-  
   public static class SimplifierCpsTransform implements Function<Expression2, Expression2> {
     
     private final ExpressionSimplifier simplifier;

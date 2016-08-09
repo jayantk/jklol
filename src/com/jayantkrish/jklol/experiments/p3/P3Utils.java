@@ -104,7 +104,7 @@ public class P3Utils {
 
     KbState stateLabel = null;
     if (worldFilePath != null) {
-      stateLabel = state;
+      stateLabel = state.copy();
       Set<String> assignedPredicates = Sets.newHashSet();
       for (String predicateString : IoUtils.readLines(path + "/" + worldFilePath)) {
         if (!predicateString.startsWith("*")) {
@@ -126,10 +126,10 @@ public class P3Utils {
           for (Object arg1 : entities) {
             for (Object arg2 : entities) {
               if (relationMap.containsEntry(arg1, arg2)) {
-                stateLabel = stateLabel.putFunctionValue(typedPredicateName,
+                stateLabel.putFunctionValue(typedPredicateName,
                     Arrays.asList(arg1, arg2), ConstantValue.TRUE);
               } else {
-                stateLabel = stateLabel.putFunctionValue(typedPredicateName,
+                stateLabel.putFunctionValue(typedPredicateName,
                     Arrays.asList(arg1, arg2), ConstantValue.FALSE);
               }
             }
@@ -142,12 +142,12 @@ public class P3Utils {
           falseEntities.removeAll(trueEntities);
           
           for (Object trueEntity : trueEntities) {
-            stateLabel = stateLabel.putFunctionValue(typedPredicateName,
+            stateLabel.putFunctionValue(typedPredicateName,
                 Arrays.asList(trueEntity), ConstantValue.TRUE);
           }
           
           for (Object falseEntity : falseEntities) {
-            stateLabel = stateLabel.putFunctionValue(typedPredicateName,
+            stateLabel.putFunctionValue(typedPredicateName,
                 Arrays.asList(falseEntity), ConstantValue.FALSE);
           }
         }
@@ -156,7 +156,7 @@ public class P3Utils {
       for (String category : categories) {
         if (!assignedPredicates.contains(category)) {
           for (Object entity : entities) {
-            stateLabel = stateLabel.putFunctionValue(category, Arrays.asList(entity),
+            stateLabel.putFunctionValue(category, Arrays.asList(entity),
                 ConstantValue.FALSE);
           }
         }
@@ -166,7 +166,7 @@ public class P3Utils {
         if (!assignedPredicates.contains(relation)) {
           for (Object arg1 : entities) {
             for (Object arg2 : entities) {
-              stateLabel = stateLabel.putFunctionValue(relation,
+              stateLabel.putFunctionValue(relation,
                   Arrays.asList(arg1, arg2), ConstantValue.FALSE);
             }
           }
@@ -211,38 +211,33 @@ public class P3Utils {
       FeatureVectorGenerator<FunctionAssignment> relPredGen) {
     IndexedList<String> functionNames = IndexedList.create();
     List<FunctionAssignment> functionAssignments = Lists.newArrayList();
-    List<FeatureVectorGenerator<FunctionAssignment>> predicateFeatureGens = Lists.newArrayList();
 
     for (String category : categories) {
       functionNames.add(category);
 
       FunctionAssignment a = IndexableFunctionAssignment.unassignedDense(catVars, truthValueVar,
-          ConstantValue.NIL, catFeatureVar, catFeatures);
+          ConstantValue.NIL, catFeatureVar, catFeatures, catPredGen);
       functionAssignments.add(a);
-      predicateFeatureGens.add(catPredGen);
     }
     
     for (String relation : relations) {
       functionNames.add(relation);
 
       FunctionAssignment a = IndexableFunctionAssignment.unassignedDense(relVars, truthValueVar,
-          ConstantValue.NIL, relFeatureVar, relFeatures);
+          ConstantValue.NIL, relFeatureVar, relFeatures, relPredGen);
       functionAssignments.add(a);
-      predicateFeatureGens.add(relPredGen);
     }
 
     IndexedList<String> typeNames = IndexedList.create(
         Arrays.asList(ENTITY_TYPE_NAME, TRUTH_VAL_TYPE_NAME));
     List<DiscreteVariable> typeVars = Arrays.asList(entityVar, truthValueVar);
-    return new KbState(typeNames, typeVars, functionNames, functionAssignments, predicateFeatureGens,
-        Collections.nCopies(functionNames.size(), null), Sets.newHashSet());
+    return new KbState(typeNames, typeVars, functionNames, functionAssignments, Sets.newHashSet());
   }
-  
+
   public static Environment getEnvironment(IndexedList<String> symbolTable) {
     Environment env = AmbEval.getDefaultEnvironment(symbolTable);
     env.bindName("get-entities", new WrappedBuiltinFunction(new P3Functions.GetEntities()), symbolTable);
     env.bindName("kb-get", new WrappedBuiltinFunction(new P3Functions.KbGet()), symbolTable);
-    env.bindName("kb-set", new WrappedBuiltinFunction(new P3Functions.KbSet()), symbolTable);
     env.bindName("list-to-set", new WrappedBuiltinFunction(new P3Functions.ListToSet()), symbolTable);
     return env;
   }

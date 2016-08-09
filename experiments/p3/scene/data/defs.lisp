@@ -14,16 +14,10 @@
   (k (list-to-set l)))
 
 (define make-category (predicate-name)
-  (lambda (k x) (resolve-cat (lambda (v)
-			       (lambda (w2)
-				 ((k (kb-get w2 predicate-name x)) w2)))
-			     predicate-name x)))
+  (lambda (k x) (resolve-cat k predicate-name (list x))))
 
 (define make-relation (predicate-name)
-  (lambda (k x1 x2) (resolve-cat (lambda (v)
-				   (lambda (w2)
-				     ((k (kb-get w2 predicate-name (cons x1 x2))) w2)))
-				 predicate-name (cons x1 x2))))
+  (lambda (k x1 x2) (resolve-cat k predicate-name (list x1 x2))))
 
 
 ;; Functions for manipulating diagram uncertainty
@@ -38,22 +32,28 @@
 ;				     ((queue-k k (list denotation) (list tag)) (list world))))
 (define score-k (k denotation tag) (lambda (world) ((k denotation) world)))
 
-(define resolve-c (k test-proc candidate-proc)
-  (lambda (world)
-    (if (not (test-proc world))
-	((amb-world-c (lambda (value)
-			(lambda (next-world)
-			  ((k (test-proc next-world)) next-world)
-			  )
-			)
-		      "amb-world-value"
-		      (candidate-proc world)) world)
-	((k (test-proc world)) world)
-	)))
+; (define resolve-c (k test-proc candidate-proc)
+;   (lambda (world)
+;     (if (not (test-proc world))
+; 	((amb-world-c (lambda (value)
+; 			(lambda (next-world)
+; 			  ((k (test-proc next-world)) next-world)
+; 			  )
+; 			)
+; 		      "amb-world-value"
+; 		      (candidate-proc world)) world)
+; 	((k (test-proc world)) world)
+; 	)))
 
 (define resolve-cat (k predicate entity)
-  (resolve-c k (lambda (world) (not (nil? (kb-get world predicate entity))))
-	     (lambda (world) (list (kb-set world predicate entity #t) (kb-set world predicate entity #f)))))
+  (lambda (world)
+    (let ((val (kb-get world predicate entity)))
+      (if (nil? val)
+	  ((kb-set-k k predicate entity (list #t #f)) world)
+	((k val) world)))))
+  
+;  (resolve-c k (lambda (world) (not (nil? (kb-get world predicate entity))))
+;	     (lambda (world) (list (kb-set world predicate entity #t) (kb-set world predicate entity #f)))))
 
 
 (define filter-c (continuation f-c items)

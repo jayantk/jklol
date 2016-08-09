@@ -8,7 +8,7 @@ public interface FunctionAssignment {
 
   public Object getValue(List<?> args);
   
-  public IndexableFunctionAssignment putValue(List<?> args, Object value);
+  public void putValue(List<?> args, Object value);
 
   public boolean isConsistentWith(FunctionAssignment other);
 
@@ -24,4 +24,10 @@ public interface FunctionAssignment {
    * @return
    */
   public Tensor getFeatureVector();
+
+  public Tensor getPredicateFeatureVector();
+
+  public FunctionAssignment copy();
+  
+  public void copyTo(FunctionAssignment assignment);
 }

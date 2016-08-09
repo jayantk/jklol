@@ -69,7 +69,7 @@ public class AmbIncEval extends AbstractIncEval {
       IncEvalState next = chart.alloc();
       next.set(null, Environment.extend(continuationEnv),
           values.get(i), null, probs.get(i), null);
-      chart.offer(state, next);
+      chart.offerFinished(state, next);
     }
   }
 

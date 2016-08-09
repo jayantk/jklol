@@ -29,6 +29,27 @@ public abstract class AbstractIncEval implements IncEval {
   protected Tensor getInitialFeatureVector(Object initialDiagram) {
     return null;
   }
+  
+  protected IncEvalChart initializeChart(Expression2 lf, Object initialDiagram,
+      IncEvalCost cost, Environment startEnv, IncEvalSearchLog searchLog,
+      int beamSize) {
+    Preconditions.checkArgument(initialDiagram != null);
+    // Construct and queue the start state. 
+    // Note that continuation may be null, meaning that lf cannot
+    // be evaluated by this class. If this is the case, this method
+    // will return the initialState as the only result.
+    Object continuation = lfToContinuation(lf, startEnv);
+    Tensor featureVector = getInitialFeatureVector(initialDiagram);
+    IncEvalState sizingState = new IncEvalState(continuation, startEnv, null,
+        initialDiagram, 1.0, featureVector);
+
+    IncEvalChart chart = new IncEvalChart(beamSize, sizingState, cost, searchLog);
+    IncEvalState initialState = chart.alloc();
+    sizingState.copyTo(initialState);
+    chart.offer(null, initialState);
+
+    return chart;
+  }
 
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
@@ -63,62 +84,24 @@ public abstract class AbstractIncEval implements IncEval {
       IncEvalCost cost, Environment startEnv, LogFunction log, int beamSize) {
     return evaluateBeam(lf, initialDiagram, cost, startEnv, log, null, beamSize);
   }
-  
-  /*
-  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
-      IncEvalCost cost, Environment startEnv, LogFunction log, IncEvalSearchLog searchLog,
-      int beamSize) {
-    Preconditions.checkArgument(initialDiagram != null);
-    // Construct and queue the start state. 
-    // Note that continuation may be null, meaning that lf cannot
-    // be evaluated by this class. If this is the case, this method
-    // will return the initialState as the only result.
-    Object continuation = lfToContinuation(lf, startEnv);
-    Tensor featureVector = getInitialFeatureVector(initialDiagram);
-    IncEvalState sizingState = new IncEvalState(continuation, startEnv, null,
-        initialDiagram, 1.0, featureVector);
-
-    IncEvalChart chart = new IncEvalChart(beamSize, sizingState, cost, searchLog);
-    IncEvalState initialState = chart.alloc();
-    sizingState.copyTo(initialState);
-    chart.offer(null, initialState);
-    
-  }
-  */
 
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
       IncEvalCost cost, Environment startEnv, LogFunction log, IncEvalSearchLog searchLog,
       int beamSize) {
-    Preconditions.checkArgument(initialDiagram != null);
-
-    // Construct and queue the start state. 
-    // Note that continuation may be null, meaning that lf cannot
-    // be evaluated by this class. If this is the case, this method
-    // will return the initialState as the only result.
-    Object continuation = lfToContinuation(lf, startEnv);
-    Tensor featureVector = getInitialFeatureVector(initialDiagram);
-    IncEvalState sizingState = new IncEvalState(continuation, startEnv, null,
-        initialDiagram, 1.0, featureVector);
-
-    IncEvalChart chart = new IncEvalChart(beamSize, sizingState, cost, searchLog);
-    IncEvalState initialState = chart.alloc();
-    sizingState.copyTo(initialState);
-    chart.offer(null, initialState);
-    
+    IncEvalChart chart = initializeChart(lf, initialDiagram, cost, startEnv, searchLog, beamSize);
     while (chart.size() > 0) {
+      /*
       System.out.println("====");
       System.out.println("chart size: " + chart.size());
       System.out.println("finished size: " + chart.getFinishedHeap().size());
       System.out.println("beam size: " + chart.getCurrentBeamSize());
       System.out.println("num free: " + chart.getNumFree());
+      */
 
       chart.moveHeapToBeam();
       int currentBeamSize = chart.getCurrentBeamSize();
       IncEvalState[] currentBeam = chart.getCurrentBeam();
-      
-      System.out.println("beam size: " + chart.getCurrentBeamSize());
-      System.out.println("chart size: " + chart.size());
 
       for (int i = 0; i < currentBeamSize; i++) {
         IncEvalState state = currentBeam[i];
@@ -179,6 +162,14 @@ public abstract class AbstractIncEval implements IncEval {
 
     public int getNumFree() {
       return numFree;
+    }
+
+    public int getNumAllocated() {
+      return free.length - numFree;
+    }
+
+    public IncEvalState[] getFree() {
+      return free;
     }
 
     public IncEvalState alloc() {

@@ -154,7 +154,7 @@ public class ParametricContinuationIncEval implements ParametricIncEval {
     }
 
     @Override
-    protected void nextState(IncEvalState prev, IncEvalState next, Object continuation,
+    public void nextState(IncEvalState prev, IncEvalState next, Object continuation,
         Environment env, Object denotation, Object diagram, Object otherArg, LogFunction log) {
       log.startTimer("evaluate_continuation/queue/model");
       Tensor featureVector = featureGen.apply(new StateFeatures(

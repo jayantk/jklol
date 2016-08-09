@@ -58,6 +58,10 @@ public class IncEvalState implements Copyable<IncEvalState> {
     this.features = features;
   }
 
+  public void setDiagram(Object diagram) {
+    this.diagram = diagram;
+  }
+
   @Override
   public void copyTo(IncEvalState item) {
     item.continuation = continuation;

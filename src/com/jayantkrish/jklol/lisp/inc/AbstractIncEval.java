@@ -63,6 +63,28 @@ public abstract class AbstractIncEval implements IncEval {
       IncEvalCost cost, Environment startEnv, LogFunction log, int beamSize) {
     return evaluateBeam(lf, initialDiagram, cost, startEnv, log, null, beamSize);
   }
+  
+  /*
+  public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
+      IncEvalCost cost, Environment startEnv, LogFunction log, IncEvalSearchLog searchLog,
+      int beamSize) {
+    Preconditions.checkArgument(initialDiagram != null);
+    // Construct and queue the start state. 
+    // Note that continuation may be null, meaning that lf cannot
+    // be evaluated by this class. If this is the case, this method
+    // will return the initialState as the only result.
+    Object continuation = lfToContinuation(lf, startEnv);
+    Tensor featureVector = getInitialFeatureVector(initialDiagram);
+    IncEvalState sizingState = new IncEvalState(continuation, startEnv, null,
+        initialDiagram, 1.0, featureVector);
+
+    IncEvalChart chart = new IncEvalChart(beamSize, sizingState, cost, searchLog);
+    IncEvalState initialState = chart.alloc();
+    sizingState.copyTo(initialState);
+    chart.offer(null, initialState);
+    
+  }
+  */
 
   @Override
   public List<IncEvalState> evaluateBeam(Expression2 lf, Object initialDiagram,
@@ -84,30 +106,19 @@ public abstract class AbstractIncEval implements IncEval {
     sizingState.copyTo(initialState);
     chart.offer(null, initialState);
     
-    // Array of elements in the current beam.
-    IncEvalState[] currentBeam = new IncEvalState[beamSize + 1];
-    for (int i = 0; i < currentBeam.length; i++) {
-      currentBeam[i] = sizingState.copy();
-    }
-    int currentBeamSize = 0;
-
     while (chart.size() > 0) {
-      /*
       System.out.println("====");
       System.out.println("chart size: " + chart.size());
       System.out.println("finished size: " + chart.getFinishedHeap().size());
+      System.out.println("beam size: " + chart.getCurrentBeamSize());
       System.out.println("num free: " + chart.getNumFree());
-      */      
 
-      // Copy the heap to the current beam.
-      currentBeamSize = chart.size();
-      IncEvalState[] keys = chart.getItems();
-      for (int i = 0; i < currentBeamSize; i++) {
-        keys[i].copyTo(currentBeam[i]);
-      }
-
-      // Empty the heap.
-      chart.clear();
+      chart.moveHeapToBeam();
+      int currentBeamSize = chart.getCurrentBeamSize();
+      IncEvalState[] currentBeam = chart.getCurrentBeam();
+      
+      System.out.println("beam size: " + chart.getCurrentBeamSize());
+      System.out.println("chart size: " + chart.size());
 
       for (int i = 0; i < currentBeamSize; i++) {
         IncEvalState state = currentBeam[i];
@@ -116,6 +127,7 @@ public abstract class AbstractIncEval implements IncEval {
         evaluateContinuation(state, chart, log);
         log.stopTimer("evaluate_continuation");
       }
+      chart.clearBeam();
     }
 
     List<IncEvalState> finalStates = Lists.newArrayList();
@@ -136,6 +148,11 @@ public abstract class AbstractIncEval implements IncEval {
 
     // Heap for finished parses.
     private final KbestQueue<IncEvalState> finishedHeap;
+    
+    // Current beam storing states to evaluate, whose
+    // next states are added to heap.
+    private final IncEvalState[] currentBeam;
+    private int currentBeamSize;
 
     private final IncEvalCost cost;
     private final IncEvalSearchLog searchLog;
@@ -143,11 +160,13 @@ public abstract class AbstractIncEval implements IncEval {
     public IncEvalChart(int beamSize, IncEvalState itemSize, IncEvalCost cost,
         IncEvalSearchLog searchLog) {
       // TODO: verify the calculation of number of necessary states.
-      free = new IncEvalState[2 * (beamSize + 2)];
+      free = new IncEvalState[3 * (beamSize + 2)];
 
       heap = new KbestQueue<IncEvalState>(beamSize, new IncEvalState[0]);
       finishedHeap = new KbestQueue<IncEvalState>(beamSize, new IncEvalState[0]);
-      
+      currentBeam = new IncEvalState[beamSize];
+      currentBeamSize = 0;
+
       this.cost = cost;
       this.searchLog = searchLog;
 
@@ -186,14 +205,32 @@ public abstract class AbstractIncEval implements IncEval {
       return heap.getItems();
     }
 
-    public void clear() {
-      int heapSize = heap.size();
-      IncEvalState[] items = heap.getItems();
-      for (int i = 0; i < heapSize; i++) {
-        dealloc(items[i]);
+    public void moveHeapToBeam() {
+      // Validate that the beam is empty
+      Preconditions.checkState(currentBeamSize == 0);
+      
+      // Copy the heap to the current beam.
+      currentBeamSize = heap.size();
+      IncEvalState[] keys = heap.getItems();
+      for (int i = 0; i < currentBeamSize; i++) {
+        currentBeam[i] = keys[i];
       }
-
       heap.clear();
+    }
+    
+    public int getCurrentBeamSize() {
+      return currentBeamSize;
+    }
+    
+    public IncEvalState[] getCurrentBeam() {
+      return currentBeam;
+    }
+    
+    public void clearBeam() {
+      for (int i = 0; i < currentBeamSize; i++) {
+        dealloc(currentBeam[i]);
+      }
+      currentBeamSize = 0;
     }
 
     public KbestQueue<IncEvalState> getFinishedHeap() {

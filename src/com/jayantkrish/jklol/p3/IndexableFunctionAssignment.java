@@ -369,15 +369,12 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     IndexableFunctionAssignment a = (IndexableFunctionAssignment) assignment;
     
     Preconditions.checkArgument(a.values.length == values.length);
-    for (int i = 0; i < values.length; i++) {
-      a.values[i] = values[i];
-    }
+    System.arraycopy(values, 0, a.values, 0, values.length);
+
     a.firstUnassignedIndex = firstUnassignedIndex;
     
     Preconditions.checkArgument(a.cachedFeatureVector.length == cachedFeatureVector.length);
-    for (int i = 0; i < cachedFeatureVector.length; i++) {
-      a.cachedFeatureVector[i] = cachedFeatureVector[i];
-    }
+    System.arraycopy(cachedFeatureVector, 0, a.cachedFeatureVector, 0, cachedFeatureVector.length);
 
     a.predicateFeatures = predicateFeatures;
   }

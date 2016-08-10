@@ -170,21 +170,9 @@ public class KbContinuationIncEval extends ContinuationIncEval {
           for (int i = 0; i < functionValues.size(); i++) {
             IncEvalState next = kbChart.alloc();
             KbState nextKb = kbChart.allocCopyOf(currentKb);
-            /*
-            for (int updated : currentKb.getUpdatedFunctionIndexes()) {
-              FunctionAssignment nextA = kbChart.getAssignmentPool(updated).alloc();
-              currentKb.getAssignment(updated).copyTo(nextA);
-              nextKb.setAssignment(updated, nextA);
-            }
-            if (!currentKb.getUpdatedFunctionIndexes().contains(functionIndex)) {
-              FunctionAssignment nextA = kbChart.getAssignmentPool(functionIndex).alloc();
-              currentKb.getAssignment(functionIndex).copyTo(nextA);
-              nextKb.setAssignment(functionIndex, nextA);
-            }
-            */
 
             kbChart.allocAssignment(nextKb, functionIndex);
-            // currentKb.getAssignment(functionIndex).copyTo(nextKb.getAssignment(functionIndex));
+            currentKb.getAssignment(functionIndex).copyTo(nextKb.getAssignment(functionIndex));
             Object value = functionValues.get(i);
             nextKb.putFunctionValue(functionName, functionArgs, value);
 

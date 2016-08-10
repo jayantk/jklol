@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.p3;
 
 import java.util.List;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.jayantkrish.jklol.lisp.inc.IncEvalChart;
 import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
@@ -37,14 +38,12 @@ public class KbIncEvalChart extends IncEvalChart {
   public KbState allocCopyOf(KbState other) {
     KbState kb = kbPool.alloc();
     other.shallowCopyTo(kb);
-    
-    /*
+
     List<FunctionAssignment> assignments = kb.getAssignments();
-    for (int i = 0; i < assignments.size(); i++) {
+    for (int i : other.getUpdatedFunctionIndexes()) {
       assignmentRefCounts[i][assignments.get(i).getId()]++;
     }
-    */
-    
+
     return kb;
   }
 
@@ -52,18 +51,15 @@ public class KbIncEvalChart extends IncEvalChart {
     KbState kb = kbPool.alloc();
     other.shallowCopyTo(kb);
 
-    /*
     for (int i = 0; i < kb.getFunctions().size(); i++) {
       allocAssignment(kb, i);
       other.getAssignment(i).copyTo(kb.getAssignment(i));
     }
-    */
 
     return kb;
   }
 
   public void allocAssignment(KbState kb, int functionIndex) {
-    /*
     FunctionAssignment a = assignmentPool.get(functionIndex).alloc();
     
     int id = a.getId();
@@ -82,24 +78,23 @@ public class KbIncEvalChart extends IncEvalChart {
     }
 
     kb.setAssignment(functionIndex, a);
-    */
-    kb.setAssignment(functionIndex, kb.getAssignment(functionIndex).copy());
-  }
 
+    // kb.setAssignment(functionIndex, kb.getAssignment(functionIndex).copy());
+  }
+  
   @Override
   protected void dealloc(IncEvalState state) {
     if (state.getDiagram() != null) {
       KbState kb = (KbState) state.getDiagram();
-      /*
       List<FunctionAssignment> assignments = kb.getAssignments();
-      for (int i = 0; i < assignments.size(); i++) {
+      for (int i : kb.getUpdatedFunctionIndexes()) {
         assignmentRefCounts[i][assignments.get(i).getId()]--;
         
         if (assignmentRefCounts[i][assignments.get(i).getId()] == 0) {
           assignmentPool.get(i).dealloc(assignments.get(i));
         }
       }
-      */
+
       kb.clear();
       kbPool.dealloc(kb);
     }

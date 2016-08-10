@@ -63,6 +63,7 @@ public class P3LoglikelihoodOracle implements
       if (example.isCorrect(parse.getLogicalForm(), parse.getDenotation(), parse.getDiagram())) {
         conditionalParses.add(parse);
         
+        /*
         System.out.println(parse.getSubtreeProbability() + " " + parse.getDenotation() + " "
             + parse.getLogicalForm() + " " + parse.getSyntacticParse());
         KbState state = ((KbState) parse.getDiagram());
@@ -70,6 +71,7 @@ public class P3LoglikelihoodOracle implements
           System.out.println(state.getFunctions().get(i) + " " + state.getAssignments().get(i).getFeatureVector().toString());
           System.out.println("   " + state.getAssignments().get(i).getPredicateFeatureVector().toString());
         }
+        */
       }
     }
     log.stopTimer("update_gradient/output_marginal/filter");

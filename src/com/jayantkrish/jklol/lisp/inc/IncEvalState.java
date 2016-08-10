@@ -1,10 +1,10 @@
 package com.jayantkrish.jklol.lisp.inc;
 
+import com.google.common.base.Supplier;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.tensor.Tensor;
-import com.jayantkrish.jklol.util.Copyable;
 
-public class IncEvalState implements Copyable<IncEvalState> {
+public class IncEvalState {
   private Object continuation;
   private Environment environment;
 
@@ -22,6 +22,15 @@ public class IncEvalState implements Copyable<IncEvalState> {
     this.diagram = diagram;
     this.prob = prob;
     this.features = features;
+  }
+  
+  public static Supplier<IncEvalState> getSupplier() {
+    return new Supplier<IncEvalState>() {
+      @Override
+      public IncEvalState get() {
+        return new IncEvalState(null, null, null, null, 1.0, null);
+      }
+    };
   }
 
   public final Object getContinuation() {
@@ -60,23 +69,6 @@ public class IncEvalState implements Copyable<IncEvalState> {
 
   public void setDiagram(Object diagram) {
     this.diagram = diagram;
-  }
-
-  @Override
-  public void copyTo(IncEvalState item) {
-    item.continuation = continuation;
-    item.environment = environment;
-    item.denotation = denotation;
-    item.diagram = diagram;
-    item.prob = prob;
-    item.features = features;
-  }
-
-  @Override
-  public IncEvalState copy() {
-    IncEvalState s = new IncEvalState(null, null, null, null, 0.0, null);
-    copyTo(s);
-    return s;
   }
 
   @Override

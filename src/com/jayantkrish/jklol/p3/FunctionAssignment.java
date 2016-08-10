@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.p3;
 
 import java.util.List;
 
+import com.google.common.base.Supplier;
 import com.jayantkrish.jklol.tensor.Tensor;
 
 public interface FunctionAssignment {
@@ -30,4 +31,13 @@ public interface FunctionAssignment {
   public FunctionAssignment copy();
   
   public void copyTo(FunctionAssignment assignment);
+
+  public static Supplier<FunctionAssignment> getCopySupplier(final FunctionAssignment a) {
+    return new Supplier<FunctionAssignment>() {
+      @Override
+      public FunctionAssignment get() {
+        return a.copy();
+      }
+    };
+  }
 }

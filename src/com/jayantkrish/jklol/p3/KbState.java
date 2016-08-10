@@ -1,9 +1,11 @@
 package com.jayantkrish.jklol.p3;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.models.DiscreteVariable;
@@ -29,6 +31,34 @@ public class KbState {
     Preconditions.checkArgument(functionNames.size() == functionAssignments.size());
 
     this.updated = Preconditions.checkNotNull(updated);
+  }
+
+  public static Supplier<KbState> getCopySupplier(final KbState toCopy) {
+    return new Supplier<KbState>() {
+      @Override
+      public KbState get() {
+        return toCopy.shallowCopy();
+      }
+    };
+  }
+  
+  public static Supplier<KbState> getNullSupplier(final IndexedList<String> typeNames,
+      final List<DiscreteVariable> typeVars, final IndexedList<String> functionNames) {
+    return new Supplier<KbState>() {
+      @Override
+      public KbState get() {
+        return new KbState(typeNames, typeVars, functionNames,
+            Lists.newArrayList(Collections.nCopies(functionNames.size(), null)), Sets.newHashSet());
+      }
+    };
+  }
+  
+  public IndexedList<String> getTypeNames() {
+    return typeNames;
+  }
+  
+  public List<DiscreteVariable> getTypeVars() {
+    return typeVars;
   }
 
   public Object getFunctionValue(String functionName, List<Object> args) {
@@ -60,6 +90,18 @@ public class KbState {
     return functionAssignments.get(functionIndex);
   }
 
+  public void setAssignment(int functionIndex, FunctionAssignment assignment) {
+    functionAssignments.set(functionIndex, assignment);
+    updated.add(functionIndex);
+  }
+
+  public void clear() {
+    for (int i = 0; i < functionAssignments.size(); i++) {
+      functionAssignments.set(i, null);
+    }
+    updated.clear();
+  }
+
   public Set<Integer> getUpdatedFunctionIndexes() {
     return updated;
   }
@@ -78,13 +120,18 @@ public class KbState {
         Sets.newHashSet(updated));
   }
   
-  public void copyTo(KbState other) {
+  public KbState shallowCopy() {
+    return new KbState(typeNames, typeVars, functionNames,
+        Lists.newArrayList(functionAssignments), Sets.newHashSet(updated));
+  }
+  
+  public void shallowCopyTo(KbState other) {
     List<FunctionAssignment> otherAssignments = other.functionAssignments;
     Preconditions.checkArgument(otherAssignments.size() == functionAssignments.size());
     int numAssignments = otherAssignments.size();
     
     for (int i = 0; i < numAssignments; i++) {
-      functionAssignments.get(i).copyTo(otherAssignments.get(i));
+      otherAssignments.set(i, functionAssignments.get(i));
     }
 
     other.updated.clear();

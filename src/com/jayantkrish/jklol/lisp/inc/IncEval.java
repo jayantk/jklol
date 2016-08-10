@@ -4,7 +4,6 @@ import java.util.List;
 
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.Environment;
-import com.jayantkrish.jklol.lisp.inc.AbstractIncEval.IncEvalChart;
 import com.jayantkrish.jklol.training.LogFunction;
 
 /**

@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.AmbEval.AmbFunctionValue;
@@ -18,6 +17,7 @@ import com.jayantkrish.jklol.lisp.LispUtil;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.lisp.inc.ContinuationFunctionValue;
 import com.jayantkrish.jklol.lisp.inc.ContinuationIncEval;
+import com.jayantkrish.jklol.lisp.inc.IncEvalChart;
 import com.jayantkrish.jklol.lisp.inc.IncEvalCost;
 import com.jayantkrish.jklol.lisp.inc.IncEvalSearchLog;
 import com.jayantkrish.jklol.lisp.inc.IncEvalState;
@@ -115,27 +115,20 @@ public class KbContinuationIncEval extends ContinuationIncEval {
     IncEvalCost cost, Environment startEnv, IncEvalSearchLog searchLog,
     int beamSize) {
     KbState kb = (KbState) initialDiagram;
-    
+
     // Construct and queue the start state. 
     // Note that continuation may be null, meaning that lf cannot
     // be evaluated by this class. If this is the case, this method
     // will return the initialState as the only result.
     Object continuation = lfToContinuation(lf, startEnv);
     Tensor featureVector = getInitialFeatureVector(initialDiagram);
-    IncEvalState sizingState = new IncEvalState(continuation, startEnv, null,
-        kb.copy(), 1.0, featureVector);
 
     // Initialize the chart and their KbStates.
-    IncEvalChart chart = new IncEvalChart(beamSize, sizingState, cost, searchLog);
-    Preconditions.checkState(chart.getNumAllocated() == 0);
-    IncEvalState[] free = chart.getFree();
-    for (int i = 0; i < free.length; i++) {
-      IncEvalState s = free[i];
-      s.setDiagram(kb.copy());
-    }
+    KbIncEvalChart chart = new KbIncEvalChart(beamSize, cost, searchLog, kb);
 
     IncEvalState initialState = chart.alloc();
-    sizingState.copyTo(initialState);
+    KbState initialKb = chart.allocCopyOf(kb);
+    initialState.set(continuation, startEnv, null, initialKb, 1.0, featureVector);
     chart.offer(null, initialState);
 
     return chart;
@@ -169,15 +162,29 @@ public class KbContinuationIncEval extends ContinuationIncEval {
         public Object apply(List<Object> args2, EvalContext context2) {
           LispUtil.checkArgument(args2.size() == 1, "Expected 1 argument, got: %s", args2);
           KbState currentKb = (KbState) args2.get(0);
+          int functionIndex = currentKb.getFunctions().getIndex(functionName);
+          KbIncEvalChart kbChart = (KbIncEvalChart) chart;
 
           for (int i = 0; i < functionValues.size(); i++) {
-            IncEvalState next = chart.alloc();
-            KbState nextKb = (KbState) next.getDiagram();
-            currentKb.copyTo(nextKb);
-            
+            IncEvalState next = kbChart.alloc();
+            KbState nextKb = kbChart.allocCopyOf(currentKb);
+            /*
+            for (int updated : currentKb.getUpdatedFunctionIndexes()) {
+              FunctionAssignment nextA = kbChart.getAssignmentPool(updated).alloc();
+              currentKb.getAssignment(updated).copyTo(nextA);
+              nextKb.setAssignment(updated, nextA);
+            }
+            if (!currentKb.getUpdatedFunctionIndexes().contains(functionIndex)) {
+              FunctionAssignment nextA = kbChart.getAssignmentPool(functionIndex).alloc();
+              currentKb.getAssignment(functionIndex).copyTo(nextA);
+              nextKb.setAssignment(functionIndex, nextA);
+            }
+            */
+
             Object value = functionValues.get(i);
+            nextKb.setAssignment(functionIndex, currentKb.getAssignment(functionIndex).copy());
             nextKb.putFunctionValue(functionName, functionArgs, value);
-            
+
             Object nextCont = continuation.apply(Arrays.asList(value), context2, null);
             eval.nextState(current, next, nextCont, Environment.extend(current.getEnvironment()),
                 value, nextKb, null, log);

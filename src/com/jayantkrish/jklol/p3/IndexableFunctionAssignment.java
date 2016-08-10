@@ -47,6 +47,8 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
 
   private final FeatureVectorGenerator<FunctionAssignment> predicateFeatureGen;
   private Tensor predicateFeatures;
+  
+  private int id;
 
   protected IndexableFunctionAssignment(VariableNumMap inputVars, DiscreteVariable outputVar,
       int outputVarUnassigned, Tensor sparsity, int sparsityValueIndex, int[] values,
@@ -65,6 +67,7 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     this.cachedFeatureVector = cachedFeatureVector;
     this.predicateFeatureGen = predicateFeatureGen;
     this.predicateFeatures = predicateFeatures;
+    this.id = -1;
   }
 
   public static IndexableFunctionAssignment unassignedDense(VariableNumMap inputVars,
@@ -369,6 +372,7 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     for (int i = 0; i < values.length; i++) {
       a.values[i] = values[i];
     }
+    a.firstUnassignedIndex = firstUnassignedIndex;
     
     Preconditions.checkArgument(a.cachedFeatureVector.length == cachedFeatureVector.length);
     for (int i = 0; i < cachedFeatureVector.length; i++) {
@@ -376,6 +380,14 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     }
 
     a.predicateFeatures = predicateFeatures;
+  }
+
+  public void setId(int id) {
+    this.id = id;
+  }
+
+  public int getId() {
+    return id;
   }
 
   private static void updateFeatures(int[] inputKey, int value, Tensor elementFeatures,

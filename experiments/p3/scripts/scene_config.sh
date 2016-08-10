@@ -1,7 +1,7 @@
 
 export DATA_DIR="experiments/p3/scene"
 export OUT_DIR="$DATA_DIR/output/"
-export EXPERIMENT_NAME="080316_12"
+export EXPERIMENT_NAME="080316_14"
 export EXPERIMENT_DIR="$OUT_DIR/$EXPERIMENT_NAME/"
 
 mkdir -p $OUT_DIR

@@ -32,15 +32,6 @@ public class KbState {
 
     this.updated = Preconditions.checkNotNull(updated);
   }
-
-  public static Supplier<KbState> getCopySupplier(final KbState toCopy) {
-    return new Supplier<KbState>() {
-      @Override
-      public KbState get() {
-        return toCopy.shallowCopy();
-      }
-    };
-  }
   
   public static Supplier<KbState> getNullSupplier(final IndexedList<String> typeNames,
       final List<DiscreteVariable> typeVars, final IndexedList<String> functionNames) {
@@ -92,7 +83,6 @@ public class KbState {
 
   public void setAssignment(int functionIndex, FunctionAssignment assignment) {
     functionAssignments.set(functionIndex, assignment);
-    updated.add(functionIndex);
   }
 
   public void clear() {

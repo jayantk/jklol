@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.AmbEval.AmbFunctionValue;
@@ -35,15 +36,15 @@ public class KbContinuationIncEval extends ContinuationIncEval {
   public KbContinuationIncEval(AmbEval eval, Environment env,
       Function<Expression2, Expression2> cpsTransform, SExpression defs, KbModel kbModel) {
     super(eval, env, cpsTransform, defs,
-        Arrays.asList(FINAL_CONTINUATION, QUEUE_CONTINUATIONS, SET_KB_CONTINUATIONS),
-        Arrays.asList(new FinalContinuation(), new QueueContinuations(), new QueueSetKbContinuations()));
+        Arrays.asList(FINAL_CONTINUATION, SET_KB_CONTINUATIONS),
+        Arrays.asList(new FinalKbContinuation(), new QueueSetKbContinuations()));
     this.kbModel = kbModel;
   }
   
   public KbContinuationIncEval(ContinuationIncEval eval, KbModel kbModel) {
     super(eval.getEval(), eval.getInitialEnvironment(), eval.getCpsTransform(), eval.getDefs(),
-        Arrays.asList(FINAL_CONTINUATION, QUEUE_CONTINUATIONS, SET_KB_CONTINUATIONS),
-        Arrays.asList(new FinalContinuation(), new QueueContinuations(), new QueueSetKbContinuations()));
+        Arrays.asList(FINAL_CONTINUATION, SET_KB_CONTINUATIONS),
+        Arrays.asList(new FinalKbContinuation(), new QueueSetKbContinuations()));
     this.kbModel = kbModel;
   }
 
@@ -90,6 +91,7 @@ public class KbContinuationIncEval extends ContinuationIncEval {
       prob *= Math.exp(classifier.innerProduct(featureVector).getByDimKey());
       
       Tensor predClassifier = predClassifiers.get(index);
+      Preconditions.checkNotNull(assignments.get(i));
       Tensor predFeatureVector = assignments.get(i).getPredicateFeatureVector().relabelDimensions(
           classifier.getDimensionNumbers());
       prob *= Math.exp(predClassifier.innerProduct(predFeatureVector).getByDimKey());
@@ -127,7 +129,7 @@ public class KbContinuationIncEval extends ContinuationIncEval {
     KbIncEvalChart chart = new KbIncEvalChart(beamSize, cost, searchLog, kb);
 
     IncEvalState initialState = chart.alloc();
-    KbState initialKb = chart.allocCopyOf(kb);
+    KbState initialKb = chart.allocDeepCopyOf(kb);
     initialState.set(continuation, startEnv, null, initialKb, 1.0, featureVector);
     chart.offer(null, initialState);
 
@@ -181,8 +183,9 @@ public class KbContinuationIncEval extends ContinuationIncEval {
             }
             */
 
+            kbChart.allocAssignment(nextKb, functionIndex);
+            // currentKb.getAssignment(functionIndex).copyTo(nextKb.getAssignment(functionIndex));
             Object value = functionValues.get(i);
-            nextKb.setAssignment(functionIndex, currentKb.getAssignment(functionIndex).copy());
             nextKb.putFunctionValue(functionName, functionArgs, value);
 
             Object nextCont = continuation.apply(Arrays.asList(value), context2, null);
@@ -196,4 +199,38 @@ public class KbContinuationIncEval extends ContinuationIncEval {
       });
     }
   }
+  
+  public static class FinalKbContinuation extends ContinuationFunctionValue {
+    public FinalKbContinuation() {
+      super();
+    }
+
+    @Override
+    public FinalKbContinuation copy() {
+      return new FinalKbContinuation();
+    }
+
+    public Object apply(List<Object> args1, EvalContext context1) {
+      LispUtil.checkArgument(args1.size() == 1);
+      Object denotation = args1.get(0);
+
+      return new WrappedBuiltinFunction(new FunctionValue() {
+        public Object apply(List<Object> args2, EvalContext context2) {
+          LispUtil.checkArgument(args2.size() == 1);
+          KbState diagram = (KbState) args2.get(0);
+
+          KbIncEvalChart kbChart = (KbIncEvalChart) chart;
+          IncEvalState next = kbChart.alloc();
+          KbState nextKb = kbChart.allocCopyOf(diagram);
+          
+          eval.nextState(current, next, null, Environment.extend(current.getEnvironment()),
+              denotation, nextKb, null, log);
+          chart.offerFinished(current, next);
+
+          return ConstantValue.NIL;
+        }
+      });
+    }
+  }
+
 }

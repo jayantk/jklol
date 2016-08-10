@@ -32,6 +32,11 @@ public interface FunctionAssignment {
   
   public void copyTo(FunctionAssignment assignment);
 
+  // These methods are for object pooling.
+  public void setId(int id);
+
+  public int getId();
+
   public static Supplier<FunctionAssignment> getCopySupplier(final FunctionAssignment a) {
     return new Supplier<FunctionAssignment>() {
       @Override

@@ -19,7 +19,6 @@ import com.jayantkrish.jklol.lisp.ConsValue;
 import com.jayantkrish.jklol.lisp.ConstantValue;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.EvalContext;
-import com.jayantkrish.jklol.lisp.FunctionValue;
 import com.jayantkrish.jklol.lisp.LispEval.EvalResult;
 import com.jayantkrish.jklol.lisp.LispUtil;
 import com.jayantkrish.jklol.lisp.SExpression;
@@ -178,7 +177,8 @@ public class ContinuationIncEval extends AbstractIncEval {
     }
 
     @Override
-    public Object apply(List<Object> args, EvalContext context) {
+    public Object continuationApply(List<Object> args, List<Object> args2, EvalContext context,
+        EvalContext context2) {
       LispUtil.checkArgument(args.size() == 2 || args.size() == 3,
           "Expected 2 or 3 arguments, got: %s", args);
       AmbFunctionValue continuation = (AmbFunctionValue) args.get(0);
@@ -189,41 +189,37 @@ public class ContinuationIncEval extends AbstractIncEval {
       LispUtil.checkState(nextOtherArgs == null ||
           nextOtherArgs.size() == nextDenotations.size());
       
-      return new WrappedBuiltinFunction(new FunctionValue() {
-        public Object apply(List<Object> args2, EvalContext context2) {
-          LispUtil.checkArgument(args2.size() == 1 || args2.size() == 2,
-              "Expected 1 or 2 arguments, got: %s", args2);
-          List<Object> nextDiagrams = ConsValue.consListToList(args2.get(0));
+      LispUtil.checkArgument(args2.size() == 1 || args2.size() == 2,
+          "Expected 1 or 2 arguments, got: %s", args2);
+      List<Object> nextDiagrams = ConsValue.consListToList(args2.get(0));
 
-          if (nextDiagrams.size() == 1 && nextDenotations.size() > 1) {
-            nextDiagrams = Collections.nCopies(nextDenotations.size(), nextDiagrams.get(0));
-          }
-          List<Object> myNextDenotations = nextDenotations;
-          if (myNextDenotations.size() == 1 && nextDiagrams.size() > 1) {
-            myNextDenotations = Collections.nCopies(nextDiagrams.size(), myNextDenotations.get(0));
-          }
-          
-          LispUtil.checkState(nextDiagrams.size() == myNextDenotations.size(),
-              "Unequal number of diagrams and denotations. Got: %s %s", nextDiagrams, myNextDenotations);
-          
-          for (int i = 0; i < nextDiagrams.size(); i++) {
-            Object denotation = myNextDenotations.get(i);
-            Object diagram = nextDiagrams.get(i);
-            Object otherArg = null;
-            if (nextOtherArgs != null) {
-              otherArg = nextOtherArgs.get(i);
-            }
+      if (nextDiagrams.size() == 1 && nextDenotations.size() > 1) {
+        nextDiagrams = Collections.nCopies(nextDenotations.size(), nextDiagrams.get(0));
+      }
+      List<Object> myNextDenotations = nextDenotations;
+      if (myNextDenotations.size() == 1 && nextDiagrams.size() > 1) {
+        myNextDenotations = Collections.nCopies(nextDiagrams.size(), myNextDenotations.get(0));
+      }
 
-            IncEvalState next = chart.alloc();
-            Object nextCont = continuation.apply(Arrays.asList(denotation), context2, null);
-            eval.nextState(current, next, nextCont, Environment.extend(current.getEnvironment()),
-                denotation, diagram, otherArg, log);
-            chart.offer(current, next);
-          }
-          
-          return ConstantValue.NIL;
+      LispUtil.checkState(nextDiagrams.size() == myNextDenotations.size(),
+          "Unequal number of diagrams and denotations. Got: %s %s", nextDiagrams, myNextDenotations);
+
+      for (int i = 0; i < nextDiagrams.size(); i++) {
+        Object denotation = myNextDenotations.get(i);
+        Object diagram = nextDiagrams.get(i);
+        Object otherArg = null;
+        if (nextOtherArgs != null) {
+          otherArg = nextOtherArgs.get(i);
         }
-      });
+
+        IncEvalState next = chart.alloc();
+        Object nextCont = continuation.apply(Arrays.asList(denotation), context2, null);
+        eval.nextState(current, next, nextCont, Environment.extend(current.getEnvironment()),
+            denotation, diagram, otherArg, log);
+        chart.offer(current, next);
+      }
+
+      return ConstantValue.NIL;
     }
   }
 
@@ -237,23 +233,21 @@ public class ContinuationIncEval extends AbstractIncEval {
       return new FinalContinuation();
     }
 
-    public Object apply(List<Object> args1, EvalContext context1) {
+    @Override
+    public Object continuationApply(List<Object> args1, List<Object> args2,
+        EvalContext context1, EvalContext context2) {
       LispUtil.checkArgument(args1.size() == 1);
       Object denotation = args1.get(0);
 
-      return new WrappedBuiltinFunction(new FunctionValue() {
-        public Object apply(List<Object> args2, EvalContext context2) {
-          LispUtil.checkArgument(args2.size() == 1);
-          Object diagram = args2.get(0);
+      LispUtil.checkArgument(args2.size() == 1);
+      Object diagram = args2.get(0);
           
-          IncEvalState next = chart.alloc();
-          eval.nextState(current, next, null, Environment.extend(current.getEnvironment()),
-              denotation, diagram, null, log);
-          chart.offerFinished(current, next);
-          
-          return ConstantValue.NIL;
-        }
-      });
+      IncEvalState next = chart.alloc();
+      eval.nextState(current, next, null, Environment.extend(current.getEnvironment()),
+          denotation, diagram, null, log);
+      chart.offerFinished(current, next);
+      
+      return ConstantValue.NIL;
     }
   }
 

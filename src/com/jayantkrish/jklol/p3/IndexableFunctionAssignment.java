@@ -13,42 +13,43 @@ import com.jayantkrish.jklol.models.TableFactor;
 import com.jayantkrish.jklol.models.VariableNumMap;
 import com.jayantkrish.jklol.preprocessing.FeatureVectorGenerator;
 import com.jayantkrish.jklol.tensor.DenseTensor;
+import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 
 public class IndexableFunctionAssignment implements FunctionAssignment {
   
-  private final VariableNumMap inputVars;
-  private final DiscreteVariable outputVar;
+  protected final VariableNumMap inputVars;
+  protected final DiscreteVariable outputVar;
 
   // The index of the value in outputVar that represents
   // an unassigned element.
-  private final int outputVarUnassigned;
+  protected final int outputVarUnassigned;
   
   // This tensor determines which assignments to inputVars
   // can be assigned a value. All other assignments return
   // the value sparsityValueIndex.
-  private final Tensor sparsity;
-  private final int sparsityValueIndex;
+  protected final Tensor sparsity;
+  protected final int sparsityValueIndex;
   
   // The values assigned to the permissible assignments. Each
   // assignment's index in values is determined by the 
   // corresponding index in the sparsity tensor.
-  private final int[] values;
+  protected final int[] values;
   // Index of the first element in values whose value is 
   // unassigned.
-  private int firstUnassignedIndex;
+  protected int firstUnassignedIndex;
 
   // A feature vector per input -> output mapping.
-  private final DiscreteVariable featureVar;
-  private final Tensor elementFeatures;
+  protected final DiscreteVariable featureVar;
+  protected final Tensor elementFeatures;
 
   // The current feature vector of this assignment.
-  private final double[] cachedFeatureVector;
+  protected final double[] cachedFeatureVector;
 
-  private final FeatureVectorGenerator<FunctionAssignment> predicateFeatureGen;
-  private Tensor predicateFeatures;
+  protected final FeatureVectorGenerator<FunctionAssignment> predicateFeatureGen;
+  protected Tensor predicateFeatures;
   
-  private int id;
+  protected int id;
 
   protected IndexableFunctionAssignment(VariableNumMap inputVars, DiscreteVariable outputVar,
       int outputVarUnassigned, Tensor sparsity, int sparsityValueIndex, int[] values,
@@ -94,7 +95,8 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
 
     return new IndexableFunctionAssignment(inputVars, outputVar,
         unassignedValueIndex, sparsity, -1, values, 0, featureVar,
-        features, cachedFeatureVector, predicateFeatureGen, null);
+        features, cachedFeatureVector, predicateFeatureGen, SparseTensor.empty(
+            new int[] {0}, new int[] {predicateFeatureGen.getNumberOfFeatures()}));
   }
 
   public static IndexableFunctionAssignment unassignedSparse(VariableNumMap inputVars,
@@ -123,7 +125,8 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
 
     return new IndexableFunctionAssignment(inputVars, outputVar,
         unassignedValueIndex, sparsity, sparsityValueIndex, values, 0, featureVar,
-        features, cachedFeatureVector, predicateFeatureGen, null);
+        features, cachedFeatureVector, predicateFeatureGen, SparseTensor.empty(
+            new int[] {0}, new int[] {predicateFeatureGen.getNumberOfFeatures()}));
   }
   
   public VariableNumMap getInputVars() {

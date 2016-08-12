@@ -116,6 +116,15 @@ public interface Tensor extends TensorBase, Serializable {
    * @return
    */
   Tensor innerProduct(Tensor other);
+
+  /**
+   * Tensor inner product returning a scalar. Requires both
+   * {@code this} and {@code other} to have the same dimensions.
+   * 
+   * @param other
+   * @return
+   */
+  double innerProductScalar(Tensor other);
   
   /**
    * Generalization of matrix-matrix multiplication. Elementwise 

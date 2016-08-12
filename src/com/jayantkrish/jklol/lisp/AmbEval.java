@@ -182,7 +182,7 @@ public class AmbEval {
     for (int j = 0; j < argumentExpressions.size(); j++) {
       SExpression argumentExpression = argumentExpressions.get(j);
       LispUtil.checkArgument(argumentExpression.isConstant(),
-          "%s is not a constant. Argument list: %s", argumentExpression, arguments);
+          "%s is not a constant. Argument list: %s %s", argumentExpression, arguments);
       if (argumentExpression.getConstantIndex() == PERIOD_INDEX) {
         LispUtil.checkArgument(j == argumentExpressions.size() - 2,
             "Invalid varargs lambda declaration. Arguments: %s", arguments);

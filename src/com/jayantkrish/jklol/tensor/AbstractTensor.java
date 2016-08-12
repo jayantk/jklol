@@ -59,6 +59,14 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
   public Tensor logSumOutDimensions(int[] dimensionsToEliminate) {
     return logSumOutDimensions(Ints.asList(dimensionsToEliminate));
   }
+  
+  @Override
+  public double innerProductScalar(Tensor other) {
+    // Note: you can easily implement this using 
+    // this.innerProduct(other).getByDimKey();
+    throw new UnsupportedOperationException("Not yet implemented. Note that you can use" +
+        "this.innerProduct(other).getByDimKey() to achieve the same result less efficiently");
+  }
 
   public static Tensor logSumOutDimensions(Tensor tensor, Collection<Integer> dimensionsToEliminate) {
     if (dimensionsToEliminate.size() == 0) {

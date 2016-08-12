@@ -64,6 +64,12 @@ public class KbState {
     current.putValue(args, value);
     updated.add(index);
   }
+  
+  public void putFunctionValue(int index, List<Object> args, Object value) {
+    FunctionAssignment current = functionAssignments.get(index);
+    current.putValue(args, value);
+    updated.add(index);
+  }
 
   public IndexedList<String> getFunctions() {
     return functionNames;
@@ -94,6 +100,10 @@ public class KbState {
 
   public Set<Integer> getUpdatedFunctionIndexes() {
     return updated;
+  }
+  
+  public void setUpdated(int functionIndex) {
+    updated.add(functionIndex);
   }
 
   public DiscreteVariable getTypeVar(String typeName) {

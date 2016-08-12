@@ -4,16 +4,13 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import com.jayantkrish.jklol.ccg.lambda2.Expression2;
 import com.jayantkrish.jklol.lisp.AmbEval;
 import com.jayantkrish.jklol.lisp.AmbEval.AmbFunctionValue;
-import com.jayantkrish.jklol.lisp.AmbEval.WrappedBuiltinFunction;
 import com.jayantkrish.jklol.lisp.ConsValue;
 import com.jayantkrish.jklol.lisp.ConstantValue;
 import com.jayantkrish.jklol.lisp.Environment;
 import com.jayantkrish.jklol.lisp.EvalContext;
-import com.jayantkrish.jklol.lisp.FunctionValue;
 import com.jayantkrish.jklol.lisp.LispUtil;
 import com.jayantkrish.jklol.lisp.SExpression;
 import com.jayantkrish.jklol.lisp.inc.ContinuationFunctionValue;
@@ -26,12 +23,19 @@ import com.jayantkrish.jklol.lisp.inc.ParametricContinuationIncEval.StateFeature
 import com.jayantkrish.jklol.tensor.SparseTensor;
 import com.jayantkrish.jklol.tensor.Tensor;
 import com.jayantkrish.jklol.training.LogFunction;
-import com.jayantkrish.jklol.util.IndexedList;
 
 public class KbContinuationIncEval extends ContinuationIncEval {
   private final KbModel kbModel;
   
   public static final String SET_KB_CONTINUATIONS = "kb-set-k";
+
+  public KbContinuationIncEval(AmbEval eval, Environment env,
+      Function<Expression2, Expression2> cpsTransform, SExpression defs,
+      List<String> functionNames, List<ContinuationFunctionValue> functions,
+      KbModel kbModel) {
+    super(eval, env, cpsTransform, defs, functionNames, functions);
+    this.kbModel = kbModel;
+  }
 
   public KbContinuationIncEval(AmbEval eval, Environment env,
       Function<Expression2, Expression2> cpsTransform, SExpression defs, KbModel kbModel) {
@@ -72,44 +76,45 @@ public class KbContinuationIncEval extends ContinuationIncEval {
       return;
     }
 
-    log.startTimer("evaluate_continuation/queue/model");
+    // log.startTimer("evaluate_continuation/queue/model");
     KbState state = (KbState) diagram;
-    double prob = 1.0;
-    IndexedList<String> predicateNames = kbModel.getPredicateNames();
+    double logProb = 0.0;
     List<Tensor> classifiers = kbModel.getClassifiers();
     List<Tensor> predClassifiers = kbModel.getPredicateClassifiers();
 
     // Score the current kb state.
-    IndexedList<String> stateFunctionNames = state.getFunctions();
+    // XXX: this code assumes that the scoring models are linear.
     List<FunctionAssignment> assignments = state.getAssignments();
+    // log.startTimer("evaluate_continuation/queue/model/predicates");
     for (int i : state.getUpdatedFunctionIndexes()) {
-      int index = predicateNames.getIndex(stateFunctionNames.get(i));
-      Tensor classifier = classifiers.get(index);
+      Tensor classifier = classifiers.get(i);
+      FunctionAssignment assignment = assignments.get(i);
 
-      Tensor featureVector = assignments.get(i).getFeatureVector().relabelDimensions(
-          classifier.getDimensionNumbers());
-      prob *= Math.exp(classifier.innerProduct(featureVector).getByDimKey());
+      Tensor featureVector = assignment.getFeatureVector();
+      logProb += classifier.innerProductScalar(featureVector);
       
-      Tensor predClassifier = predClassifiers.get(index);
-      Preconditions.checkNotNull(assignments.get(i));
-      Tensor predFeatureVector = assignments.get(i).getPredicateFeatureVector().relabelDimensions(
-          classifier.getDimensionNumbers());
-      prob *= Math.exp(predClassifier.innerProduct(predFeatureVector).getByDimKey());
+      Tensor predClassifier = predClassifiers.get(i);
+      Tensor predFeatureVector = assignment.getPredicateFeatureVector();
+      logProb += predClassifier.innerProductScalar(predFeatureVector);
     }
+    // log.stopTimer("evaluate_continuation/queue/model/predicates");
 
     // Score actions.
-    // XXX: this code assumes that the action scoring model is linear. 
+    // XXX: this code assumes that the action scoring model is linear.
+    // log.startTimer("evaluate_continuation/queue/model/actions");
     Tensor actionFeaturesSum = prev.getFeatures();
     if (otherArg != null) {
+      // log.startTimer("evaluate_continuation/queue/model/actions_generate");
       Tensor actionFeatures = kbModel.generateActionFeatures(new StateFeatures(
           prev, continuation, env, denotation, diagram, otherArg));
       actionFeaturesSum = actionFeaturesSum.elementwiseAddition(actionFeatures);
+      // log.stopTimer("evaluate_continuation/queue/model/actions_generate");
     }
-    prob *= Math.exp(kbModel.getActionClassifier().innerProduct(actionFeaturesSum).getByDimKey());
+    logProb += kbModel.getActionClassifier().innerProductScalar(actionFeaturesSum);
+    // log.stopTimer("evaluate_continuation/queue/model/actions");
 
-    log.stopTimer("evaluate_continuation/queue/model");
-
-    next.set(continuation, env, denotation, diagram, prob, actionFeaturesSum);
+    next.set(continuation, env, denotation, diagram, Math.exp(logProb), actionFeaturesSum);
+    // log.stopTimer("evaluate_continuation/queue/model");
   }
   
   @Override
@@ -152,7 +157,8 @@ public class KbContinuationIncEval extends ContinuationIncEval {
     }
 
     @Override
-    public Object apply(List<Object> args, EvalContext context) {
+    public Object continuationApply(List<Object> args, List<Object> args2,
+        EvalContext context, EvalContext context2) {
       LispUtil.checkArgument(args.size() == 4,
           "Expected 4 arguments, got: %s", args);
       AmbFunctionValue continuation = (AmbFunctionValue) args.get(0);
@@ -160,31 +166,27 @@ public class KbContinuationIncEval extends ContinuationIncEval {
       List<Object> functionArgs = ConsValue.consListToList(args.get(2));
       List<Object> functionValues = ConsValue.consListToList(args.get(3));
 
-      return new WrappedBuiltinFunction(new FunctionValue() {
-        public Object apply(List<Object> args2, EvalContext context2) {
-          LispUtil.checkArgument(args2.size() == 1, "Expected 1 argument, got: %s", args2);
-          KbState currentKb = (KbState) args2.get(0);
-          int functionIndex = currentKb.getFunctions().getIndex(functionName);
-          KbIncEvalChart kbChart = (KbIncEvalChart) chart;
+      LispUtil.checkArgument(args2.size() == 1, "Expected 1 argument, got: %s", args2);
+      KbState currentKb = (KbState) args2.get(0);
+      int functionIndex = currentKb.getFunctions().getIndex(functionName);
+      KbIncEvalChart kbChart = (KbIncEvalChart) chart;
 
-          for (int i = 0; i < functionValues.size(); i++) {
-            IncEvalState next = kbChart.alloc();
-            KbState nextKb = kbChart.allocCopyOf(currentKb);
+      for (int i = 0; i < functionValues.size(); i++) {
+        IncEvalState next = kbChart.alloc();
+        KbState nextKb = kbChart.allocCopyOf(currentKb);
 
-            kbChart.allocAssignment(nextKb, functionIndex);
-            currentKb.getAssignment(functionIndex).copyTo(nextKb.getAssignment(functionIndex));
-            Object value = functionValues.get(i);
-            nextKb.putFunctionValue(functionName, functionArgs, value);
+        kbChart.allocAssignment(nextKb, functionIndex);
+        currentKb.getAssignment(functionIndex).copyTo(nextKb.getAssignment(functionIndex));
+        Object value = functionValues.get(i);
+        nextKb.putFunctionValue(functionName, functionArgs, value);
 
-            Object nextCont = continuation.apply(Arrays.asList(value), context2, null);
-            eval.nextState(current, next, nextCont, Environment.extend(current.getEnvironment()),
-                value, nextKb, null, log);
-            chart.offer(current, next);
-          }
+        Object nextCont = continuation.apply(Arrays.asList(value), context2, null);
+        eval.nextState(current, next, nextCont, Environment.extend(current.getEnvironment()),
+            value, nextKb, null, log);
+        chart.offer(current, next);
+      }
 
-          return ConstantValue.NIL;
-        }
-      });
+      return ConstantValue.NIL;
     }
   }
   
@@ -198,27 +200,23 @@ public class KbContinuationIncEval extends ContinuationIncEval {
       return new FinalKbContinuation();
     }
 
-    public Object apply(List<Object> args1, EvalContext context1) {
+    public Object continuationApply(List<Object> args1, List<Object> args2, EvalContext context1,
+        EvalContext context2) {
       LispUtil.checkArgument(args1.size() == 1);
       Object denotation = args1.get(0);
 
-      return new WrappedBuiltinFunction(new FunctionValue() {
-        public Object apply(List<Object> args2, EvalContext context2) {
-          LispUtil.checkArgument(args2.size() == 1);
-          KbState diagram = (KbState) args2.get(0);
+      LispUtil.checkArgument(args2.size() == 1);
+      KbState diagram = (KbState) args2.get(0);
 
-          KbIncEvalChart kbChart = (KbIncEvalChart) chart;
-          IncEvalState next = kbChart.alloc();
-          KbState nextKb = kbChart.allocCopyOf(diagram);
-          
-          eval.nextState(current, next, null, Environment.extend(current.getEnvironment()),
-              denotation, nextKb, null, log);
-          chart.offerFinished(current, next);
+      KbIncEvalChart kbChart = (KbIncEvalChart) chart;
+      IncEvalState next = kbChart.alloc();
+      KbState nextKb = kbChart.allocCopyOf(diagram);
 
-          return ConstantValue.NIL;
-        }
-      });
+      eval.nextState(current, next, null, Environment.extend(current.getEnvironment()),
+          denotation, nextKb, null, log);
+      chart.offerFinished(current, next);
+
+      return ConstantValue.NIL;
     }
   }
-
 }

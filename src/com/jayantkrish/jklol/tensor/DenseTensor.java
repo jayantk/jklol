@@ -205,6 +205,19 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
   }
   
   @Override
+  public double innerProductScalar(Tensor other) {
+    Preconditions.checkArgument(Arrays.equals(other.getDimensionNumbers(), getDimensionNumbers()),
+        "innerProductScalar requires both tensors to have the same dimensions");
+    if (other instanceof DenseTensor) {
+      return denseTensorInnerProduct((DenseTensor) other);
+    } else if (other instanceof SparseTensor) {
+      return denseSparseInnerProduct((SparseTensor) other);
+    } else {
+      throw new UnsupportedOperationException("Not yet implemented");
+    }
+  }
+
+  @Override
   public Tensor matrixInnerProduct(Tensor other) {
     return AbstractTensor.innerProduct(this, other, DenseTensorBuilder.getFactory());
   }
@@ -227,6 +240,19 @@ public class DenseTensor extends DenseTensorBase implements Tensor, Serializable
     for (int i = 0; i < length; i++) {
       innerProduct += values[i] * otherValues[i];
     }
+    return innerProduct;
+  }
+  
+  private double denseSparseInnerProduct(SparseTensor other) {
+    long[] keyNums = other.getKeyNums();
+    double[] otherValues = other.getValues();
+
+    double innerProduct = 0.0;
+    int l = keyNums.length;
+    for (int i = 0; i < l; i++) {
+      innerProduct += values[(int) keyNums[i]] * otherValues[i];
+    }
+
     return innerProduct;
   }
 

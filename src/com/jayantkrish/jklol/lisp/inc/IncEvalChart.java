@@ -95,16 +95,20 @@ public class IncEvalChart {
   private void offer(KbestQueue<IncEvalState> heap, IncEvalState current,
       IncEvalState next, IncEvalSearchLog searchLog) {
     if (cost == null) {
+      if (searchLog != null) {
+        searchLog.log(current, next, 0.0);
+      }
+
       IncEvalState removed = heap.offer(next, next.getProb());
       if (removed != null) {
         dealloc(removed);
       }
-
-      if (searchLog != null) {
-        searchLog.log(current, next, 0.0);
-      }
     } else {
       double costValue = cost.apply(next);
+      if (searchLog != null) {
+        searchLog.log(current, next, costValue);
+      }
+
       if (costValue != Double.NEGATIVE_INFINITY) {
         IncEvalState removed = heap.offer(next, next.getProb() * Math.exp(costValue));
         if (removed != null) {
@@ -112,10 +116,6 @@ public class IncEvalChart {
         }
       } else {
         dealloc(next);
-      }
-
-      if (searchLog != null) {
-        searchLog.log(current, next, costValue);
       }
     }
   }

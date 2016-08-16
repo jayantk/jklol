@@ -156,6 +156,17 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     }
     return argSet;
   }
+  
+  public Set<ImmutableList<Object>> getArgSetWithValue(Object value) {
+    Set<ImmutableList<Object>> argSet = Sets.newHashSet();
+    int valueInd = outputVar.getValueIndex(value);
+    for (int i = 0; i < sparsity.size(); i++) {
+      if (values[i] == valueInd) {
+        argSet.add(indexToArgs(i));
+      }
+    }
+    return argSet;
+  }
 
   public int getSparsityIndex() {
     return sparsityValueIndex;

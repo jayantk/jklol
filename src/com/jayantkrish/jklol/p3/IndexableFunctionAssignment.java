@@ -257,37 +257,6 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     put(keyIndex, newValueIndex);
   }
   
-  /*
-  public IndexableFunctionAssignment putAll(Tensor t, Object value) {
-    Preconditions.checkArgument(Arrays.equals(t.getDimensionSizes(), sparsity.getDimensionSizes())); 
-    
-    int newValueIndex = outputVar.getValueIndex(value);
-    int[] newValues = Arrays.copyOf(values, values.length);
-    double[] newFeatureVector = Arrays.copyOf(cachedFeatureVector, cachedFeatureVector.length);
-    int[] dimKey = new int[2];
-    for (int i = 0; i < t.size(); i++) {
-      long keyNum = t.indexToKeyNum(i);
-      int myIndex = sparsity.keyNumToIndex(keyNum);
-      sparsity.keyNumToDimKey(keyNum, dimKey);
-
-      int oldValueIndex = newValues[myIndex];
-      newValues[myIndex] = newValueIndex;
-      updateFeatures(dimKey, oldValueIndex, elementFeatures, inputVars.size(), newFeatureVector, -1.0);
-      updateFeatures(dimKey, newValueIndex, elementFeatures, inputVars.size(), newFeatureVector, 1.0);
-    }
-    
-    int nextUnassignedIndex = firstUnassignedIndex;
-    while (nextUnassignedIndex < newValues.length &&
-        newValues[nextUnassignedIndex] != outputVarUnassigned) {
-      nextUnassignedIndex++;
-    }
-    
-    return new IndexableFunctionAssignment(inputVars, outputVar, outputVarUnassigned,
-        sparsity, sparsityValueIndex, newValues, nextUnassignedIndex, featureVar,
-        elementFeatures, newFeatureVector, predicateFeatureGen, predicateFeatures);
-  }
-  */
-  
   public void put(int keyIndex, int newValueIndex) {
     Preconditions.checkArgument(keyIndex != -1);
     int oldValueIndex = values[keyIndex];
@@ -305,33 +274,6 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     this.predicateFeatures = predicateFeatureGen.apply(this);
   }
   
-  /*
-  public IndexableFunctionAssignment putAll(int[] keyIndexes, int[] newValueIndexes) {
-    int[] newValues = Arrays.copyOf(values, values.length);
-    double[] newFeatureVector = Arrays.copyOf(cachedFeatureVector, cachedFeatureVector.length);
-    for (int i = 0; i < keyIndexes.length; i++) {
-      int keyIndex = keyIndexes[i];
-      int newValueIndex = newValueIndexes[i];
-      int oldValueIndex = newValues[keyIndex];
-      newValues[keyIndex] = newValueIndex;
-    
-      int[] dimKey = sparsity.keyNumToDimKey(sparsity.indexToKeyNum(keyIndex));
-      updateFeatures(dimKey, oldValueIndex, elementFeatures, inputVars.size(), newFeatureVector, -1.0);
-      updateFeatures(dimKey, newValueIndex, elementFeatures, inputVars.size(), newFeatureVector, 1.0);
-    }
-
-    int nextUnassignedIndex = firstUnassignedIndex;
-    while (nextUnassignedIndex < newValues.length &&
-        newValues[nextUnassignedIndex] != outputVarUnassigned) {
-      nextUnassignedIndex++;
-    }
-
-    return new IndexableFunctionAssignment(inputVars, outputVar, outputVarUnassigned,
-        sparsity, sparsityValueIndex, newValues, nextUnassignedIndex, featureVar,
-        elementFeatures, newFeatureVector, predicateFeatureGen, predicateFeatures);
-  }
-  */
-
   @Override
   public boolean isConsistentWith(FunctionAssignment other) {
     Preconditions.checkState(other instanceof IndexableFunctionAssignment);

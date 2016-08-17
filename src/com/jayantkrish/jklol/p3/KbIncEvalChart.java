@@ -99,6 +99,7 @@ public class KbIncEvalChart extends IncEvalChart {
       kbPool.dealloc(kb);
     }
     state.setDiagram(null);
+    state.setId(-1);
     statePool.dealloc(state);
   }
 }

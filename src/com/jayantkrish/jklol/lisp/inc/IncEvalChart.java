@@ -7,6 +7,7 @@ import com.jayantkrish.jklol.util.ObjectPool;
 public class IncEvalChart {
   protected final int maxPoolSize; 
   protected final ObjectPool<IncEvalState> statePool;
+  private int stateCounter;
 
   // Working heap for queuing parses to process next.
   private final KbestQueue<IncEvalState> heap;
@@ -26,6 +27,7 @@ public class IncEvalChart {
     maxPoolSize = 3 * (beamSize + 2);
     statePool = new ObjectPool<IncEvalState>(IncEvalState.getSupplier(),
         maxPoolSize, new IncEvalState[0]);
+    stateCounter = 0;
 
     heap = new KbestQueue<IncEvalState>(beamSize, new IncEvalState[0]);
     finishedHeap = new KbestQueue<IncEvalState>(beamSize, new IncEvalState[0]);
@@ -37,10 +39,14 @@ public class IncEvalChart {
   }
 
   public IncEvalState alloc() {
-    return statePool.alloc();
+    IncEvalState state = statePool.alloc();
+    state.setId(stateCounter);
+    stateCounter++;
+    return state;
   }
 
   protected void dealloc(IncEvalState state) {
+    state.setId(-1);
     statePool.dealloc(state);
   }
 

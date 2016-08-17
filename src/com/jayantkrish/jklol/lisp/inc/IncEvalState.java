@@ -13,22 +13,25 @@ public class IncEvalState {
   private double prob;
   
   private Tensor features;
+  private int id;
 
   public IncEvalState(Object continuation, Environment environment,
-      Object denotation, Object diagram, double prob, Tensor features) {
+      Object denotation, Object diagram, double prob, Tensor features,
+      int id) {
     this.continuation = continuation;
     this.environment = environment;
     this.denotation = denotation;
     this.diagram = diagram;
     this.prob = prob;
     this.features = features;
+    this.id = id;
   }
   
   public static Supplier<IncEvalState> getSupplier() {
     return new Supplier<IncEvalState>() {
       @Override
       public IncEvalState get() {
-        return new IncEvalState(null, null, null, null, 1.0, null);
+        return new IncEvalState(null, null, null, null, 1.0, null, -1);
       }
     };
   }
@@ -57,6 +60,10 @@ public class IncEvalState {
     return features;
   }
   
+  public final int getId() {
+    return id;
+  }
+
   public final void set(Object continuation, Environment environment,
       Object denotation, Object diagram, double prob, Tensor features) {
     this.continuation = continuation;
@@ -69,6 +76,10 @@ public class IncEvalState {
 
   public void setDiagram(Object diagram) {
     this.diagram = diagram;
+  }
+
+  public void setId(int id) {
+    this.id = id;
   }
 
   @Override

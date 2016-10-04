@@ -7,6 +7,7 @@ import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.lisp.ConsValue;
 import com.jayantkrish.jklol.lisp.EvalContext;
 import com.jayantkrish.jklol.lisp.FunctionValue;
+import com.jayantkrish.jklol.p3.IndexableFunctionAssignment;
 import com.jayantkrish.jklol.p3.KbState;
 
 public class P3Functions {
@@ -59,6 +60,21 @@ public class P3Functions {
       String predicate = (String) argumentValues.get(1);
       List<Object> args = ConsValue.consListToList(argumentValues.get(2));
       return state.getFunctionValue(predicate, args);
+    }
+  }
+  
+  public static class KbGetPossibleValues extends LoggingFunctionValue {
+    public KbGetPossibleValues() {
+      super("p3functions/kb_get_possible_values");
+    }
+
+    @Override
+    public Object apply2(List<Object> argumentValues, EvalContext context) {
+      Preconditions.checkArgument(argumentValues.size() == 2);
+      KbState state = (KbState) argumentValues.get(0);
+      String predicate = (String) argumentValues.get(1);
+      return ((IndexableFunctionAssignment) state.getAssignment(predicate))
+          .getAssignedOutputValuesConsList();
     }
   }
 

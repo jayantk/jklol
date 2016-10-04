@@ -67,7 +67,11 @@ public class KbestQueue<T> implements SearchQueue<T> {
   public T[] getItems() {
     return keys;
   }
-  
+
+  public double[] getScores() {
+    return values;
+  }
+
   /**
    * Pops all of the items in this queue and places them
    * into a list sorted in descending score order (i.e.,

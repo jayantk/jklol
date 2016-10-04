@@ -122,7 +122,7 @@ public class CachedSparseTensor extends SparseTensor {
   }
 
   @Override
-  public SparseTensor innerProduct(Tensor other) {
+  public Tensor innerProduct(Tensor other) {
     int[] otherDims = other.getDimensionNumbers();
     int[] permutation = getLeftAlignedPermutation(otherDims);
     SparseTensor cached = tensorCache.get(Ints.asList(permutation));

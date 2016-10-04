@@ -6,7 +6,9 @@ import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jayantkrish.jklol.lisp.ConsValue;
 import com.jayantkrish.jklol.models.DiscreteFactor;
 import com.jayantkrish.jklol.models.DiscreteVariable;
 import com.jayantkrish.jklol.models.TableFactor;
@@ -24,6 +26,9 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
   // The index of the value in outputVar that represents
   // an unassigned element.
   protected final int outputVarUnassigned;
+  // All possible values of outputVar excluding the unassigned value.
+  protected final List<Object> assignedOutputValuesList;
+  protected final Object assignedOutputValuesConsList;
   
   // This tensor determines which assignments to inputVars
   // can be assigned a value. All other assignments return
@@ -52,13 +57,16 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
   protected int id;
 
   protected IndexableFunctionAssignment(VariableNumMap inputVars, DiscreteVariable outputVar,
-      int outputVarUnassigned, Tensor sparsity, int sparsityValueIndex, int[] values,
+      int outputVarUnassigned, List<Object> assignedOutputValuesList, Object assignedOutputValuesConsList,
+      Tensor sparsity, int sparsityValueIndex, int[] values,
       int firstUnassignedIndex, DiscreteVariable featureVar, Tensor elementFeatures, 
       double[] cachedFeatureVector, FeatureVectorGenerator<FunctionAssignment> predicateFeatureGen,
       Tensor predicateFeatures) {
     this.inputVars = Preconditions.checkNotNull(inputVars);
     this.outputVar = Preconditions.checkNotNull(outputVar);
     this.outputVarUnassigned = outputVarUnassigned;
+    this.assignedOutputValuesList = assignedOutputValuesList;
+    this.assignedOutputValuesConsList = assignedOutputValuesConsList;
     this.sparsity = Preconditions.checkNotNull(sparsity);
     this.sparsityValueIndex = sparsityValueIndex;
     this.values = values;
@@ -92,11 +100,15 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
       int[] dimKey = sparsity.keyNumToDimKey(sparsity.indexToKeyNum(i));
       updateFeatures(dimKey, values[i], features, inputVars.size(), cachedFeatureVector, 1.0);
     }
+    
+    List<Object> assignedOutputValuesList = Lists.newArrayList(outputVar.getValues());
+    assignedOutputValuesList.remove(unassignedValue);
+    Object assignedOutputValuesConsList = ConsValue.listToConsList(assignedOutputValuesList);
 
     return new IndexableFunctionAssignment(inputVars, outputVar,
-        unassignedValueIndex, sparsity, -1, values, 0, featureVar,
-        features, cachedFeatureVector, predicateFeatureGen, SparseTensor.empty(
-            new int[] {0}, new int[] {predicateFeatureGen.getNumberOfFeatures()}));
+        unassignedValueIndex, assignedOutputValuesList, assignedOutputValuesConsList,
+        sparsity, -1, values, 0, featureVar, features, cachedFeatureVector, predicateFeatureGen,
+        SparseTensor.empty(new int[] {0}, new int[] {predicateFeatureGen.getNumberOfFeatures()}));
   }
 
   public static IndexableFunctionAssignment unassignedSparse(VariableNumMap inputVars,
@@ -122,13 +134,18 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
       int[] dimKey = sparsity.keyNumToDimKey(sparsity.indexToKeyNum(i));
       updateFeatures(dimKey, values[i], features, inputVars.size(), cachedFeatureVector, 1.0);
     }
+    
+    List<Object> assignedOutputValuesList = Lists.newArrayList(outputVar.getValues());
+    assignedOutputValuesList.remove(unassignedValue);
+    Object assignedOutputValuesConsList = ConsValue.listToConsList(assignedOutputValuesList);
 
     return new IndexableFunctionAssignment(inputVars, outputVar,
-        unassignedValueIndex, sparsity, sparsityValueIndex, values, 0, featureVar,
-        features, cachedFeatureVector, predicateFeatureGen, SparseTensor.empty(
+        unassignedValueIndex, assignedOutputValuesList, assignedOutputValuesConsList,
+        sparsity, sparsityValueIndex, values, 0, featureVar, features, cachedFeatureVector,
+        predicateFeatureGen, SparseTensor.empty(
             new int[] {0}, new int[] {predicateFeatureGen.getNumberOfFeatures()}));
   }
-  
+
   public VariableNumMap getInputVars() {
     return inputVars;
   }
@@ -137,6 +154,14 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     return outputVar;
   }
   
+  public List<Object> getAssignedOutputValues() {
+    return assignedOutputValuesList;
+  }
+
+  public Object getAssignedOutputValuesConsList() {
+    return assignedOutputValuesConsList;
+  }
+
   public int getUnassignedIndex() {
     return outputVarUnassigned;
   }
@@ -309,6 +334,10 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
   public Tensor getPredicateFeatureVector() {
     return predicateFeatures;
   }
+  
+  public FeatureVectorGenerator<FunctionAssignment> getPredicateFeatureGen() {
+    return predicateFeatureGen;
+  }
 
   @Override
   public IndexableFunctionAssignment copy() {
@@ -316,7 +345,8 @@ public class IndexableFunctionAssignment implements FunctionAssignment {
     double[] newFeatureVector = Arrays.copyOf(cachedFeatureVector, cachedFeatureVector.length);
 
     return new IndexableFunctionAssignment(inputVars, outputVar, outputVarUnassigned,
-        sparsity, sparsityValueIndex, newValues, firstUnassignedIndex, featureVar,
+        assignedOutputValuesList, assignedOutputValuesConsList, sparsity,
+        sparsityValueIndex, newValues, firstUnassignedIndex, featureVar,
         elementFeatures, newFeatureVector, predicateFeatureGen, predicateFeatures);
   }
 

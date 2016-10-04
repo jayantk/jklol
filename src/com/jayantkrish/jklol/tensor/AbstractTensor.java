@@ -77,9 +77,14 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
     return tensor.elementwiseAddition(minValues).elementwiseExp().sumOutDimensions(dimensionsToEliminate)
         .elementwiseLog().elementwiseAddition(minValues.elementwiseProduct(-1.0));
   }
-
+  
   public static Tensor innerProduct(Tensor first, Tensor second, TensorFactory factory) {
-    int myInd = 0;
+    TensorBuilder b = innerProduct(first, second, factory, null);
+    return b.buildNoCopy();
+  }
+
+  public static TensorBuilder innerProduct(Tensor first, Tensor second, TensorFactory factory,
+      TensorBuilder givenBuilder) {
     int mySize = first.size();
     int otherSize = second.size();
 
@@ -112,15 +117,6 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
     
     // This is an inclusive index.
     int lastAlignedDim = firstAlignedDim + numOtherDims - 1;
-
-    // Use the alignment of dimensions to compute a mapping between
-    // the keys of the two tensors and the result.
-    long keyNumDivisor = myDimensionOffsets[lastAlignedDim];
-    long keyNumModulo = firstAlignedDim != 0 ? myDimensionOffsets[firstAlignedDim - 1] : first.getMaxKeyNum();
-
-    // otherKeyNumOffset partitions the keynums of other into two
-    // parts. Note that numOtherDims must be > 0.
-    long otherKeyNumOffset = otherDimensionOffsets[numOtherDims - 1];
     
     // This check is not necessary, but makes it easier to construct the
     // dimensions of the result. Really, the result dimensions produced
@@ -144,16 +140,32 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
       resultDimensionNums[i + firstAlignedDim] = otherDimensionNums[i + numOtherDims];
       resultDimensionSizes[i + firstAlignedDim] = otherDimensionSizes[i + numOtherDims];
     }
-    for (int i = 0; i < myDimensionNums.length - (lastAlignedDim + 1); i++) {
-      resultDimensionNums[i + firstAlignedDim + numOtherDims] = myDimensionNums[i + lastAlignedDim + 1];
-      resultDimensionSizes[i + firstAlignedDim + numOtherDims] = myDimensionSizes[i + lastAlignedDim + 1];
+    for (int i = 0; i < numResultDims - (firstAlignedDim + numOtherUnalignedDims); i++) {
+      resultDimensionNums[i + firstAlignedDim + numOtherUnalignedDims] = myDimensionNums[i + lastAlignedDim + 1];
+      resultDimensionSizes[i + firstAlignedDim + numOtherUnalignedDims] = myDimensionSizes[i + lastAlignedDim + 1];
     }
-    TensorBuilder builder = factory.getBuilder(resultDimensionNums, resultDimensionSizes);
+    TensorBuilder builder = null;
+    if (givenBuilder == null) {
+      builder = factory.getBuilder(resultDimensionNums, resultDimensionSizes);
+    } else {
+      builder = givenBuilder;
+    }
+
     long[] resultDimensionOffsets = builder.getDimensionOffsets();
     long resultPrefixOffset = firstAlignedDim != 0 ? resultDimensionOffsets[firstAlignedDim - 1] : 0;
     long resultMiddleOffset = resultDimensionOffsets[firstAlignedDim + numOtherUnalignedDims - 1];
     long resultSuffixOffset = 1L;
+    
+    // Use the alignment of dimensions to compute a mapping between
+    // the keys of the two tensors and the result.
+    long keyNumDivisor = myDimensionOffsets[lastAlignedDim];
+    long keyNumModulo = firstAlignedDim != 0 ? myDimensionOffsets[firstAlignedDim - 1] : first.getMaxKeyNum();
 
+    // otherKeyNumOffset partitions the keynums of other into two
+    // parts. Note that numOtherDims must be > 0.
+    long otherKeyNumOffset = otherDimensionOffsets[numOtherDims - 1];
+
+    int myInd = 0;
     while (myInd < mySize) {
       long myKeyNum = first.indexToKeyNum(myInd);
       double myValue = first.getByIndex(myInd);
@@ -187,10 +199,9 @@ public abstract class AbstractTensor extends AbstractTensorBase implements Tenso
 
       myInd++;
     }
-
-    return builder.build();
+    return builder;
   }
-
+  
   /**
    * Default implementation of tensor outer products.
    * 

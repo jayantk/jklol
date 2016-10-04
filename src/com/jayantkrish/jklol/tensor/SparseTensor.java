@@ -472,13 +472,30 @@ public class SparseTensor extends AbstractTensor implements Serializable {
   }
 
   @Override
-  public SparseTensor innerProduct(Tensor other) {
-    return elementwiseProduct(other).sumOutDimensions(Ints.asList(other.getDimensionNumbers()));
+  public Tensor innerProduct(Tensor other) {
+    return elementwiseProduct(other)
+        .sumOutDimensions(Ints.asList(other.getDimensionNumbers()));
+    /*
+    int[] otherDims = other.getDimensionNumbers();
+    
+    if (areDimensionsLeftAligned(otherDims)) {
+      int[] myDims = getDimensionNumbers();
+      int[] mySizes = getDimensionSizes();
+
+      int[] resultDims = ArrayUtils.copyOfRange(myDims, otherDims.length, myDims.length);
+      int[] resultSizes = ArrayUtils.copyOfRange(mySizes, otherDims.length, myDims.length);
+      DenseTensorBuilder b = new DenseTensorBuilder(resultDims, resultSizes);
+      b.incrementInnerProductWithMultiplier(this, other, 1.0);
+      return b.buildNoCopy();
+    } else {
+      return elementwiseProduct(other).sumOutDimensions(Ints.asList(other.getDimensionNumbers()));
+    }
+    */
   }
 
   @Override
   public Tensor matrixInnerProduct(Tensor other) {
-    return AbstractTensor.innerProduct(this, other, SparseTensorBuilder.getFactory());
+    return AbstractTensor.innerProduct(this, other, DenseTensorBuilder.getFactory());
   }
 
   @Override

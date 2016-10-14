@@ -1,4 +1,4 @@
-# Parsing to Probabilistic Programs (P3) Experiments on SCENE
+# Parsing to Probabilistic Programs (P3) Experiments on Scene
 
 This package contains code for running P3 on the <a
 href="http://rtw.ml.cmu.edu/tacl2013_lsp/">Scene data set</a>.
@@ -49,6 +49,3 @@ RAM. To train P3 with annotated environments, edit
 `experiments/p3/scripts/train.sh` and add the `--worldFilename` flag
 to `CMD`. (The correct option value is shown in a comment in the
 file.)
-
-## Exploring the Code
-

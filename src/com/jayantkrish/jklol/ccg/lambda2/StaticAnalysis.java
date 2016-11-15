@@ -496,5 +496,9 @@ public class StaticAnalysis {
       }
       return best;
     }
+    
+    public List<Scope> getScopes() {
+      return scopes;
+    }
   }
 }

@@ -111,10 +111,12 @@ public class TrainSemanticParser extends AbstractCli {
       ccgExamples.add(WikiTablesUtil.convertExample(example, tables, tableIndexMap));
     }
 
+    /*
     examineData(examples, tables, tableIndexMap,
         family.getModelFromParameters(family.getNewSufficientStatistics()),
         simplifier, comparator);
-    
+    */
+
     int beamSize = 1000;
     CcgCkyInference inference = new CcgCkyInference(null, beamSize, 1000,
         Integer.MAX_VALUE, 1);

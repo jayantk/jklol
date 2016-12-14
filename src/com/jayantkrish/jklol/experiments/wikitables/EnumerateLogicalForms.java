@@ -125,7 +125,7 @@ public class EnumerateLogicalForms extends AbstractCli {
         {"e", "(lambda ($0) (set-size $0))"},
         {"r", "(lambda ($0) (next-row $0))"},
         {"r", "(lambda ($0) (prev-row $0))"},
-        {"r", "(lambda ($0) (row-index $0)"},
+        {"r", "(lambda ($0) (row-index $0))"},
     };
 
     String[][] binaryRules = new String[][] {

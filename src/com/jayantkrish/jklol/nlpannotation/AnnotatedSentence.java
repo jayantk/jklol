@@ -81,6 +81,10 @@ public class AnnotatedSentence {
   public Object getAnnotation(String annotationName) {
     return annotations.get(annotationName);
   }
+  
+  public Map<String, Object> getAnnotations() {
+    return annotations;
+  }
 
   /**
    * Gets a copy of this annotated sentence containing the

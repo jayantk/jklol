@@ -162,16 +162,15 @@ public class TrainSemanticParser extends AbstractCli {
     Expression2 expression = null;
     ExpressionParser<Expression2> parser = ExpressionParser.expression2();
     for (String line : lines) {
-      if (line.trim().length() == 0 && words != null && expression != null) {
-        words = null;
-        expression = null;
-      } else if (line.startsWith("(")) {
+      if (words != null) {
         expression = parser.parse(line);
 
         List<String> posTags = Collections.nCopies(words.size(), ParametricCcgParser.DEFAULT_POS_TAG);
         AnnotatedSentence supertaggedSentence = new AnnotatedSentence(words, posTags);
 
         examples.add(new CcgExample(supertaggedSentence, null, null, expression));
+        words = null;
+        expression = null;
       } else {
         words = Arrays.asList(line.split("\\s"));
       }

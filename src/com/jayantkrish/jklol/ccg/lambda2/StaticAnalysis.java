@@ -236,7 +236,7 @@ public class StaticAnalysis {
    * @return
    */
   public static Type inferType(Expression2 expression, Type rootType, TypeDeclaration typeDeclaration) {
-    Map<Integer, Type> subexpressionTypeMap = inferTypeMap(expression, rootType, typeDeclaration);
+    Map<Integer, Type> subexpressionTypeMap = inferTypeMap2(expression, rootType, typeDeclaration).getExpressionTypes();
     return subexpressionTypeMap.get(0);
   }
 
@@ -368,6 +368,13 @@ public class StaticAnalysis {
     } else {
       return false;
     }
+  }
+  
+  public static TypeInference inferTypeMap2(Expression2 expression, Type rootType,
+      TypeDeclaration typeDeclaration) {
+    TypeInference inference = new TypeInference(expression, typeDeclaration);
+    inference.infer();
+    return inference;
   }
 
   public static String getNewVariableName(Expression2... expressions) {

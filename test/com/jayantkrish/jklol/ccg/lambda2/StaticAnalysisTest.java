@@ -178,7 +178,9 @@ public class StaticAnalysisTest extends TestCase {
   private void runTypeInferenceTest(String expression, String expectedType) {
     Type expected = Type.parseFrom(expectedType);
     Expression2 exp = ExpressionParser.expression2().parse(expression);
-    Type predicted = StaticAnalysis.inferType(exp, typeDeclaration);
-    assertEquals(expected, predicted);
+    TypeInference inference = StaticAnalysis.inferTypeMap2(exp, TypeDeclaration.TOP, typeDeclaration);
+    System.out.println(inference.getConstraints());
+    
+    assertEquals(expected, inference.getExpressionTypes().get(0));
   }
 }

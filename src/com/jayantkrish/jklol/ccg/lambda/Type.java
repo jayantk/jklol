@@ -2,12 +2,15 @@ package com.jayantkrish.jklol.ccg.lambda;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 public class Type implements Serializable {
   private static final long serialVersionUID = 1L;
 
-  // Non-null if this is an atomic type
+  // Either atomicType is non-null or atomicTypeVar >= 0
+  // if this is an atomic type. 
   private final String atomicType;
+  private final int atomicTypeVar;
 
   // Non-null if this is a function type.
   private final Type argType;
@@ -16,20 +19,26 @@ public class Type implements Serializable {
   // argType arguments.
   private final boolean acceptRepeatedArguments;
 
-  private Type(String atomicType, Type argType, Type returnType, boolean acceptRepeatedArguments) {
+  private Type(String atomicType, int atomicTypeVar,
+      Type argType, Type returnType, boolean acceptRepeatedArguments) {
     this.atomicType = atomicType;
+    this.atomicTypeVar = atomicTypeVar;
     this.argType = argType;
     this.returnType = returnType;
     this.acceptRepeatedArguments = acceptRepeatedArguments;
   }
 
   public static Type createAtomic(String type) {
-    return new Type(type, null, null, false);
+    return new Type(type, -1, null, null, false);
+  }
+
+  public static Type createTypeVariable(int id) {
+    return new Type(null, id, null, null, false);
   }
 
   public static Type createFunctional(Type argType, Type returnType,
       boolean acceptRepeatedArguments) {
-    return new Type(null, argType, returnType, acceptRepeatedArguments);
+    return new Type(null, -1, argType, returnType, acceptRepeatedArguments);
   }
   
   public static Type parseFrom(String spec) {
@@ -37,11 +46,15 @@ public class Type implements Serializable {
   }
 
   public boolean isAtomic() {
-    return atomicType != null;
+    return atomicType != null || atomicTypeVar >= 0;
   }
 
   public String getAtomicTypeName() {
     return atomicType;
+  }
+
+  public int getAtomicTypeVar() {
+    return atomicTypeVar;
   }
 
   public boolean isFunctional() {
@@ -54,6 +67,14 @@ public class Type implements Serializable {
 
   public Type getReturnType() {
     return returnType;
+  }
+  
+  public boolean hasTypeVariables() {
+    if (isAtomic()) {
+      return atomicTypeVar >= 0;
+    } else {
+      return argType.hasTypeVariables() || returnType.hasTypeVariables();
+    }
   }
   
   public Type addArgument(Type arg) {
@@ -81,11 +102,34 @@ public class Type implements Serializable {
   public boolean acceptsRepeatedArguments() {
     return acceptRepeatedArguments;
   }
+  
+  public Type substitute(Map<Integer, Type> typeVarBindings) {
+    if (isAtomic()) {
+      if (typeVarBindings.containsKey(atomicTypeVar)) {
+        return typeVarBindings.get(atomicTypeVar);
+      } else {
+        return this;
+      }
+    } else {
+      Type newArg = argType.substitute(typeVarBindings);
+      Type newReturn = returnType.substitute(typeVarBindings);
+      
+      if (newArg != argType || newReturn != returnType) {
+        return Type.createFunctional(newArg, newReturn, acceptRepeatedArguments);
+      } else {
+        return this;
+      }
+    }
+  }
 
   @Override
   public String toString() {
     if (isAtomic()) {
-      return atomicType;
+      if (hasTypeVariables()) {
+        return "$" + atomicTypeVar;
+      } else {
+        return atomicType;
+      }
     } else {
       return "<" + argType + (acceptRepeatedArguments ? "*" : "") + "," + returnType + ">";
     }
@@ -97,10 +141,9 @@ public class Type implements Serializable {
     int result = 1;
     result = prime * result + (acceptRepeatedArguments ? 1231 : 1237);
     result = prime * result + ((argType == null) ? 0 : argType.hashCode());
-    result = prime * result
-        + ((atomicType == null) ? 0 : atomicType.hashCode());
-    result = prime * result
-        + ((returnType == null) ? 0 : returnType.hashCode());
+    result = prime * result + ((atomicType == null) ? 0 : atomicType.hashCode());
+    result = prime * result + atomicTypeVar;
+    result = prime * result + ((returnType == null) ? 0 : returnType.hashCode());
     return result;
   }
 
@@ -124,6 +167,8 @@ public class Type implements Serializable {
       if (other.atomicType != null)
         return false;
     } else if (!atomicType.equals(other.atomicType))
+      return false;
+    if (atomicTypeVar != other.atomicTypeVar)
       return false;
     if (returnType == null) {
       if (other.returnType != null)

@@ -28,9 +28,11 @@ public class GeoqueryUtil {
     return new ExpressionSimplifier(Arrays.
         <ExpressionReplacementRule>asList(new LambdaApplicationReplacementRule(),
             new VariableCanonicalizationReplacementRule(),
-            new CommutativeReplacementRule("and:<t*,t>")));
+            new CommutativeReplacementRule("and:<t*,t>"),
+            new CommutativeReplacementRule("or:<t*,t>"),
+            new CommutativeReplacementRule("next_to:<lo,<lo,t>>")));
   }
-  
+
   public static TypeDeclaration getTypeDeclaration() { 
     Map<String, String> typeReplacements = Maps.newHashMap();
     typeReplacements.put("lo", "e");

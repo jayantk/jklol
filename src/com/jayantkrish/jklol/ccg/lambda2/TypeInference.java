@@ -18,7 +18,8 @@ public class TypeInference {
   private Map<Integer, Type> expressionTypes;
   private ScopeSet scopes;
   private int typeVarCounter = 0;
-  private ConstraintSet rootConstraints = null; 
+  private ConstraintSet rootConstraints = null;
+  private ConstraintSet solved = null;
   
   public TypeInference(Expression2 expression, TypeDeclaration typeDeclaration) {
     this.expression = Preconditions.checkNotNull(expression);
@@ -37,23 +38,33 @@ public class TypeInference {
       for (String variable : scope.getBoundVariables()) {
         int location = scope.getBindingIndex(variable);
         if (!expressionTypes.containsKey(location)) {
-          expressionTypes.put(location, Type.createTypeVariable(typeVarCounter));
-          typeVarCounter++;
+          expressionTypes.put(location, getFreshTypeVar());
         }
       }
     }
 
     rootConstraints = populateExpressionTypes(0);
     // TODO: root type.
-    ConstraintSet finalConstraints = rootConstraints.solveFinal();
+    System.out.println("Making atomic:");
+    ConstraintSet atomicConstraints = rootConstraints.makeAtomic(typeVarCounter);
+    System.out.println("solving:");
+    solved = atomicConstraints.solveAtomic(typeDeclaration);
 
     for (int k : expressionTypes.keySet()) {
-      expressionTypes.put(k, expressionTypes.get(k).substitute(finalConstraints.getBindings()));
+      expressionTypes.put(k, expressionTypes.get(k).substitute(solved.getBindings()));
     }
   }
-  
+
   public ConstraintSet getConstraints() {
     return rootConstraints;
+  }
+
+  public ConstraintSet getSolvedConstraints() {
+    return solved;
+  }
+
+  public Type getFreshTypeVar() {
+    return Type.createTypeVariable(typeVarCounter++);
   }
 
   private ConstraintSet populateExpressionTypes(int index) {
@@ -95,9 +106,8 @@ public class TypeInference {
       ConstraintSet constraints = populateExpressionTypes(functionIndex);
       Type functionType = expressionTypes.get(functionIndex);
 
-      Type returnType = Type.createTypeVariable(typeVarCounter);
+      Type returnType = getFreshTypeVar();
       Type supertype = returnType;
-      typeVarCounter++;
       for (int i = childIndexes.length - 1; i >= 1; i--) {
         ConstraintSet argConstraints = populateExpressionTypes(childIndexes[i]);
         constraints = constraints.union(argConstraints);
@@ -117,7 +127,7 @@ public class TypeInference {
       }
 
       constraints = constraints.add(new SubtypeConstraint(functionType, supertype));
-      constraints = constraints.solveIncremental();
+      // constraints = constraints.solveIncremental();
       expressionTypes.put(index, returnType.substitute(constraints.getBindings()));
       return constraints;
     }

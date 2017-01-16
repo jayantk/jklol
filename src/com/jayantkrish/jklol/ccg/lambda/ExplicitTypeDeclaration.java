@@ -35,7 +35,7 @@ public class ExplicitTypeDeclaration extends AbstractTypeDeclaration {
     }
     return TypeDeclaration.TOP;
   }
-  
+
   private Type doTypeReplacements(Type type) {
     if (type.isFunctional()) {
       Type newArg = doTypeReplacements(type.getArgumentType());

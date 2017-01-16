@@ -43,4 +43,32 @@ public abstract class AbstractTypeDeclaration implements TypeDeclaration {
       return TypeDeclaration.BOTTOM;
     }
   }
+  
+  public Type meet(Type t1, Type t2) {
+    if (t1.equals(t2)) {
+      return t1;
+    } else if (t1.equals(TypeDeclaration.TOP)) {
+      return t2;
+    } else if (t2.equals(TypeDeclaration.TOP)) {
+      return t1;
+    } else {
+      return TypeDeclaration.TOP;
+    }
+  }
+
+  public Type join(Type t1, Type t2) {
+    if (t1.equals(t2)) {
+      return t1;
+    } else if (t1.equals(TypeDeclaration.BOTTOM)) {
+      return t2;
+    } else if (t2.equals(TypeDeclaration.BOTTOM)) {
+      return t1;
+    } else {
+      return TypeDeclaration.BOTTOM;
+    }
+  }
+
+  public boolean isAtomicSubtype(String subtype, String supertype) {
+    return subtype.equals(supertype);
+  }
 }

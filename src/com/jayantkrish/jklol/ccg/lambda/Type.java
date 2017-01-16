@@ -58,7 +58,7 @@ public class Type implements Serializable {
   }
 
   public boolean isFunctional() {
-    return atomicType == null;
+    return !isAtomic();
   }
 
   public Type getArgumentType() {
@@ -106,7 +106,7 @@ public class Type implements Serializable {
   public Type substitute(Map<Integer, Type> typeVarBindings) {
     if (isAtomic()) {
       if (typeVarBindings.containsKey(atomicTypeVar)) {
-        return typeVarBindings.get(atomicTypeVar);
+        return typeVarBindings.get(atomicTypeVar).substitute(typeVarBindings);
       } else {
         return this;
       }

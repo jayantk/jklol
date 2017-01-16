@@ -8,4 +8,10 @@ public interface TypeDeclaration {
   public Type getType(String constant);
   
   public Type unify(Type t1, Type t2);
+  
+  public Type meet(Type t1, Type t2);
+  
+  public Type join(Type t1, Type t2);
+  
+  public boolean isAtomicSubtype(String subtype, String supertype);
 }

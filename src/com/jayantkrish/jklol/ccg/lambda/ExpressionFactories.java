@@ -33,9 +33,14 @@ public class ExpressionFactories {
   public static ExpressionFactory<Type> getTypeFactory() {
     return new ExpressionFactory<Type>() {
       public Type createTokenExpression(String token) {
-        return Type.createAtomic(token);
+        if (token.startsWith("#")) {
+          int varNum = Integer.parseInt(token.substring(1));
+          return Type.createTypeVariable(varNum);
+        } else {
+          return Type.createAtomic(token);
+        }
       }
-      
+
       public Type createExpression(List<Type> types) {
         if (types.size() == 2) {
           return Type.createFunctional(types.get(0), types.get(1), false);

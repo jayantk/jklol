@@ -1,8 +1,19 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
+import java.util.Map;
+import java.util.Set;
+
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 public abstract class AbstractTypeDeclaration implements TypeDeclaration {
+  
+  private final Map<String, String> supertypeMap;
+  
+  public AbstractTypeDeclaration(Map<String, String> supertypeMap) {
+    this.supertypeMap = Maps.newHashMap(supertypeMap);
+  }
 
   @Override
   public Type unify(Type t1, Type t2) {
@@ -44,31 +55,56 @@ public abstract class AbstractTypeDeclaration implements TypeDeclaration {
     }
   }
   
+  @Override
   public Type meet(Type t1, Type t2) {
-    if (t1.equals(t2)) {
+    Preconditions.checkArgument(t1.isAtomic() && t2.isAtomic() &&
+        !t1.hasTypeVariables() && !t2.hasTypeVariables());
+    String t1Atomic = t1.getAtomicTypeName();
+    String t2Atomic = t2.getAtomicTypeName();
+    
+    if (isAtomicSubtype(t1Atomic, t2Atomic)) {
       return t1;
-    } else if (t1.equals(TypeDeclaration.TOP)) {
+    } else if (isAtomicSubtype(t2Atomic, t1Atomic)) {
       return t2;
-    } else if (t2.equals(TypeDeclaration.TOP)) {
-      return t1;
-    } else {
-      return TypeDeclaration.TOP;
-    }
-  }
-
-  public Type join(Type t1, Type t2) {
-    if (t1.equals(t2)) {
-      return t1;
-    } else if (t1.equals(TypeDeclaration.BOTTOM)) {
-      return t2;
-    } else if (t2.equals(TypeDeclaration.BOTTOM)) {
-      return t1;
     } else {
       return TypeDeclaration.BOTTOM;
     }
   }
 
+  @Override
+  public Type join(Type t1, Type t2) {
+    Preconditions.checkArgument(t1.isAtomic() && t2.isAtomic() &&
+        !t1.hasTypeVariables() && !t2.hasTypeVariables());
+    String t1Atomic = t1.getAtomicTypeName();
+    String t2Atomic = t2.getAtomicTypeName();
+
+    Set<String> t1Supertypes = Sets.newHashSet();
+    String curType = t1Atomic;
+    while (curType != null) {
+      t1Supertypes.add(curType);
+      curType = supertypeMap.get(curType);
+    }
+    
+    curType = t2Atomic;
+    while (curType != null) {
+      if (t1Supertypes.contains(curType)) {
+        return Type.createAtomic(curType);
+      }
+      curType = supertypeMap.get(curType);
+    }
+
+    return TypeDeclaration.TOP;
+  }
+
+  @Override
   public boolean isAtomicSubtype(String subtype, String supertype) {
-    return subtype.equals(supertype);
+    String curType = subtype;
+    while (curType != null) {
+      if (curType.equals(supertype)) {
+        return true;
+      }
+      curType = supertypeMap.get(curType);
+    }
+    return false;
   }
 }

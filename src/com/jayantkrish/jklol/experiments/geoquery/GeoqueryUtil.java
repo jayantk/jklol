@@ -43,7 +43,8 @@ public class GeoqueryUtil {
     typeReplacements.put("l", "e");
     typeReplacements.put("m", "e");
     typeReplacements.put("p", "e");
-    return new ExplicitTypeDeclaration(typeReplacements);
+    // TODO;
+    return new ExplicitTypeDeclaration(Maps.newHashMap(), typeReplacements);
   }
 
   public static Pair<Lexeme, LexiconEntryTemplate> factorLexiconEntry(LexiconEntry entry,

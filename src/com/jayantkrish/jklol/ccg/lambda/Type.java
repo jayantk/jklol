@@ -3,6 +3,9 @@ package com.jayantkrish.jklol.ccg.lambda;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import com.google.common.collect.Sets;
 
 public class Type implements Serializable {
   private static final long serialVersionUID = 1L;
@@ -74,6 +77,23 @@ public class Type implements Serializable {
       return atomicTypeVar >= 0;
     } else {
       return argType.hasTypeVariables() || returnType.hasTypeVariables();
+    }
+  }
+  
+  public Set<Integer> getTypeVariables() {
+    Set<Integer> typeVars = Sets.newHashSet();
+    getTypeVariablesHelper(typeVars);
+    return typeVars;
+  }
+  
+  private void getTypeVariablesHelper(Set<Integer> vars) {
+    if (isAtomic()) {
+      if (atomicTypeVar > 0) {
+        vars.add(atomicTypeVar);
+      }
+    } else {
+      argType.getTypeVariablesHelper(vars);
+      returnType.getTypeVariablesHelper(vars);
     }
   }
   

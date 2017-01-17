@@ -15,14 +15,16 @@ import com.google.common.base.Preconditions;
  */
 public class ExplicitTypeDeclaration extends AbstractTypeDeclaration {
   
-  private final Map<String, String> typeReplacements;
+  private final Map<String, Type> typeReplacements;
   
-  public ExplicitTypeDeclaration(Map<String, String> typeReplacements) {
+  public ExplicitTypeDeclaration(Map<String, String> supertypeMap,
+      Map<String, Type> typeReplacements) {
+    super(supertypeMap);
     this.typeReplacements = Preconditions.checkNotNull(typeReplacements);
   }
   
   public static ExplicitTypeDeclaration getDefault() {
-    return new ExplicitTypeDeclaration(Collections.emptyMap());
+    return new ExplicitTypeDeclaration(Collections.emptyMap(), Collections.emptyMap());
   }
 
   @Override
@@ -46,7 +48,7 @@ public class ExplicitTypeDeclaration extends AbstractTypeDeclaration {
     String typeString = type.toString();
 
     if (typeReplacements.containsKey(typeString)) {
-      return Type.parseFrom(typeReplacements.get(typeString));
+      return typeReplacements.get(typeString);
     } else {
       return type; 
     }

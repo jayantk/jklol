@@ -1,10 +1,12 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jayantkrish.jklol.util.CsvParser;
 
 /**
@@ -20,7 +22,9 @@ public class RegexTypeDeclaration extends AbstractTypeDeclaration {
   private List<Pattern> patterns;
   private List<Type> types;
   
-  public RegexTypeDeclaration(List<Pattern> patterns, List<Type> types) {
+  public RegexTypeDeclaration(Map<String, String> supertypeMap,
+      List<Pattern> patterns, List<Type> types) {
+    super(supertypeMap);
     this.patterns = ImmutableList.copyOf(patterns);
     this.types = ImmutableList.copyOf(types);
   }
@@ -36,7 +40,7 @@ public class RegexTypeDeclaration extends AbstractTypeDeclaration {
       patterns.add(Pattern.compile(parts[0]));
       types.add(typeParser.parse(parts[1]));
     }
-    return new RegexTypeDeclaration(patterns, types);
+    return new RegexTypeDeclaration(Maps.newHashMap(), patterns, types);
   }
   
   public static RegexTypeDeclaration fromStringArrays(String[][] lines) {
@@ -47,7 +51,7 @@ public class RegexTypeDeclaration extends AbstractTypeDeclaration {
       patterns.add(Pattern.compile(parts[0]));
       types.add(typeParser.parse(parts[1]));
     }
-    return new RegexTypeDeclaration(patterns, types);
+    return new RegexTypeDeclaration(Maps.newHashMap(), patterns, types);
   }
 
   @Override

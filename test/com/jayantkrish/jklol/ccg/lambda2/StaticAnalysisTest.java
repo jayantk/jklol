@@ -36,6 +36,7 @@ public class StaticAnalysisTest extends TestCase {
     Map<String, Type> typeReplacementMap = Maps.newHashMap();
     typeReplacementMap.put("<<e,t>,<<e,i>,e>>", Type.parseFrom("<<#1,t>,<<#1,i>,#1>>"));
     typeReplacementMap.put("<<e,t>,t>", Type.parseFrom("<<#1,t>,t>"));
+    typeReplacementMap.put("<<e,t>,i>", Type.parseFrom("<<#1,t>,i>"));
 
     Map<String, String> subtypeMap = Maps.newHashMap();
     subtypeMap.put("lo", "e");
@@ -119,6 +120,20 @@ public class StaticAnalysisTest extends TestCase {
     runTypeInferenceTest("(lambda ($0 $1) (and:<t*,t> ($1 $0) (foo:<e,t> $0) (city:<c,t> $0)))", "<c,<<c,t>,t>>");
   }
   
+  public void testTypeInferenceLambda3() {
+    runTypeInferenceTest("(lambda ($0) (and:<t*,t> (city:<c,t> $0) (loc:<lo,<lo,t>> $0 alaska:s)))", "<c,t>");
+  }
+  
+  public void testTypeInferenceLambda4() {
+    runTypeInferenceTest("(argmax:<<e,t>,<<e,i>,e>> (lambda ($0) (and:<t*,t> (city:<c,t> $0) (loc:<lo,<lo,t>> $0 alaska:s))) (lambda ($0) (size:<lo,i> $0)))",
+        "c");
+  }
+  
+  public void testTypeInferenceLambda5() {
+    runTypeInferenceTest("(size:<lo,i> (argmax:<<e,t>,<<e,i>,e>> (lambda ($0) (and:<t*,t> (city:<c,t> $0) (loc:<lo,<lo,t>> $0 alaska:s))) (lambda ($0) (size:<lo,i> $0))))",
+        "i");
+  }
+  
   public void testTypeInferenceNestedLambda() {
     String expression = "(count:<<e,t>,i> (lambda ($0) (and:<t,<t,t>> (state:<e,t> $0)"
         + "(exists:<<e,t>,t> (lambda ($1) (and:<t,<t,t>> (city:<e,t> $1) (loc:<e,<e,t>> $1 $0)))))))";
@@ -162,16 +177,16 @@ public class StaticAnalysisTest extends TestCase {
     runTypeInferenceTest("(lambda ($f0) (argmax:<<e,t>,<<e,i>,e>> (lambda ($0) ($f0 $0)) (lambda ($1) (size:<lo,i> $1))))",
         "<<lo,t>,lo>");
   }
-  
+
   public void testSomething() {
     runTypeInferenceTest("(lambda ($f0) (named:<e,<n,t>> $f0 austin:n))", "<e,t>");
   }
-  
+
   public void testSomething2() {
     runTypeInferenceTest("(lambda ($f0 $f1) (and:<t*,t> ($f0 $f1) (exists:<<e,t>,t> (lambda ($1) (and:<t*,t> (city:<c,t> $1) (named:<e,<n,t>> $1 austin:n) (loc:<lo,<lo,t>> $1 $f1))))))",
         "<<lo,t>,<lo,t>>");
   }
-  
+
   public void testSomething3() {
     runTypeInferenceTest("(lambda ($0) (size:<lo,i> (argmax:<<e,t>,<<e,i>,e>> (lambda ($1) ($0 $1)) (lambda ($1) (size:<lo,i> $1)))))",
         "<<lo,t>,i>");
@@ -204,11 +219,16 @@ public class StaticAnalysisTest extends TestCase {
     runTypeInferenceTest("(lambda (f) (and:<t*,t> (f texas:e) ((lambda (f) (state:<e,t> f)) austin:e)))",
         "<<e,t>,t>");
   }
+  
+  public void testPolymorphism() {
+    runTypeInferenceTest("(count:<<e,t>,i> (lambda ($0) (and:<t*,t> (city:<c,t> $0) (loc:<lo,<lo,t>> $0 louisiana:s))))",
+        "i");
+  }
 
   private void runTypeInferenceTest(String expression, String expectedType) {
     Type expected = Type.parseFrom(expectedType);
     Expression2 exp = ExpressionParser.expression2().parse(expression);
-    TypeInference inference = StaticAnalysis.inferTypeMap2(exp, TypeDeclaration.TOP, typeDeclaration);
+    TypeInference inference = StaticAnalysis.typeInference(exp, TypeDeclaration.TOP, typeDeclaration);
     System.out.println("original:");
     System.out.println(inference.getConstraints());
     System.out.println("solved:");

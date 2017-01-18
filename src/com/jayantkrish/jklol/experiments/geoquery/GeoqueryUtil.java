@@ -32,19 +32,37 @@ public class GeoqueryUtil {
             new CommutativeReplacementRule("or:<t*,t>"),
             new CommutativeReplacementRule("next_to:<lo,<lo,t>>")));
   }
+  
+  public static TypeDeclaration getSimpleTypeDeclaration() {
+    Map<String, Type> typeReplacementMap = Maps.newHashMap();
+    typeReplacementMap.put("lo", Type.createAtomic("e"));
+    typeReplacementMap.put("c", Type.createAtomic("e"));
+    typeReplacementMap.put("co", Type.createAtomic("e"));
+    typeReplacementMap.put("s", Type.createAtomic("e"));
+    typeReplacementMap.put("r", Type.createAtomic("e"));
+    typeReplacementMap.put("l", Type.createAtomic("e"));
+    typeReplacementMap.put("m", Type.createAtomic("e"));
+    typeReplacementMap.put("p", Type.createAtomic("e"));
+    Map<String, String> subtypeMap = Maps.newHashMap();
+    return new ExplicitTypeDeclaration(subtypeMap, typeReplacementMap);
+  }
 
   public static TypeDeclaration getTypeDeclaration() { 
-    Map<String, String> typeReplacements = Maps.newHashMap();
-    typeReplacements.put("lo", "e");
-    typeReplacements.put("c", "e");
-    typeReplacements.put("co", "e");
-    typeReplacements.put("s", "e");
-    typeReplacements.put("r", "e");
-    typeReplacements.put("l", "e");
-    typeReplacements.put("m", "e");
-    typeReplacements.put("p", "e");
-    // TODO;
-    return new ExplicitTypeDeclaration(Maps.newHashMap(), typeReplacements);
+    Map<String, Type> typeReplacementMap = Maps.newHashMap();
+    typeReplacementMap.put("<<e,t>,<<e,i>,e>>", Type.parseFrom("<<#1,t>,<<#1,i>,#1>>"));
+    typeReplacementMap.put("<<e,t>,t>", Type.parseFrom("<<#1,t>,t>"));
+    typeReplacementMap.put("<<e,t>,i>", Type.parseFrom("<<#1,t>,i>"));
+
+    Map<String, String> subtypeMap = Maps.newHashMap();
+    subtypeMap.put("lo", "e");
+    subtypeMap.put("c", "lo");
+    subtypeMap.put("co", "lo");
+    subtypeMap.put("s", "lo");
+    subtypeMap.put("r", "lo");
+    subtypeMap.put("l", "lo");
+    subtypeMap.put("m", "lo");
+    subtypeMap.put("p", "lo");
+    return new ExplicitTypeDeclaration(subtypeMap, typeReplacementMap);
   }
 
   public static Pair<Lexeme, LexiconEntryTemplate> factorLexiconEntry(LexiconEntry entry,

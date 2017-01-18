@@ -236,141 +236,17 @@ public class StaticAnalysis {
    * @return
    */
   public static Type inferType(Expression2 expression, Type rootType, TypeDeclaration typeDeclaration) {
-    Map<Integer, Type> subexpressionTypeMap = inferTypeMap2(expression, rootType, typeDeclaration).getExpressionTypes();
+    Map<Integer, Type> subexpressionTypeMap = inferTypeMap(expression, rootType, typeDeclaration);
     return subexpressionTypeMap.get(0);
   }
 
   public static Map<Integer, Type> inferTypeMap(Expression2 expression, Type rootType,
       TypeDeclaration typeDeclaration) {
-    Map<Integer, Type> subexpressionTypeMap = Maps.newHashMap();
-    initializeSubexpressionTypeMap(expression, subexpressionTypeMap);
-    updateType(0, rootType, subexpressionTypeMap, typeDeclaration, expression);
-    ScopeSet scopes = getScopes(expression);
-
-    boolean updated = true;
-    while (updated) {
-      updated = false;
-      for (int index : subexpressionTypeMap.keySet()) {
-        Expression2 subexpression = expression.getSubexpression(index);
-        if (subexpression.isConstant()) {
-          
-          Scope scope = scopes.getScope(index);
-          int bindingIndex = scope.getBindingIndex(subexpression.getConstant());
-          if (bindingIndex == -1) {
-            // Get the type of this constant if it is declared
-            // and it's not a lambda variable.
-            Type newType = typeDeclaration.getType(subexpression.getConstant());
-            updated = updateType(index, newType, subexpressionTypeMap, typeDeclaration, expression) || updated;
-          } else {
-            // Propagate type information between occurrences of the same variable.
-            Type myType = subexpressionTypeMap.get(index);
-            Type bindingType = subexpressionTypeMap.get(bindingIndex);
-            
-            updated = updateType(index, bindingType, subexpressionTypeMap, typeDeclaration, expression) || updated;
-            updated = updateType(bindingIndex, myType, subexpressionTypeMap, typeDeclaration, expression) || updated;
-          }
-
-        } else if (isLambda(subexpression)) {
-          // Lambda expression. Propagate argument / body types to the whole expression,
-          // and the expressions type back to the arguments / body.
-          int[] childIndexes = expression.getChildIndexes(index);
-          int bodyIndex = childIndexes[childIndexes.length - 1];
-          int[] argIndexes = expression.getChildIndexes(childIndexes[1]);
-
-          Type newType = subexpressionTypeMap.get(bodyIndex);
-          for (int i = argIndexes.length - 1; i >= 0; i--) {
-            newType = newType.addArgument(subexpressionTypeMap.get(argIndexes[i]));
-          }
-
-          updated = updateType(index, newType, subexpressionTypeMap, typeDeclaration, expression) || updated;
-          
-          // Propagate the expression's type back to the arguments / body
-          Type lambdaType = subexpressionTypeMap.get(index);
-
-          for (int i = 0; i < argIndexes.length; i++) {
-            Type argType = lambdaType.getArgumentType();
-            updated = updateType(argIndexes[i], argType, subexpressionTypeMap, typeDeclaration, expression) || updated;
-            lambdaType = lambdaType.getReturnType();
-          }
-
-          updated = updateType(bodyIndex, lambdaType,
-              subexpressionTypeMap, typeDeclaration, expression) || updated;
-        } else if (true) {
-          // Application
-          int[] childIndexes = expression.getChildIndexes(index);
-          int functionIndex = childIndexes[0];
-
-          Type applicationType = subexpressionTypeMap.get(index);
-          Type functionType = subexpressionTypeMap.get(functionIndex);
-
-          if (!functionType.equals(TypeDeclaration.TOP)) {
-            Type rest = functionType;
-            
-            for (int i = 1; i < childIndexes.length; i++) {
-              Type argType = rest.getArgumentType();
-              if (!rest.acceptsRepeatedArguments()) {
-                rest = rest.getReturnType();
-              }
-              updated = updateType(childIndexes[i], argType, subexpressionTypeMap,
-                  typeDeclaration, expression) || updated;
-            }
-
-            if (rest.acceptsRepeatedArguments()) {
-              rest = rest.getReturnType();
-            }
-
-            updated = updateType(index, rest, subexpressionTypeMap, typeDeclaration, expression) 
-                || updated;
-          }
-
-          // Propagate type information on arguments and return value
-          // back to the function itself.
-          functionType = applicationType;
-          for (int i = childIndexes.length - 1; i >= 1; i--) {
-            Type argType = subexpressionTypeMap.get(childIndexes[i]);
-            functionType = functionType.addArgument(argType);
-          }
-          updated = updateType(functionIndex, functionType, subexpressionTypeMap,
-              typeDeclaration, expression) || updated;
-        }
-      }
-    }
-    return subexpressionTypeMap;
+    TypeInference inference = typeInference(expression, rootType, typeDeclaration);
+    return inference.getExpressionTypes();
   }
 
-  private static void initializeSubexpressionTypeMap(Expression2 expression,
-      Map<Integer, Type> subexpressionTypeMap) {
-    for (int i = 0; i < expression.size(); i++) {
-      int parentIndex = expression.getParentExpressionIndex(i);
-      
-      if (parentIndex != -1 && StaticAnalysis.isLambda(expression, parentIndex)) {
-        // Don't include "lambda" or the nested expression containing lambda arguments
-        int[] childIndexes = expression.getChildIndexes(parentIndex);
-        if (i == childIndexes[0] || i == childIndexes[1]) {
-          continue;
-        }
-      }
-      subexpressionTypeMap.put(i, TypeDeclaration.TOP);
-    }
-  }
-
-  private static boolean updateType(int index, Type type, Map<Integer, Type> typeMap,
-      TypeDeclaration typeDeclaration, Expression2 expression) {
-    Type oldType = typeMap.get(index);
-    Type newType = typeDeclaration.unify(oldType, type);
-    
-    // System.out.println("old: " + oldType + " update: " + type + " new: " + newType);
-
-    if (!newType.equals(oldType)) {
-      // System.out.println(index + " " + expression.getSubexpression(index) + " " + oldType + " " + type + " -> " + newType);
-      typeMap.put(index, newType);
-      return true;
-    } else {
-      return false;
-    }
-  }
-  
-  public static TypeInference inferTypeMap2(Expression2 expression, Type rootType,
+  public static TypeInference typeInference(Expression2 expression, Type rootType,
       TypeDeclaration typeDeclaration) {
     TypeInference inference = new TypeInference(expression, typeDeclaration);
     inference.infer();

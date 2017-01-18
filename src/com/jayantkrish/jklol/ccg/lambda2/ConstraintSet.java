@@ -139,9 +139,12 @@ public class ConstraintSet {
     boolean done = false;
     boolean solvable = this.solvable;
     
+    System.out.println(" equality");
+    System.out.println(equalityConstraints);
+    
     Map<Integer, Type> nextBindings = Maps.newHashMap(bindings);
     while (!done) {
-      System.out.println(current.size() + " " + current);
+      // System.out.println(current.size() + " " + current);
       
       done = true;
       for (SubtypeConstraint c : current) {
@@ -186,14 +189,20 @@ public class ConstraintSet {
             solvable = false;
           }
         } else {
-          if (subtype.hasTypeVariables()) {
+          if (subtype.hasTypeVariables() && supertype.hasTypeVariables()) {
+            if (subtype.getAtomicTypeVar() != supertype.getAtomicTypeVar()) {
+              nextBindings.put(subtype.getAtomicTypeVar(), supertype);
+            }
+          } else if (subtype.hasTypeVariables()) {
             nextBindings.put(subtype.getAtomicTypeVar(), supertype);
             done = false;
           } else if (supertype.hasTypeVariables()) {
             nextBindings.put(supertype.getAtomicTypeVar(), subtype);
             done = false;
           } else {
-            Preconditions.checkState(false, "shouldn't get here");
+            if (!subtype.equals(supertype)) {
+              solvable = false;
+            }
           }
         }
       }
@@ -238,8 +247,8 @@ public class ConstraintSet {
     Map<Integer, Type> nextBindings = Maps.newHashMap(bindings);
     while (!done && solvable) {
       done = true;
-      System.out.println(current.size() + " " + current);
-      System.out.println("  " + nextBindings);
+      // System.out.println(current.size() + " " + current);
+      // System.out.println("  " + nextBindings);
       Set<Integer> onLeft = Sets.newHashSet();
       Set<Integer> onRight = Sets.newHashSet();
       for (SubtypeConstraint c : current) {

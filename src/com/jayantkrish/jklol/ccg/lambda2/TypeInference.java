@@ -2,6 +2,7 @@ package com.jayantkrish.jklol.ccg.lambda2;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -47,14 +48,21 @@ public class TypeInference {
 
     rootConstraints = populateExpressionTypes(0);
     // TODO: root type.
-    System.out.println("Making atomic:");
+    System.out.println("root");
+    System.out.println(rootConstraints);
     ConstraintSet atomicConstraints = rootConstraints.makeAtomic(typeVarCounter);
-    System.out.println("solving:");
+    System.out.println("atomic");
+    System.out.println(atomicConstraints);
+
     solved = atomicConstraints.solveAtomic(typeDeclaration);
+    System.out.println("solved");
+    System.out.println(solved);
 
     for (int k : expressionTypes.keySet()) {
+      System.out.println(expressionTypes.get(k) + " " + solved.getBindings());
       expressionTypes.put(k, expressionTypes.get(k).substitute(solved.getBindings()));
     }
+    System.out.println("done");
   }
 
   public ConstraintSet getConstraints() {
@@ -100,21 +108,41 @@ public class TypeInference {
         Type type = typeDeclaration.getType(subexpression.getConstant());
         if (type.hasTypeVariables()) {
           Map<Integer, Type> substitutions = Maps.newHashMap();
-          for (int var : type.getTypeVariables()) {
-            substitutions.put(var, getFreshTypeVar());
+          Set<Integer> usedTypeVars = type.getTypeVariables();
+          for (int var : usedTypeVars) {
+            Type fresh = getFreshTypeVar();
+            while (usedTypeVars.contains(fresh.getAtomicTypeVar())) {
+              fresh = getFreshTypeVar();
+            }
+            substitutions.put(var, fresh);
           }
+          System.out.println("here: " + type + " " + substitutions);
           type = type.substitute(substitutions);
         }
         
-        List<SubtypeConstraint> constraints = Lists.newArrayList();
-        Type supertype = upcast(type, constraints, true, false);
-        expressionTypes.put(index, supertype);
-        return new ConstraintSet(Lists.newArrayList(), constraints, Maps.newHashMap(), true);
+        if (expression.getParentExpressionIndex(index) == index - 1) {
+          // Subexpression is the first expression in an application.
+          // Don't upcast it.
+          expressionTypes.put(index, type);
+          return ConstraintSet.EMPTY;
+        } else {
+          List<SubtypeConstraint> constraints = Lists.newArrayList();
+          Type supertype = upcast(type, constraints, true, false);
+          expressionTypes.put(index, supertype);
+          return new ConstraintSet(Lists.newArrayList(), constraints, Maps.newHashMap(), true);
+        }
       } else {
         // Get the type variable for this binding and add it here.
         Type boundType = expressionTypes.get(bindingIndex);
-        expressionTypes.put(index, boundType);
-        return ConstraintSet.EMPTY;
+        List<SubtypeConstraint> constraints = Lists.newArrayList();
+        Type supertype = upcast(boundType, constraints, true, true);
+        expressionTypes.put(index, supertype);
+        ConstraintSet constraintSet = new ConstraintSet(Lists.newArrayList(),
+            constraints, Maps.newHashMap(), true);
+        // System.out.println(index);
+        // System.out.println(constraintSet);
+        return constraintSet; 
+        // return ConstraintSet.EMPTY;
       }
     } else if (StaticAnalysis.isLambda(subexpression)) {
       int[] childIndexes = expression.getChildIndexes(index);
@@ -124,7 +152,8 @@ public class TypeInference {
       ConstraintSet bodyConstraints = populateExpressionTypes(bodyIndex);
       Type lambdaType = expressionTypes.get(bodyIndex);
       for (int i = argIndexes.length - 1; i >= 0; i--) {
-        populateExpressionTypes(argIndexes[i]);
+        // Lambda arguments have prepopulated expression types
+        // from the initialization.
         lambdaType = lambdaType.addArgument(expressionTypes.get(argIndexes[i]));
       }
 
@@ -147,7 +176,7 @@ public class TypeInference {
         Type argType = expressionTypes.get(childIndexes[i]);
         supertype = supertype.addArgument(argType);
       }
-      System.out.println(subexpression);
+      // System.out.println(subexpression);
 
       // Hack to handle types with vararg parameters.
       if (functionType.acceptsRepeatedArguments()) {
@@ -163,7 +192,7 @@ public class TypeInference {
       // constraints = constraints.solveIncremental();
       expressionTypes.put(index, returnType);
       
-      System.out.println(constraints);
+      // System.out.println(constraints);
       return constraints;
     }
   }

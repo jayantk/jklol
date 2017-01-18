@@ -1,5 +1,6 @@
 package com.jayantkrish.jklol.ccg.lambda2;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,15 @@ public class ConstraintSet {
     List<SubtypeConstraint> newConstraints = Lists.newArrayList(constraints);
     newConstraints.add(constraint.substitute(bindings));
     
+    return new ConstraintSet(equalityConstraints, newConstraints, bindings, solvable);
+  }
+  
+  public ConstraintSet addAll(Collection<SubtypeConstraint> constraintCollection) {
+    List<SubtypeConstraint> newConstraints = Lists.newArrayList(constraints);
+    for (SubtypeConstraint c : constraintCollection) {
+      newConstraints.add(c.substitute(bindings));
+    }
+
     return new ConstraintSet(equalityConstraints, newConstraints, bindings, solvable);
   }
   
@@ -139,8 +149,8 @@ public class ConstraintSet {
     boolean done = false;
     boolean solvable = this.solvable;
     
-    System.out.println(" equality");
-    System.out.println(equalityConstraints);
+    // System.out.println(" equality");
+    // System.out.println(equalityConstraints);
     
     Map<Integer, Type> nextBindings = Maps.newHashMap(bindings);
     while (!done) {

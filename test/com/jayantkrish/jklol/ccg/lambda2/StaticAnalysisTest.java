@@ -113,9 +113,8 @@ public class StaticAnalysisTest extends TestCase {
 
   public void testTypeInferenceLambda() {
     runTypeInferenceTest("(lambda ($0) (foo:<e,t> $0))", "<e,t>");
-    runTypeInferenceTest("(lambda ($0 $1) (and:<t,<t,t>> ($1 $0) (foo:<e,t> $0)))", "<e,<<e,t>,t>>");
   }
-  
+
   public void testTypeInferenceLambda2() {
     runTypeInferenceTest("(lambda ($0 $1) (and:<t*,t> ($1 $0) (foo:<e,t> $0) (city:<c,t> $0)))", "<c,<<c,t>,t>>");
   }
@@ -133,7 +132,11 @@ public class StaticAnalysisTest extends TestCase {
     runTypeInferenceTest("(size:<lo,i> (argmax:<<e,t>,<<e,i>,e>> (lambda ($0) (and:<t*,t> (city:<c,t> $0) (loc:<lo,<lo,t>> $0 alaska:s))) (lambda ($0) (size:<lo,i> $0))))",
         "i");
   }
-  
+
+  public void testTypeInferenceLambda6() {
+    runTypeInferenceTest("(lambda ($0 $1) (and:<t,<t,t>> ($1 $0) (foo:<e,t> $0)))", "<e,<<e,t>,t>>");
+  }
+
   public void testTypeInferenceNestedLambda() {
     String expression = "(count:<<e,t>,i> (lambda ($0) (and:<t,<t,t>> (state:<e,t> $0)"
         + "(exists:<<e,t>,t> (lambda ($1) (and:<t,<t,t>> (city:<e,t> $1) (loc:<e,<e,t>> $1 $0)))))))";
@@ -151,7 +154,7 @@ public class StaticAnalysisTest extends TestCase {
   }
 
   public void testRepeatedArguments() {
-    runTypeInferenceTest("(lambda ($0 $1) (and:<t*,t> (bar:<e,t> $0) ($1 $0) (foo:<e,t> $0)))", "<e,<<e,t>,t>>");
+    runTypeInferenceTest("(lambda ($0) (and:<t*,t> (bar:<e,t> $0) (foo:<e,t> $0)))", "<e,t>");
   }
 
   public void testUnknownPropagation() {

@@ -98,13 +98,19 @@ public abstract class AbstractTypeDeclaration implements TypeDeclaration {
 
   @Override
   public boolean isAtomicSubtype(String subtype, String supertype) {
-    String curType = subtype;
-    while (curType != null) {
-      if (curType.equals(supertype)) {
-        return true;
+    if (supertype.equals(TypeDeclaration.TOP.getAtomicTypeName())) {
+      return true;
+    } else if (subtype.equals(TypeDeclaration.BOTTOM.getAtomicTypeName())) {
+      return true;
+    } else {
+      String curType = subtype;
+      while (curType != null) {
+        if (curType.equals(supertype)) {
+          return true;
+        }
+        curType = supertypeMap.get(curType);
       }
-      curType = supertypeMap.get(curType);
+      return false;
     }
-    return false;
   }
 }

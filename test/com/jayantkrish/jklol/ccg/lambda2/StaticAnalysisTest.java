@@ -142,12 +142,7 @@ public class StaticAnalysisTest extends TestCase {
         + "(exists:<<e,t>,t> (lambda ($1) (and:<t,<t,t>> (city:<e,t> $1) (loc:<e,<e,t>> $1 $0)))))))";
     runTypeInferenceTest(expression, "i");
   }
-  
-  public void testTypeInferenceNestedLambdaFunction() {
-    String expression = "(lambda ($0) (count:<<e,t>,i> $0))";
-    runTypeInferenceTest(expression, "<<e,t>,i>");
-  }
-  
+
   public void testTypeInferenceNestedLambdaFunction2() {
     String expression = "(lambda ($0) (lambda ($1) (cause:<e,<e,t>> $0 ($1 foo:a))))";
     runTypeInferenceTest(expression, "<e,<<a,e>,t>>");
@@ -156,19 +151,14 @@ public class StaticAnalysisTest extends TestCase {
   public void testRepeatedArguments() {
     runTypeInferenceTest("(lambda ($0) (and:<t*,t> (bar:<e,t> $0) (foo:<e,t> $0)))", "<e,t>");
   }
-
-  public void testUnknownPropagation() {
-    runTypeInferenceTest("(lambda ($0 $1) ($0 $1))", "<<⊤,⊤>,<⊤,⊤>>");
+  
+  public void testRepeatedArguments2() {
+    runTypeInferenceTest("(lambda ($0) (and:<e,<t*,t>> baz:e (bar:<e,t> $0) (foo:<e,t> $0)))", "<e,t>");
   }
 
   public void testMultipleArguments() {
     runTypeInferenceTest("(lambda ($f0) (argmax:<<e,t>,<<e,i>,e>> $f0 (lambda ($1) (size:<lo,i> $1))))",
         "<<lo,t>,lo>");
-  }
-  
-  public void testMultipleArguments2() {
-    runTypeInferenceTest("(lambda ($f0 $f1) (argmax:<<e,t>,<<e,i>,e>> $f0 $f1))",
-        "<<e,t>,<<e,i>,e>>");
   }
   
   public void testMultipleArguments3() {
@@ -217,6 +207,16 @@ public class StaticAnalysisTest extends TestCase {
     runTypeInferenceTest("(lambda ($f0 $f1) (and:<t*,t> ($f0 $f1) (exists:<<e,t>,t> (lambda ($1) (loc:<lo,<lo,t>> $1 $f1)))))",
         "<<lo,t>,<lo,t>>");
   }
+  
+  public void testSomething8() {
+    runTypeInferenceTest("(lambda ($0 $1) (animal-c:<<t,⊥>,<a,⊥>> (lambda ($2) (plant-c:<<t,⊥>,<a,⊥>> (lambda ($3) (and-c:<<t,⊥>,<t*,⊥>> $0 $2 $3)) $1)) $1))",
+        "<<t,⊥>,<a,⊥>>");
+  }
+
+  public void testSomething9() {
+    runTypeInferenceTest("(display:<⊤,⊥> foo:d)", "⊥");
+    runTypeInferenceTest("(get-denotation-c:<<d,⊥>,<<<t,⊥>,<a,⊥>>,⊥>> (lambda ($0) (display:<⊤,⊥> $0)) animal-c:<<t,⊥>,<a,⊥>>)", "⊥");
+  }
 
   public void testVariablesSameName() {
     runTypeInferenceTest("(lambda (f) (and:<t*,t> (f texas:e) ((lambda (f) (state:<e,t> f)) austin:e)))",
@@ -232,10 +232,12 @@ public class StaticAnalysisTest extends TestCase {
     Type expected = Type.parseFrom(expectedType);
     Expression2 exp = ExpressionParser.expression2().parse(expression);
     TypeInference inference = StaticAnalysis.typeInference(exp, TypeDeclaration.TOP, typeDeclaration);
+    /*
     System.out.println("original:");
     System.out.println(inference.getConstraints());
     System.out.println("solved:");
     System.out.println(inference.getSolvedConstraints());
+    */
 
     assertTrue(inference.getSolvedConstraints().isSolvable());
     assertEquals(expected, inference.getExpressionTypes().get(0));

@@ -102,7 +102,7 @@ public class Type implements Serializable {
   public Type addArgument(Type arg) {
     return Type.createFunctional(arg, this, false);
   }
-  
+
   /**
    * Adds a list of argument types to this type. The
    * last argument in the list is the first argument

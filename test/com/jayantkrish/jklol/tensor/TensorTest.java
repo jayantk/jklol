@@ -440,9 +440,9 @@ public abstract class TensorTest extends TestCase {
 
   public void testMatrixInnerProductLeftAligned() {
     for (Tensor matrixInnerProductFirst : matrixInnerProductFirsts) {
-      Tensor actual = table.matrixInnerProduct(matrixInnerProductFirst);
-      Tensor expected = simpleReduce(simpleMultiply(table, matrixInnerProductFirst),
-          Sets.newHashSet(1), ReduceType.SUM);
+      Tensor actual = SparseTensor.copyOf(table.matrixInnerProduct(matrixInnerProductFirst));
+      Tensor expected = SparseTensor.copyOf(simpleReduce(simpleMultiply(table, matrixInnerProductFirst),
+          Sets.newHashSet(1), ReduceType.SUM));
       assertEquals(expected, actual);
     }
   }
@@ -450,18 +450,18 @@ public abstract class TensorTest extends TestCase {
   public void testMatrixInnerProductMiddleAligned() {
     Tensor relabeledTable = table.relabelDimensions(new int[] {1, 3, 5});
     for (Tensor matrixInnerProductMiddle : matrixInnerProductMiddles) {
-      Tensor actual = relabeledTable.matrixInnerProduct(matrixInnerProductMiddle);
-      Tensor expected = simpleReduce(simpleMultiply(relabeledTable, matrixInnerProductMiddle),
-          Sets.newHashSet(3), ReduceType.SUM);
+      Tensor actual = SparseTensor.copyOf(relabeledTable.matrixInnerProduct(matrixInnerProductMiddle));
+      Tensor expected = SparseTensor.copyOf(simpleReduce(simpleMultiply(relabeledTable, matrixInnerProductMiddle),
+          Sets.newHashSet(3), ReduceType.SUM));
       assertEquals(expected, actual);
     }
   }
 
   public void testMatrixInnerProductRightAligned() {
     for (Tensor matrixInnerProductLast : matrixInnerProductLasts) {
-      Tensor actual = table.matrixInnerProduct(matrixInnerProductLast);
-      Tensor expected = simpleReduce(simpleMultiply(table, matrixInnerProductLast),
-          Sets.newHashSet(4), ReduceType.SUM);
+      Tensor actual = SparseTensor.copyOf(table.matrixInnerProduct(matrixInnerProductLast));
+      Tensor expected = SparseTensor.copyOf(simpleReduce(simpleMultiply(table, matrixInnerProductLast),
+          Sets.newHashSet(4), ReduceType.SUM));
       assertEquals(expected, actual);
     }
   }

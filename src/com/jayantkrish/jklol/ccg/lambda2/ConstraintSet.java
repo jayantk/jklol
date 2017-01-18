@@ -1,7 +1,6 @@
 package com.jayantkrish.jklol.ccg.lambda2;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,19 +11,19 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jayantkrish.jklol.ccg.lambda.Type;
 import com.jayantkrish.jklol.ccg.lambda.TypeDeclaration;
+import com.jayantkrish.jklol.util.CountAccumulator;
 
 public class ConstraintSet {
 
-  public static ConstraintSet EMPTY = new ConstraintSet(Collections.emptyList(),
-      Collections.emptyList(), Collections.emptyMap(), true);
-
   private final List<SubtypeConstraint> equalityConstraints;
   private final List<SubtypeConstraint> constraints;
-  private final Map<Integer, Type> bindings;
+  private final TypeReplacement bindings;
   private final boolean solvable;
   
+  private int typeVarCounter = 0;
+  
   public ConstraintSet(List<SubtypeConstraint> equalityConstraints,
-      List<SubtypeConstraint> constraints, Map<Integer, Type> bindings,
+      List<SubtypeConstraint> constraints, TypeReplacement bindings,
       boolean solvable) {
     this.equalityConstraints = equalityConstraints;
     this.constraints = constraints;
@@ -32,52 +31,56 @@ public class ConstraintSet {
     this.solvable = solvable;
   }
   
+  public static ConstraintSet empty() {
+    return new ConstraintSet(Lists.newArrayList(), Lists.newArrayList(),
+        new TypeReplacement(Maps.newHashMap()), true);
+  }
+  
   public Map<Integer, Type> getBindings() {
-    return bindings;
+    return bindings.getBindings();
   }
 
   public boolean isSolvable() {
     return solvable;
   }
 
-  public ConstraintSet union(ConstraintSet other) {
-    List<SubtypeConstraint> newEqualityConstraints = Lists.newArrayList();
-    newEqualityConstraints.addAll(equalityConstraints);
-    newEqualityConstraints.addAll(other.equalityConstraints);
-    
-    List<SubtypeConstraint> newConstraints = Lists.newArrayList();
-    newConstraints.addAll(constraints);
-    newConstraints.addAll(other.constraints);
-    
-    Map<Integer, Type> newBindings = Maps.newHashMap(bindings);
-    newBindings.putAll(other.bindings);
-
-    return new ConstraintSet(newEqualityConstraints,
-        newConstraints, newBindings, solvable && other.solvable);
+  public void add(SubtypeConstraint constraint) {
+    constraints.add(constraint.substitute(bindings.getBindings()));
   }
   
-  public ConstraintSet add(SubtypeConstraint constraint) {
-    List<SubtypeConstraint> newConstraints = Lists.newArrayList(constraints);
-    newConstraints.add(constraint.substitute(bindings));
-    
-    return new ConstraintSet(equalityConstraints, newConstraints, bindings, solvable);
-  }
-  
-  public ConstraintSet addAll(Collection<SubtypeConstraint> constraintCollection) {
-    List<SubtypeConstraint> newConstraints = Lists.newArrayList(constraints);
+  public void addAll(Collection<SubtypeConstraint> constraintCollection) {
     for (SubtypeConstraint c : constraintCollection) {
-      newConstraints.add(c.substitute(bindings));
+      constraints.add(c.substitute(bindings.getBindings()));
     }
-
-    return new ConstraintSet(equalityConstraints, newConstraints, bindings, solvable);
   }
   
-  public ConstraintSet addEquality(Type subt, Type supert) {
-    List<SubtypeConstraint> newEqualityConstraints = Lists.newArrayList(equalityConstraints);
-    newEqualityConstraints.add(new SubtypeConstraint(subt, supert));
-    
-    return new ConstraintSet(newEqualityConstraints, constraints, bindings, solvable);
-  }    
+  public void addEquality(Type subt, Type supert) {
+    equalityConstraints.add(new SubtypeConstraint(subt, supert));
+  }
+
+  public Type getFreshTypeVar() {
+    return Type.createTypeVariable(typeVarCounter++);
+  }
+
+  public Type upcast(Type t, boolean positiveCtx) {
+    return upcast(t, constraints, positiveCtx);
+  }
+
+  private Type upcast(Type t, List<SubtypeConstraint> acc, boolean positiveCtx) {
+    if (t.isAtomic()) {
+      Type v = getFreshTypeVar();
+      if (positiveCtx) {
+        acc.add(new SubtypeConstraint(t, v));
+      } else {
+        acc.add(new SubtypeConstraint(v, t));
+      }
+      return v;
+    } else {
+      Type argType = upcast(t.getArgumentType(), acc, !positiveCtx);
+      Type retType = upcast(t.getReturnType(), acc, positiveCtx);
+      return Type.createFunctional(argType, retType, t.acceptsRepeatedArguments());
+    }
+  }
   
   /*
   public ConstraintSet addEquality(Type subt, Type supert) {
@@ -152,14 +155,14 @@ public class ConstraintSet {
     // System.out.println(" equality");
     // System.out.println(equalityConstraints);
     
-    Map<Integer, Type> nextBindings = Maps.newHashMap(bindings);
+    TypeReplacement nextBindings = new TypeReplacement(bindings);
     while (!done) {
       // System.out.println(current.size() + " " + current);
       
       done = true;
       for (SubtypeConstraint c : current) {
-        Type subtype = c.subtype.substitute(nextBindings);
-        Type supertype = c.supertype.substitute(nextBindings);
+        Type subtype = c.subtype.substitute(nextBindings.getBindings());
+        Type supertype = c.supertype.substitute(nextBindings.getBindings());
         
         // System.out.println(subtype + " "+ subtype.isFunctional());
         // System.out.println(supertype + " "+ supertype.isFunctional());
@@ -178,7 +181,7 @@ public class ConstraintSet {
             Type nextType = Type.createFunctional(newArgVar, newReturnVar, false);
             */
             
-            nextBindings.put(subtype.getAtomicTypeVar(), supertype);
+            nextBindings.add(subtype.getAtomicTypeVar(), supertype);
             // next.add(c);
             done = false;
           } else {
@@ -192,7 +195,7 @@ public class ConstraintSet {
             Type nextType = Type.createFunctional(newArgVar, newReturnVar, false);
             */
 
-            nextBindings.put(supertype.getAtomicTypeVar(), supertype);
+            nextBindings.add(supertype.getAtomicTypeVar(), supertype);
             // next.add(c);
             done = false;
           } else {
@@ -201,13 +204,13 @@ public class ConstraintSet {
         } else {
           if (subtype.hasTypeVariables() && supertype.hasTypeVariables()) {
             if (subtype.getAtomicTypeVar() != supertype.getAtomicTypeVar()) {
-              nextBindings.put(subtype.getAtomicTypeVar(), supertype);
+              nextBindings.add(subtype.getAtomicTypeVar(), supertype);
             }
           } else if (subtype.hasTypeVariables()) {
-            nextBindings.put(subtype.getAtomicTypeVar(), supertype);
+            nextBindings.add(subtype.getAtomicTypeVar(), supertype);
             done = false;
           } else if (supertype.hasTypeVariables()) {
-            nextBindings.put(supertype.getAtomicTypeVar(), subtype);
+            nextBindings.add(supertype.getAtomicTypeVar(), subtype);
             done = false;
           } else {
             if (!subtype.equals(supertype)) {
@@ -221,12 +224,53 @@ public class ConstraintSet {
       next = Lists.newArrayList();
     }
     
-    List<SubtypeConstraint> atomicConstraints = Lists.newArrayList();
-    for (SubtypeConstraint c : constraints) {
-      atomicConstraints.add(c.substitute(nextBindings));
+    done = false;
+    current = constraints;
+    next = Lists.newArrayList();
+    while (!done) {
+      done = true;
+      for (SubtypeConstraint c : current) {
+        SubtypeConstraint substituted = c.substitute(nextBindings.getBindings());
+        System.out.println(substituted);
+        Type subtype = substituted.subtype;
+        Type supertype = substituted.supertype;
+        
+        if (subtype.isFunctional() && supertype.isFunctional()) {
+          System.out.println("F F");
+          next.add(new SubtypeConstraint(supertype.getArgumentType(), subtype.getArgumentType()));
+          next.add(new SubtypeConstraint(subtype.getReturnType(), supertype.getReturnType()));
+          done = false;
+        } else if (!subtype.isFunctional() && supertype.isFunctional()) {
+          System.out.println("A F");
+          if (subtype.hasTypeVariables()) {
+            Type subtypeReplacement = upcast(supertype, next, false);
+            nextBindings.add(subtype.getAtomicTypeVar(), subtypeReplacement);
+            System.out.println(subtype.getAtomicTypeVar() + " -> " + subtypeReplacement);
+            done = false;
+          } else {
+            solvable = false;
+          }
+        } else if (subtype.isFunctional() && !supertype.isFunctional()) {
+          System.out.println("F A");
+          if (supertype.hasTypeVariables()) {
+            Type supertypeReplacement = upcast(subtype, next, true);
+            nextBindings.add(supertype.getAtomicTypeVar(), supertypeReplacement);
+            done = false;
+          } else {
+            solvable = false;
+          }
+        } else {
+          System.out.println("A A");
+          next.add(substituted);
+        }
+      }
+
+      current = next;
+      next = Lists.newArrayList();
     }
 
-    return new ConstraintSet(Lists.newArrayList(), atomicConstraints, nextBindings, solvable);
+    System.out.println("HERE");
+    return new ConstraintSet(Lists.newArrayList(), current, nextBindings, solvable);
   }
   
   public ConstraintSet solveAtomic(TypeDeclaration typeDeclaration) {
@@ -238,32 +282,22 @@ public class ConstraintSet {
     boolean done = false;
     boolean solvable = this.solvable;
 
-    Set<Integer> allVars = Sets.newHashSet();
-    for (SubtypeConstraint c : current) {
-      Type subtype = c.subtype;
-      Type supertype = c.supertype;
-      Preconditions.checkState(subtype.isAtomic() && supertype.isAtomic());
-      
-      if (subtype.hasTypeVariables()) {
-        // lowerBounds.put(subtype.getAtomicTypeVar(), TypeDeclaration.BOTTOM);
-        allVars.add(subtype.getAtomicTypeVar());
-      } 
-      if (supertype.hasTypeVariables()) {
-        // upperBounds.put(supertype.getAtomicTypeVar(), TypeDeclaration.TOP);
-        allVars.add(supertype.getAtomicTypeVar());
-      }
-    }
-
-    Map<Integer, Type> nextBindings = Maps.newHashMap(bindings);
+    TypeReplacement nextBindings = new TypeReplacement(bindings);
+    System.out.println("start bindings: " + nextBindings);
     while (!done && solvable) {
       done = true;
       // System.out.println(current.size() + " " + current);
       // System.out.println("  " + nextBindings);
       Set<Integer> onLeft = Sets.newHashSet();
       Set<Integer> onRight = Sets.newHashSet();
+      CountAccumulator<Integer> varCounts = CountAccumulator.create();
+      Map<Integer, Integer> varCountSubVar = Maps.newHashMap();
       for (SubtypeConstraint c : current) {
         Type subtype = c.subtype;
         Type supertype = c.supertype;
+        
+        Preconditions.checkState(subtype.isAtomic() && supertype.isAtomic(),
+            "solveAtomic() requires atomic subtype constraints, got %s", c);
 
         if (!subtype.hasTypeVariables() && !supertype.hasTypeVariables()) {
           if (!typeDeclaration.isAtomicSubtype(subtype.getAtomicTypeName(),
@@ -288,9 +322,15 @@ public class ConstraintSet {
           upperBounds.put(subtype.getAtomicTypeVar(), bound);
           boundedVars.add(subtype.getAtomicTypeVar());
         } else {
-          onLeft.add(subtype.getAtomicTypeVar());
-          onRight.add(supertype.getAtomicTypeVar());
-          next.add(c);
+          if (!subtype.equals(supertype)) {
+            onLeft.add(subtype.getAtomicTypeVar());
+            onRight.add(supertype.getAtomicTypeVar());
+            varCounts.increment(subtype.getAtomicTypeVar(), 1);
+            varCounts.increment(supertype.getAtomicTypeVar(), 1);
+            varCountSubVar.put(subtype.getAtomicTypeVar(), supertype.getAtomicTypeVar());
+            varCountSubVar.put(supertype.getAtomicTypeVar(), subtype.getAtomicTypeVar());
+            next.add(c);
+          }
         }
       }
 
@@ -304,13 +344,24 @@ public class ConstraintSet {
           }
         }
         
-        if (lb != null && !onRight.contains(var) && !nextBindings.containsKey(var)) {
-          nextBindings.put(var, lb);
+        if (lb != null && !onRight.contains(var) && !nextBindings.contains(var)) {
+          nextBindings.add(var, lb);
           done = false;
         }
 
-        if (ub != null && !onLeft.contains(var) && !nextBindings.containsKey(var)) {
-          nextBindings.put(var, ub);
+        if (ub != null && !onLeft.contains(var) && !nextBindings.contains(var)) {
+          nextBindings.add(var, ub);
+          done = false;
+        }
+      }
+      
+      for (Integer var : varCounts.keySet()) {
+        System.out.println("  " + var);
+        if (varCounts.getCount(var) <= 1.0 && !boundedVars.contains(var)
+            && !nextBindings.contains(var)
+            && !nextBindings.contains(varCountSubVar.get(var))) {
+          System.out.println("  " + var + " -> " + varCountSubVar.get(var));
+          nextBindings.add(var, Type.createTypeVariable(varCountSubVar.get(var)));
           done = false;
         }
       }
@@ -328,9 +379,11 @@ public class ConstraintSet {
       }
       */
       
+      System.out.println("next: " + nextBindings);
       current = Lists.newArrayList();
       for (SubtypeConstraint c : next) {
-        current.add(c.substitute(nextBindings));
+        System.out.println(c);
+        current.add(c.substitute(nextBindings.getBindings()));
       }
       next = Lists.newArrayList();
     }

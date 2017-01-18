@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 
 public class Type implements Serializable {
@@ -36,6 +37,7 @@ public class Type implements Serializable {
   }
 
   public static Type createTypeVariable(int id) {
+    Preconditions.checkArgument(id >= 0, "Type variables must have positive ids (got %s)", id);
     return new Type(null, id, null, null, false);
   }
 
@@ -126,7 +128,7 @@ public class Type implements Serializable {
   public Type substitute(Map<Integer, Type> typeVarBindings) {
     if (isAtomic()) {
       if (typeVarBindings.containsKey(atomicTypeVar)) {
-        return typeVarBindings.get(atomicTypeVar).substitute(typeVarBindings);
+        return typeVarBindings.get(atomicTypeVar);
       } else {
         return this;
       }

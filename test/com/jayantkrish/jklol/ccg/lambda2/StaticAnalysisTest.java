@@ -227,6 +227,10 @@ public class StaticAnalysisTest extends TestCase {
     runTypeInferenceTest("(count:<<e,t>,i> (lambda ($0) (and:<t*,t> (city:<c,t> $0) (loc:<lo,<lo,t>> $0 louisiana:s))))",
         "i");
   }
+  
+  public void testPolymorphism2() {
+    runTypeInferenceTest("(lambda (x) (field:<c,r> (var:<#1,#1> x)))", "<c,r>");
+  }
 
   private void runTypeInferenceTest(String expression, String expectedType) {
     Type expected = Type.parseFrom(expectedType);

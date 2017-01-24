@@ -50,8 +50,10 @@ public class GeoqueryUtil {
   public static TypeDeclaration getTypeDeclaration() { 
     Map<String, Type> typeReplacementMap = Maps.newHashMap();
     typeReplacementMap.put("<<e,t>,<<e,i>,e>>", Type.parseFrom("<<#1,t>,<<#1,i>,#1>>"));
+    typeReplacementMap.put("<<e,t>,<<e,i>,i>>", Type.parseFrom("<<#1,t>,<<#1,i>,i>>"));
     typeReplacementMap.put("<<e,t>,t>", Type.parseFrom("<<#1,t>,t>"));
     typeReplacementMap.put("<<e,t>,i>", Type.parseFrom("<<#1,t>,i>"));
+    typeReplacementMap.put("<<e,t>,e>", Type.parseFrom("<<#1,t>,#1>"));
 
     Map<String, String> subtypeMap = Maps.newHashMap();
     subtypeMap.put("lo", "e");

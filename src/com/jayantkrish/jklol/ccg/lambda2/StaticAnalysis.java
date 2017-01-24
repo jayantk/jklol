@@ -243,6 +243,10 @@ public class StaticAnalysis {
   public static Map<Integer, Type> inferTypeMap(Expression2 expression, Type rootType,
       TypeDeclaration typeDeclaration) {
     TypeInference inference = typeInference(expression, rootType, typeDeclaration);
+    // TODO: figure out a better interface for error handling here.
+    Preconditions.checkState(inference.getSolvedConstraints().isSolvable(),
+        "Could not type %s", expression);
+
     return inference.getExpressionTypes();
   }
 

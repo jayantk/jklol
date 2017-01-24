@@ -93,9 +93,14 @@ public class ConstraintSet {
   }
   
   public ConstraintSet solve(TypeDeclaration types) {
+    // System.out.println(this);
     ConstraintSet equalSolved = this.solveEquality();
+    // System.out.println(equalSolved);
     ConstraintSet atomic = equalSolved.makeAtomic();
-    return atomic.solveAtomic(types);
+    // System.out.println(atomic);
+    ConstraintSet solved = atomic.solveAtomic(types);
+    // System.out.println(solved);
+    return solved;
   }
 
   /**

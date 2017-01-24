@@ -37,6 +37,7 @@ public class StaticAnalysisTest extends TestCase {
     typeReplacementMap.put("<<e,t>,<<e,i>,e>>", Type.parseFrom("<<#1,t>,<<#1,i>,#1>>"));
     typeReplacementMap.put("<<e,t>,t>", Type.parseFrom("<<#1,t>,t>"));
     typeReplacementMap.put("<<e,t>,i>", Type.parseFrom("<<#1,t>,i>"));
+    typeReplacementMap.put("<<e,t>,e>", Type.parseFrom("<<#1,t>,#1>"));
 
     Map<String, String> subtypeMap = Maps.newHashMap();
     subtypeMap.put("lo", "e");
@@ -226,6 +227,11 @@ public class StaticAnalysisTest extends TestCase {
   public void testPolymorphism() {
     runTypeInferenceTest("(count:<<e,t>,i> (lambda ($0) (and:<t*,t> (city:<c,t> $0) (loc:<lo,<lo,t>> $0 louisiana:s))))",
         "i");
+  }
+  
+  public void testPolymorphism2() {
+    runTypeInferenceTest("(argmax:<<e,t>,<<e,i>,e>> (lambda ($0) (and:<t*,t> (loc:<lo,<lo,t>> $0 (the:<<e,t>,e> (lambda ($1) (and:<t*,t> (capital2:<s,<c,t>> $1 des_moines_ia:c) (state:<s,t> $1))))) (place:<p,t> $0))) (lambda ($0) (elevation:<lo,i> $0)))",
+        "p");
   }
 
   private void runTypeInferenceTest(String expression, String expectedType) {

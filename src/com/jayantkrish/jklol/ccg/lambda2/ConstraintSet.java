@@ -312,10 +312,21 @@ public class ConstraintSet {
       }
 
       for (Integer var : varCounts.keySet()) {
-        if (varCounts.getCount(var) <= 1.0 && !boundedVars.contains(var)
-            && !nextBindings.contains(var)
+        if (varCounts.getCount(var) <= 1.0 && !nextBindings.contains(var)
             && !nextBindings.contains(varCountSubVar.get(var))) {
-          nextBindings.add(var, Type.createTypeVariable(varCountSubVar.get(var)));
+          int sub = varCountSubVar.get(var);
+          nextBindings.add(var, Type.createTypeVariable(sub));
+          Type lb = lowerBounds.get(var);
+          if (lb != null) {
+            lowerBounds.put(sub, lb);
+            boundedVars.add(sub);
+          }
+          Type ub = upperBounds.get(var);
+          if (ub != null) {
+            upperBounds.put(sub, ub);
+            boundedVars.add(sub);
+          }
+          
           done = false;
         }
       }
@@ -334,9 +345,14 @@ public class ConstraintSet {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("[ConstraintSet\n");
-    for (Constraint constraint : subConstraints) {
+    for (Constraint c : subConstraints) {
       sb.append("  ");
-      sb.append(constraint.toString());
+      sb.append(c.subtype + " ⊑ " + c.supertype);
+      sb.append("\n");
+    }
+    for (Constraint c : eqConstraints) {
+      sb.append("  ");
+      sb.append(c.subtype + " = " + c.supertype);
       sb.append("\n");
     }
     sb.append(bindings);
@@ -364,4 +380,3 @@ public class ConstraintSet {
     }
   }
 }
-

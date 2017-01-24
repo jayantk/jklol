@@ -237,6 +237,10 @@ public class StaticAnalysisTest extends TestCase {
   public void testPolymorphism3() {
     runTypeInferenceTest("(lambda (x) (field:<c,r> (var:<#1,#1> x)))", "<c,r>");
   }
+  
+  public void testPolymorphism4() {
+    runTypeInferenceTest("((reverse:<<#2,#1>,<#1,#2>> fb:cell.cell.number:<i,c>) ((reverse:<<#1,#2>,<#2,#1>> fb:row.row.season:<c,r>) foo:r))", "i");
+  }
 
   private void runTypeInferenceTest(String expression, String expectedType) {
     Type expected = Type.parseFrom(expectedType);
@@ -251,5 +255,15 @@ public class StaticAnalysisTest extends TestCase {
 
     assertTrue(inference.getSolvedConstraints().isSolvable());
     assertEquals(expected, inference.getExpressionTypes().get(0));
+    
+    /*
+    Map<Integer, Type> typeMap = inference.getExpressionTypes();
+    for (int i : typeMap.keySet()) {
+      Type t = typeMap.get(i);
+      if (t.hasTypeVariables()) {
+        System.out.println(i + " " + t + " " + exp.getSubexpression(i));
+      }
+    }
+    */
   }
 }

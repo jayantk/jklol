@@ -241,6 +241,42 @@ public class StaticAnalysisTest extends TestCase {
   public void testPolymorphism4() {
     runTypeInferenceTest("((reverse:<<#2,#1>,<#1,#2>> fb:cell.cell.number:<i,c>) ((reverse:<<#1,#2>,<#2,#1>> fb:row.row.season:<c,r>) foo:r))", "i");
   }
+  
+  public void testWellFormed1() {
+    String s = "(lambda ($0) (count (fb:cell.8_districts_formed_from_oruzgan_province_in_2004 $0)))";
+    Expression2 exp = ExpressionParser.expression2().parse(s);
+    assertTrue(StaticAnalysis.isWellFormed(exp));
+  }
+  
+  public void testWellFormed2() {
+    String s = "(lambda ($0) $0)";
+    Expression2 exp = ExpressionParser.expression2().parse(s);
+    assertTrue(StaticAnalysis.isWellFormed(exp));
+  }
+
+  public void testWellFormed3() {
+    String s = "(lambda ($0))";
+    Expression2 exp = ExpressionParser.expression2().parse(s);
+    assertFalse(StaticAnalysis.isWellFormed(exp));
+  }
+
+  public void testWellFormed4() {
+    String s = "lambda";
+    Expression2 exp = ExpressionParser.expression2().parse(s);
+    assertFalse(StaticAnalysis.isWellFormed(exp));
+  }
+  
+  public void testWellFormed5() {
+    String s = "(foo lambda)";
+    Expression2 exp = ExpressionParser.expression2().parse(s);
+    assertFalse(StaticAnalysis.isWellFormed(exp));
+  }
+  
+  public void testWellFormed6() {
+    String s = "(lambda (foo (bar)) baz)";
+    Expression2 exp = ExpressionParser.expression2().parse(s);
+    assertFalse(StaticAnalysis.isWellFormed(exp));
+  }
 
   private void runTypeInferenceTest(String expression, String expectedType) {
     Type expected = Type.parseFrom(expectedType);

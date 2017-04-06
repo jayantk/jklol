@@ -86,6 +86,12 @@ public class ExpressionParser<T> {
         false, new char[] {','}, new String[] {"\\*"}, new String[] {",\\*"},
         ExpressionFactories.getTypeFactory());
   }
+  
+  private void assertExpressionError(boolean condition, String message, Object ... values) {
+    if (!condition) {
+      throw new ExpressionParsingError(String.format(message, values));
+    }
+  }
 
   public List<String> tokenize(String expression) {
     for (int i = 0; i < preprocessingPatterns.length; i++) {
@@ -118,7 +124,7 @@ public class ExpressionParser<T> {
         } 
       }
 
-      Preconditions.checkState((character != openQuote && character != closeQuote) || quoteOk || inEscape,
+      assertExpressionError((character != openQuote && character != closeQuote) || quoteOk || inEscape,
           "Quoting error. Tokenizing: %s", expression.substring(Math.max(i - 20, 0),
               Math.min(i, expression.length())));
       
@@ -163,8 +169,8 @@ public class ExpressionParser<T> {
 
   public T parse(List<String> tokenizedExpressionString) {
     List<T> expressions = parseAll(tokenizedExpressionString);
-    Preconditions.checkState(expressions.size() == 1, "Input string is not a single expression: %s, %s",
-        tokenizedExpressionString, expressions);
+    assertExpressionError(expressions.size() == 1,
+        "Input string is not a single expression: %s, %s", tokenizedExpressionString, expressions);
     return expressions.get(0);
   }
 
@@ -186,7 +192,8 @@ public class ExpressionParser<T> {
 
   private T reduce(Stack<T> stack) {
     // Pop the closing parenthesis
-    Preconditions.checkArgument(stack.peek().equals(closeParenExpression));
+    assertExpressionError(stack.peek().equals(closeParenExpression),
+        "Ill-formed expression. Stack: %s", stack);
     stack.pop();
 
     // Pop all arguments.
@@ -205,5 +212,19 @@ public class ExpressionParser<T> {
     }
 
     return factory.createExpression(subexpressions);
+  }
+  
+  /**
+   * Unchecked exception that is thrown when parsing an expression
+   * string if the string is not well-formed.
+   * 
+   * @author jayantk
+   */
+  public static class ExpressionParsingError extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
+    public ExpressionParsingError(String message) {
+      super(message);
+    }
   }
 }

@@ -221,6 +221,50 @@ public class StaticAnalysis {
       return index < childIndexes[childIndexes.length - 1];
     }
   }
+  
+  /**
+   * Returns {@code true} if {@code expression} is well-formed, i.e.,
+   * is a syntactically-valid lambda calculus expression.
+   * 
+   * @param expression
+   * @return
+   */
+  public static boolean isWellFormed(Expression2 expression) {
+    for (int i = 0; i < expression.size; i++) {
+      Expression2 subexpression = expression.getSubexpression(i);
+      if (subexpression.isConstant() && subexpression.getConstant().equals(LAMBDA)) {
+        // lambdas must appear as the first argument of a nested expression.
+        int parentIndex = expression.getParentExpressionIndex(i);
+        if (parentIndex == -1) {
+          return false;
+        }
+
+        Expression2 lambdaExpression = expression.getSubexpression(parentIndex);
+        List<Expression2> children = lambdaExpression.getSubexpressions();
+
+        // Parent expression must have 3 subexpressions: lambda, argument list, body
+        if (children.size() != 3) {
+          return false;
+        }
+        if (children.get(0) != subexpression) {
+          return false;
+        }
+
+        // Argument list must be an application expression containing only constants
+        Expression2 argListExpr = children.get(1);
+        if (argListExpr.isConstant()) {
+          return false;
+        }
+        List<Expression2> arguments = argListExpr.getSubexpressions(); 
+        for (int j = 0; j < arguments.size(); j++) {
+          if (!arguments.get(j).isConstant()) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
 
   public static Type inferType(Expression2 expression, TypeDeclaration typeDeclaration) {
     return inferType(expression, TypeDeclaration.TOP, typeDeclaration);

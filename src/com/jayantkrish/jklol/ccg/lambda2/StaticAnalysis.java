@@ -172,10 +172,11 @@ public class StaticAnalysis {
 
   public static boolean isLambda(Expression2 expression, int index) {
     Expression2 subexpression = expression.getSubexpression(index);
-    return !subexpression.isConstant() && subexpression.getSubexpression(1).isConstant() && 
+    return !subexpression.isConstant() && subexpression.getSubexpressions().size() == 3 &&
+        subexpression.getSubexpression(1).isConstant() && 
         subexpression.getSubexpression(1).getConstant().equals(LAMBDA);
   }
-  
+
   public static List<String> getLambdaArguments(Expression2 expression) {
     return getLambdaArguments(expression, 0);
   }

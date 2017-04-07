@@ -8,7 +8,8 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
 public abstract class AbstractTypeDeclaration implements TypeDeclaration {
-  
+  private static final long serialVersionUID = 1L;
+
   private final Map<String, String> supertypeMap;
   
   public AbstractTypeDeclaration(Map<String, String> supertypeMap) {

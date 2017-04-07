@@ -1,6 +1,8 @@
 package com.jayantkrish.jklol.ccg.lambda;
 
-public interface TypeDeclaration {
+import java.io.Serializable;
+
+public interface TypeDeclaration extends Serializable {
   
   public static Type TOP = Type.createAtomic("⊤");
   public static Type BOTTOM = Type.createAtomic("⊥");

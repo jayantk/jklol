@@ -14,7 +14,8 @@ import com.google.common.base.Preconditions;
  *
  */
 public class ExplicitTypeDeclaration extends AbstractTypeDeclaration {
-  
+  private static final long serialVersionUID = 1L;
+
   private final Map<String, Type> typeReplacements;
   
   public ExplicitTypeDeclaration(Map<String, String> supertypeMap,

@@ -115,7 +115,7 @@ public class GeoqueryInduceLexicon extends AbstractCli {
 
   @Override
   public void run(OptionSet options) {
-    TypeDeclaration typeDeclaration = GeoqueryUtil.getTypeDeclaration();
+    TypeDeclaration typeDeclaration = GeoqueryUtil.getSimpleTypeDeclaration();
     
     List<String> foldNames = Lists.newArrayList();
     List<List<AlignmentExample>> folds = Lists.newArrayList();
